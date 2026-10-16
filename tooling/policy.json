@@ -1,0 +1,10 @@
+{
+  "forbiddenTools": ["python", "python3", "uv", "copier", "mkdocs", "pre-commit", "commitizen", "make"],
+  "install": {
+    "frozenLockfile": true,
+    "dependencyBuildScripts": "denied"
+  },
+  "commitIdentity": {
+    "emailPattern": "^([0-9]+\\+)?[A-Za-z0-9-]+@users\\.noreply\\.github\\.com$"
+  }
+}

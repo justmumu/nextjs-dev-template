@@ -1,0 +1,3 @@
+# Generator workspace settings. The app seed is deliberately not a member of this
+# workspace: it owns its own manifest and lock.
+allowBuilds: {}

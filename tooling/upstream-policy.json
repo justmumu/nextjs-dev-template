@@ -1,0 +1,12 @@
+{
+  "source": {
+    "repository": "https://github.com/justmumu/python-dev-template",
+    "revision": "7f8da69c6f9f69e4fc4d1547c712fb8ef1f1d0b7",
+    "role": "behavior reference only; no executable import, no runtime dependency"
+  },
+  "mapping": {
+    "format": "Each entry names the source file or document, the behavior carried over, the JS owner unit and the JS test or document that holds the proof. Python tools are never carried over, only behavior. A deliberate Node-port difference is listed under `differences` with a reason and a test.",
+    "entries": [],
+    "differences": []
+  }
+}
