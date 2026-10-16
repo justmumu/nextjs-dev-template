@@ -50,16 +50,107 @@ has no `packages`). Generated projects never use `workspace:*`, parent overrides
 generator `node_modules`. pnpm 12 locks may contain several YAML documents; do not
 parse them by hand.
 
+## Commands
+
+Routine work goes through `pnpm run <script>`; each script is a literal call to a
+Node dispatcher (`scripts/development.cjs`, `scripts/dependencies.cjs`). Flags are
+written `--name=value`; there is no `--` separator and no extra flag is accepted.
+The scripts are defined once in `scripts/development.cjs` and projected into the
+generator and application `package.json` files; a test fails on drift.
+
+| Command | Status |
+| --- | --- |
+| `node scripts/bootstrap.cjs setup` | Checks exact Node and pnpm, installs from the frozen lock. Hooks are not installed yet (the installer arrives later). |
+| `node scripts/bootstrap.cjs repair` | Rebuilds project-local `node_modules` from the frozen lock and clears the incomplete-install marker. Never regenerates a manifest or lock; the global store is untouched. |
+| `node scripts/bootstrap.cjs deps-lock` | Relocks and installs after a dependency-manifest edit that was approved separately. Refuses any protected difference from the committed `HEAD`. |
+| `pnpm run check` | Lock consistency (checked on a disposable copy of the metadata), format, lint, typecheck, unit tests. Format, lint and unit/coverage are not available yet and make `check` fail rather than pass. |
+| `pnpm run typecheck` | Generator: `tsc --noEmit`. Application: not available yet. |
+| `pnpm run test:one --test=<path> [--name=<literal>]` | One test file under `tests/`, optionally one literal test name. |
+| `pnpm run test:integration [--scenario=<id>]` | Real pnpm and filesystem scenarios (generator only). |
+| `pnpm run deps:add --package=<name[@version]> --group=<prod\|dev>`, `deps:remove`, `deps:upgrade [--package=<name>]` | Dependency transactions. |
+| `pnpm run template:create --name=<name> --owner=<login> --dest=<path>`, `template:seed:refresh` | Generator only. |
+| `pnpm run format`, `lint:fix`, `test:permissions` | Not available yet; they fail with the owning unit named. |
+
+pnpm keeps `verifyDepsBeforeRun: error`. After a dependency-manifest edit, or with
+`node_modules` missing, `pnpm run` refuses to start; use `bootstrap.cjs repair` or
+`deps-lock`, which need no `node_modules`. Pre/post scripts are disabled
+(`enablePrePostScripts: false`).
+
+## Dependency changes
+
+A dependency command may change only the requested dependency map entry and the lock.
+Before pnpm runs, the protected surface is snapshotted. `scripts/core/protected.cjs` is its
+single inventory (the protected-files guard extends the same module): the manifest, lock
+and workspace file, `.npmrc`, `.node-version`, `AGENTS.md`, `CLAUDE.md`, pnpmfiles and
+static tool configuration (TypeScript, Next.js, ESLint, Prettier, Vitest, Playwright,
+PostCSS, docs configuration), `scripts/`, `tooling/`, agent settings, `.githooks/`, and
+shadow overrides (a `.npmrc`, workspace, pnpmfile or lint/format/test configuration file
+anywhere below the root, except in `template/` and `tests/fixtures/`). Git configuration and
+hooks are snapshotted through the paths Git itself resolves, so a linked worktree's
+hooks and configuration (which live under the main repository, not under a `.git`
+directory of the root) are covered too. The result is judged from the files, not from
+pnpm's exit code or a script's report: any other change, or any failure, restores those
+bytes (a replaced symlink is unlinked and recreated, never followed; file modes are kept)
+and marks the install incomplete (`node_modules/.template-environment-dirty`). An accepted
+result must also pass a frozen-lock check, so a manifest edited after pnpm's own write is
+rejected. Every routine command then refuses to run until `bootstrap.cjs repair` succeeds. A lifecycle script that rewrites
+`scripts.check`, a build-permission placeholder written by pnpm, `permissions.build`,
+`scriptShell`, `shellEmulator` and pnpmfile hooks are never accepted as part of a
+dependency change. A package that newly needs a build gets a review message naming it;
+no permission is adopted. Specifiers are literal: a package name with an exact version or
+dist-tag, never a URL, range or alias. Versions are saved exact. `.npmrc` credentials stay
+outside the repository and are masked in command output.
+
+`deps-lock` assumes the manifest edit was approved and reconciled elsewhere; it grants
+no approval. Once the guard capability is registered in `tooling/capabilities.json`, it
+also requires `scripts/hooks/state.cjs` to export `status(root)` answering `{ clean: true }`
+for a coherent baseline with no pending reservation or conflict. Anything else (a missing
+module, a throw, any other answer) refuses.
+
+If a relock fails (for example the store is unreachable), the approved manifest bytes stay,
+the lock is restored and the install stays marked incomplete with `kind=deps-lock`. `repair`
+refuses a stale lock and says so; the same `deps-lock` can be run again once the failure
+is fixed. It repeats every check (committed baseline, unchanged protected files, the
+dependency-only boundary) and clears the marker only after the frozen install succeeds.
+Any other incomplete install must be repaired first.
+
+### Reviewed pins versus ordinary dependencies
+
+`tooling/versions.json` lists the generator's reviewed tool pins. Changing one is a
+reviewed tooling change; `deps:add`, `deps:remove` and `deps:upgrade` refuse it before
+running anything. `deps:upgrade` without a name is the whole set or nothing: while a pin is
+a dependency it is refused with the pin names, and other dependencies are upgraded one at a
+time with `--package=<name>`. Any other dependency is ordinary: the pin contract checks that the pins hold, not that
+the dependency set is exactly the pins, so adding one does not break the checks.
+Generated applications carry no pin file and are not restricted this way.
+
+### Workspace policy parser
+
+`pnpm-workspace.yaml` is read with a deliberately narrow, dependency-free parser (bootstrap
+cannot use a YAML library). It accepts full-line comments, top-level `key: scalar` lines and
+one level of two-space-indented `key: scalar` children, with plain or quoted names. Anything
+else (quoted top-level keys, flow maps other than `{}`/`[]`, lists, anchors, aliases, tags,
+block scalars, inline comments, tabs, duplicate keys, unknown top-level keys) fails the
+policy instead of being skipped.
+
+### Package manager preflight
+
+The preflight runs `pnpm --version` with Corepack network access off and
+`pmOnFail=ignore`, so it reports the installed manager and never downloads or switches to the
+version a project names; a mismatch is an expected/found error. Project configuration is not
+changed for this.
+
 ## Verify this foundation
 
 ```sh
-node scripts/toolchain.cjs verify
+node scripts/bootstrap.cjs setup
+pnpm run typecheck
+pnpm run test:one --test=tests/unit/commands.test.ts
+pnpm run test:integration --scenario=dependencies
 ```
 
-This needs only Node and pnpm. It checks the exact versions, runs
-`pnpm install --frozen-lockfile`, then `pnpm run test:one` for the toolchain
-contract and the no-Python integration test. `test:one` is focused feedback and
-does not replace the full gates added by later units.
+Node and pnpm are the only prerequisites. `test:one` is focused feedback and does not
+replace the full gates added by later units.
 
 ## Behaviour mapping from the Python template
 

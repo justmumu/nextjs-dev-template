@@ -1,0 +1,243 @@
+// @ts-check
+"use strict";
+// Semantic dependency policy: what a dependency change may touch, and which workspace/.npmrc
+// fields are never part of one. Dependency-free and pure so the guard can reuse it later.
+
+const MAPS = /** @type {const} */ (["dependencies", "devDependencies"]);
+const GROUP_MAP = /** @type {const} */ ({ prod: "dependencies", dev: "devDependencies" });
+const EXACT = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$/;
+
+// Higher-priority build permissions, shells, hooks and graph-rewriting fields. None of these is a
+// dependency change; each needs its own protected review.
+const FORBIDDEN_WORKSPACE_KEYS = [
+  "permissions",
+  "scriptShell",
+  "shellEmulator",
+  "pnpmfile",
+  "globalPnpmfile",
+  "hooks",
+  "overrides",
+  "packages",
+  "packageExtensions",
+  "patchedDependencies",
+  "dangerouslyAllowAllBuilds",
+  "onlyBuiltDependencies",
+  "neverBuiltDependencies",
+  "ignoredBuiltDependencies",
+];
+const REQUIRED_SCALARS = /** @type {const} */ ({ strictDepBuilds: "true", verifyDepsBeforeRun: "error", enablePrePostScripts: "false" });
+const FORBIDDEN_NPMRC = /^\s*(script-shell|shell-emulator|pnpmfile|global-pnpmfile)\s*=/im;
+const NPMRC_CREDENTIAL = /^\s*(?:\/\/[^\s=]*:)?(_authToken|_auth|_password)\s*=\s*(\S*)/gim;
+
+const TOP_KEY = /^([A-Za-z][A-Za-z0-9]*):(?: (.+))?$/;
+// Plain, double- or single-quoted names with no escapes: exactly what the reviewed files use.
+const CHILD = /^ {2}(?:([A-Za-z0-9][A-Za-z0-9._/-]*)|"([^"\\\n]+)"|'([^'\n]+)'): (\S.*)$/;
+const SCALAR = /^(?:[A-Za-z0-9][A-Za-z0-9._/-]*|\[\]|\{\})$/;
+const ALLOWED_TOP = new Set([...Object.keys(REQUIRED_SCALARS), "skills", "allowBuilds"]);
+
+/**
+ * Parses the deliberately narrow canonical subset of pnpm-workspace.yaml that the policy files use:
+ * full-line comments, `key: scalar` at the top, and one level of two-space-indented `key: scalar`
+ * children. The check has to run without node_modules, so it cannot use a YAML library; instead
+ * everything outside the subset (quoted top-level keys, flow maps, lists, anchors, aliases, tags,
+ * block scalars, inline comments, tabs, duplicate keys, extra indentation, extra documents) is
+ * reported as unsupported structure and fails the policy.
+ * @param {string} text
+ * @returns {{ keys: Map<string, { inline: string | null, children: Map<string, string> }>, problems: string[] }}
+ */
+function parseWorkspace(text) {
+  /** @type {Map<string, { inline: string | null, children: Map<string, string> }>} */
+  const keys = new Map();
+  /** @type {string[]} */
+  const problems = [];
+  /** @type {{ inline: string | null, children: Map<string, string> } | null} */
+  let current = null;
+  const lines = text.split("\n");
+  if (lines.at(-1) === "") lines.pop();
+  lines.forEach((raw, index) => {
+    const line = raw.endsWith("\r") ? raw.slice(0, -1) : raw;
+    const where = `pnpm-workspace.yaml line ${index + 1}`;
+    if (/^\s*(?:#.*)?$/.test(line)) return;
+    if (line.includes("\t")) return void problems.push(`${where}: tabs are not supported`);
+    const top = TOP_KEY.exec(line);
+    if (top) {
+      const inline = top[2] ?? null;
+      if (inline !== null && !SCALAR.test(inline)) return void problems.push(`${where}: unsupported YAML value ${JSON.stringify(inline)} (only bare scalars, [] and {} are supported)`);
+      if (keys.has(top[1])) return void problems.push(`${where}: duplicate key ${top[1]}`);
+      current = { inline, children: new Map() };
+      keys.set(top[1], current);
+      return;
+    }
+    const child = CHILD.exec(line);
+    if (child && current && current.inline === null) {
+      const name = child[1] ?? child[2] ?? child[3];
+      if (!SCALAR.test(child[4])) return void problems.push(`${where}: unsupported YAML value for ${name} (${JSON.stringify(child[4])})`);
+      if (current.children.has(name)) return void problems.push(`${where}: duplicate key ${name}`);
+      current.children.set(name, child[4]);
+      return;
+    }
+    problems.push(`${where}: unsupported YAML structure; only the canonical subset of key: value lines is accepted`);
+  });
+  return { keys, problems };
+}
+
+/**
+ * @param {string} text pnpm-workspace.yaml
+ * @param {{ reviewedBuilds: readonly string[] }} options
+ * @returns {string[]}
+ */
+function workspaceViolations(text, options) {
+  const { keys, problems } = parseWorkspace(text);
+  const violations = [...problems];
+  for (const [key, expected] of Object.entries(REQUIRED_SCALARS)) {
+    if (keys.get(key)?.inline !== expected) violations.push(`${key}: ${expected} is required`);
+  }
+  const skills = keys.get("skills");
+  if (skills?.inline !== null || skills.children.size !== 1 || skills.children.get("dirs") !== "[]") violations.push("skills.dirs: [] is required (no implicit skill linking)");
+  for (const key of keys.keys()) {
+    if (FORBIDDEN_WORKSPACE_KEYS.includes(key)) violations.push(`${key} is not a dependency field and needs its own protected review`);
+    else if (!ALLOWED_TOP.has(key)) violations.push(`${key} is not part of the reviewed workspace policy and needs its own protected review`);
+  }
+  const builds = keys.get("allowBuilds");
+  if (builds && builds.inline !== null && builds.inline !== "{}") violations.push("allowBuilds must be a block of name: true|false entries (or {})");
+  for (const [name, value] of builds?.children ?? []) {
+    if (value === "false") continue;
+    if (value !== "true") violations.push(`allowBuilds.${name} has no decision (${JSON.stringify(value)}); a placeholder is not a policy`);
+    else if (!options.reviewedBuilds.includes(name)) violations.push(`allowBuilds.${name}: true is not a reviewed build permission`);
+  }
+  return violations;
+}
+
+/** @param {string} text .npmrc @returns {string[]} */
+function npmrcViolations(text) {
+  const violations = [];
+  const hook = FORBIDDEN_NPMRC.exec(text);
+  if (hook) violations.push(`.npmrc ${hook[1]} is not allowed`);
+  for (const match of text.matchAll(NPMRC_CREDENTIAL)) {
+    if (!/^\$\{[A-Z0-9_]+\}$/.test(match[2])) violations.push(`.npmrc holds a literal ${match[1]}; credentials stay external`);
+  }
+  return violations;
+}
+
+/** @param {string} value */
+function isExactVersion(value) {
+  return EXACT.test(value);
+}
+
+/** @param {unknown} value @returns {string} */
+function canonical(value) {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+  if (value !== null && typeof value === "object") {
+    const record = /** @type {Record<string, unknown>} */ (value);
+    return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${canonical(record[key])}`).join(",")}}`;
+  }
+  return JSON.stringify(value) ?? "undefined";
+}
+
+/** @param {unknown} a @param {unknown} b */
+const same = (a, b) => canonical(a) === canonical(b);
+
+/**
+ * @param {Record<string, any>} manifest
+ * @param {string} map
+ * @returns {Record<string, string>}
+ */
+function mapOf(manifest, map) {
+  const value = manifest[map];
+  return value !== null && typeof value === "object" ? value : {};
+}
+
+/**
+ * @param {Record<string, any>} manifest
+ * @returns {Record<string, any>}
+ */
+function withoutMaps(manifest) {
+  const rest = { ...manifest };
+  for (const map of MAPS) delete rest[map];
+  return rest;
+}
+
+/**
+ * @typedef {{ action: "none" } | { action: "approved-edit" } | { action: "add", group: "prod" | "dev", name: string, version?: string | null } | { action: "remove", group: "prod" | "dev", name: string } | { action: "upgrade", name: string | null }} DependencyPlan
+ */
+
+/**
+ * Compares two parsed package.json objects against the one mutation a plan allows.
+ * Returns an empty list only when nothing outside that mutation changed.
+ * @param {Record<string, any>} before
+ * @param {Record<string, any>} after
+ * @param {DependencyPlan & { valueOk?: (value: string) => boolean, pinned?: Record<string, string> }} plan
+ * @returns {string[]}
+ */
+function manifestViolations(before, after, plan) {
+  const violations = [];
+  for (const [name, version] of Object.entries(plan.pinned ?? {})) {
+    for (const map of MAPS) {
+      const was = Object.hasOwn(mapOf(before, map), name);
+      const now = mapOf(after, map)[name];
+      if (was && now !== version) violations.push(`${map}.${name} is a reviewed tool pin (${version}); changing it is a reviewed tooling change, not a dependency change`);
+      if (!was && now !== undefined && now !== version) violations.push(`${map}.${name} would shadow a reviewed tool pin (${version})`);
+    }
+  }
+  const valueOk = plan.valueOk ?? isExactVersion;
+  if (!same(withoutMaps(before), withoutMaps(after))) {
+    violations.push("package.json changed outside the dependency maps (scripts, engines, packageManager, overrides and other fields are protected)");
+  }
+  for (const map of MAPS) {
+    const was = mapOf(before, map);
+    const now = mapOf(after, map);
+    const wasKeys = Object.keys(was);
+    const nowKeys = Object.keys(now);
+    const added = nowKeys.filter((key) => !Object.hasOwn(was, key));
+    const removed = wasKeys.filter((key) => !Object.hasOwn(now, key));
+    const changed = nowKeys.filter((key) => Object.hasOwn(was, key) && was[key] !== now[key]);
+    /** @param {string} reason @param {string[]} names */
+    const touched = (reason, names) => names.length > 0 && violations.push(`${map}: ${reason} ${names.join(", ")}`);
+    if (plan.action === "none") {
+      touched("unexpected addition", added);
+      touched("unexpected removal", removed);
+      touched("unexpected change", changed);
+    } else if (plan.action === "approved-edit") {
+      for (const key of nowKeys) if (!valueOk(now[key])) violations.push(`${map}.${key} must be an exact registry version (got ${JSON.stringify(now[key])})`);
+    } else if (plan.action === "add") {
+      const own = map === GROUP_MAP[plan.group];
+      touched("unexpected removal", removed);
+      touched("unexpected change", own ? changed.filter((key) => key !== plan.name) : changed);
+      touched("unexpected addition", own ? added.filter((key) => key !== plan.name) : added);
+      if (own && !Object.hasOwn(now, plan.name)) violations.push(`${map}.${plan.name} was not added`);
+      if (own && Object.hasOwn(now, plan.name) && !valueOk(now[plan.name])) violations.push(`${map}.${plan.name} must be an exact registry version (got ${JSON.stringify(now[plan.name])})`);
+      else if (own && plan.version && Object.hasOwn(now, plan.name) && now[plan.name] !== plan.version) violations.push(`${map}.${plan.name} must be the requested version ${plan.version} (got ${JSON.stringify(now[plan.name])})`);
+    } else if (plan.action === "remove") {
+      const own = map === GROUP_MAP[plan.group];
+      touched("unexpected addition", added);
+      touched("unexpected change", changed);
+      touched("unexpected removal", own ? removed.filter((key) => key !== plan.name) : removed);
+      if (own && Object.hasOwn(now, plan.name)) violations.push(`${map}.${plan.name} was not removed`);
+      if (own && !Object.hasOwn(was, plan.name)) violations.push(`${map}.${plan.name} was not a dependency to remove`);
+    } else if (plan.action === "upgrade") {
+      touched("unexpected addition", added);
+      touched("unexpected removal", removed);
+      touched("unexpected change", plan.name === null ? [] : changed.filter((key) => key !== plan.name));
+      for (const key of changed) if (!valueOk(now[key])) violations.push(`${map}.${key} must be an exact registry version (got ${JSON.stringify(now[key])})`);
+    }
+  }
+  return violations;
+}
+
+/** @param {string} text pnpm-workspace.yaml @returns {string[]} names with an allowed build */
+function buildPermissions(text) {
+  const children = parseWorkspace(text).keys.get("allowBuilds")?.children ?? new Map();
+  return [...children].filter(([, value]) => value === "true").map(([name]) => name);
+}
+
+/**
+ * Packages whose build scripts pnpm ignored. The result is a review prompt; it is never a policy.
+ * @param {string} output
+ * @returns {string[]}
+ */
+function buildReview(output) {
+  const match = /Ignored build scripts:\s*([^\n]+)/.exec(output);
+  return match ? match[1].split(",").map((entry) => entry.trim()).filter(Boolean) : [];
+}
+
+module.exports = { GROUP_MAP, buildPermissions, buildReview, isExactVersion, manifestViolations, npmrcViolations, parseWorkspace, same, workspaceViolations };

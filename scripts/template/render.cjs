@@ -185,34 +185,4 @@ function defaultInputs() {
   };
 }
 
-function parseArgs(argv) {
-  const options = {};
-  const known = new Set(["dest", "name", "description", "owner", "version"]);
-  for (let i = 0; i < argv.length; i += 2) {
-    const match = /^--([a-z]+)$/.exec(argv[i] ?? "");
-    if (!match || !known.has(match[1]) || argv[i + 1] === undefined) throw new RenderError(`usage: render.cjs --dest <absolute dir> --name <name> [--description <text>] [--owner <login>] [--version <semver>]`);
-    options[match[1]] = argv[i + 1];
-  }
-  if (!options.dest) throw new RenderError("--dest is required");
-  const { dest, ...answers } = options;
-  return { dest, answers };
-}
-
-function main(argv) {
-  const { dest, answers } = parseArgs(argv);
-  const { manifest, bases } = defaultInputs();
-  const { files, digest } = renderTree({ manifest, bases, answers });
-  writeTree(files, dest);
-  process.stdout.write(`${JSON.stringify({ files: files.length, digest })}\n`);
-}
-
 module.exports = { PROTOCOL, SCHEMA, RenderError, renderTree, writeTree, treeDigest, defaultInputs };
-
-if (require.main === module) {
-  try {
-    main(process.argv.slice(2));
-  } catch (error) {
-    process.stderr.write(`${error.message}\n`);
-    process.exitCode = error instanceof RenderError ? 2 : 1;
-  }
-}

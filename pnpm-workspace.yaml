@@ -1,3 +1,9 @@
 # Generator workspace settings. The app seed is deliberately not a member of this
 # workspace: it owns its own manifest and lock.
+# Dependency policy (KTD7, KTD11): protected, reviewed separately from dependency changes.
+strictDepBuilds: true
+verifyDepsBeforeRun: error
+enablePrePostScripts: false
+skills:
+  dirs: []
 allowBuilds: {}

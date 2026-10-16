@@ -8,6 +8,18 @@
     { "type": "copy", "base": "template", "source": "pnpm-workspace.yaml", "destination": "pnpm-workspace.yaml" },
     { "type": "copy", "base": "template", "source": ".gitignore", "destination": ".gitignore" },
     { "type": "copy", "base": "template", "source": "tooling/project-role.json", "destination": "tooling/project-role.json" },
-    { "type": "copy", "base": "root", "source": ".node-version", "destination": ".node-version" }
+    { "type": "copy", "base": "root", "source": ".node-version", "destination": ".node-version" },
+    { "type": "copy", "base": "root", "source": "scripts/bootstrap.cjs", "destination": "scripts/bootstrap.cjs" },
+    { "type": "copy", "base": "root", "source": "scripts/dependencies.cjs", "destination": "scripts/dependencies.cjs" },
+    { "type": "copy", "base": "root", "source": "scripts/development.cjs", "destination": "scripts/development.cjs" },
+    { "type": "copy", "base": "root", "source": "scripts/core/args.cjs", "destination": "scripts/core/args.cjs" },
+    { "type": "copy", "base": "root", "source": "scripts/core/dependency-policy.cjs", "destination": "scripts/core/dependency-policy.cjs" },
+    { "type": "copy", "base": "root", "source": "scripts/core/install-state.cjs", "destination": "scripts/core/install-state.cjs" },
+    { "type": "copy", "base": "root", "source": "scripts/core/protected.cjs", "destination": "scripts/core/protected.cjs" },
+    { "type": "copy", "base": "root", "source": "scripts/core/process.cjs", "destination": "scripts/core/process.cjs" },
+    { "type": "copy", "base": "root", "source": "scripts/core/toolchain.cjs", "destination": "scripts/core/toolchain.cjs" },
+    { "type": "copy", "base": "root", "source": "scripts/core/transaction.cjs", "destination": "scripts/core/transaction.cjs" },
+    { "type": "copy", "base": "root", "source": "tooling/capabilities.json", "destination": "tooling/capabilities.json" },
+    { "type": "copy", "base": "root", "source": "tooling/policy.json", "destination": "tooling/policy.json" }
   ]
 }

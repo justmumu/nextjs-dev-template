@@ -30,9 +30,28 @@ const byPath = (result: typeof a, path: string) => (result.files.find((file) => 
 
 describe("real seed render", () => {
   test("emits the application role files and nothing from the generator", () => {
-    expect(paths).toEqual([".gitignore", ".node-version", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", "tooling/project-role.json"]);
+    expect(paths).toEqual([
+      ".gitignore",
+      ".node-version",
+      "package.json",
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml",
+      "scripts/bootstrap.cjs",
+      "scripts/core/args.cjs",
+      "scripts/core/dependency-policy.cjs",
+      "scripts/core/install-state.cjs",
+      "scripts/core/process.cjs",
+      "scripts/core/protected.cjs",
+      "scripts/core/toolchain.cjs",
+      "scripts/core/transaction.cjs",
+      "scripts/dependencies.cjs",
+      "scripts/development.cjs",
+      "tooling/capabilities.json",
+      "tooling/policy.json",
+      "tooling/project-role.json",
+    ]);
     expect(paths).toEqual(b.files.map((file) => file.path));
-    for (const forbidden of [/template-manifest/, /^scripts\/template/, /^tests\//, /^tooling\/(?!project-role\.json$)/, /\.py$/, /pyproject|Makefile|copier|uv\.lock/i, /auth|prisma|drizzle|database|db\//i]) {
+    for (const forbidden of [/template-manifest/, /^scripts\/template/, /^tests\//, /^tooling\/(?!project-role\.json$|policy\.json$|capabilities\.json$)/, /\.py$/, /pyproject|Makefile|copier|uv\.lock/i, /auth|prisma|drizzle|database|db\//i]) {
       for (const path of paths) expect(path, String(forbidden)).not.toMatch(forbidden);
     }
   });
@@ -59,7 +78,7 @@ describe("real seed render", () => {
     const workspace = byPath(a, "pnpm-workspace.yaml");
     expect(workspace).not.toMatch(/^packages:|^overrides:/m);
     for (const name of versions.seed.deniedBuilds) expect(workspace).toContain(`${name}: false`);
-    expect(workspace).not.toMatch(/: true|dangerouslyAllowAllBuilds/);
+    expect(workspace).not.toMatch(/allowBuilds:[\s\S]*: true|dangerouslyAllowAllBuilds/);
     expect(byPath(a, ".node-version")).toBe(readFileSync(join(root, ".node-version"), "utf8"));
     expect(byPath(a, ".node-version").trim()).toBe(versions.node);
   });
@@ -82,15 +101,16 @@ describe("real seed render", () => {
     expect(paths.filter((path) => /\.log$|\.tsbuildinfo$/.test(path))).toEqual([]);
   });
 
-  test("the CLI renders the same tree as the API and refuses a non-empty destination", () => {
+  test("template:create renders the same tree as the API and refuses a non-empty destination", () => {
     const dest = join(scratch, "cli");
     const cli = (target: string) =>
-      spawnSync(process.execPath, [join(root, "scripts/template/render.cjs"), "--dest", target, "--name", "first-app", "--description", description, "--owner", "first-owner"], { encoding: "utf8" });
+      spawnSync(process.execPath, [join(root, "scripts/development.cjs"), "template:create", "--name=first-app", "--owner=first-owner", `--dest=${target}`], { encoding: "utf8" });
     const first = cli(dest);
     expect(first.status).toBe(0);
-    expect(JSON.parse(first.stdout)).toEqual({ files: a.files.length, digest: a.digest });
+    const same = renderFor({ name: "first-app", owner: "first-owner" });
+    expect(JSON.parse(first.stdout)).toEqual({ files: same.files.length, digest: same.digest });
     expect(walk(dest)).toEqual(paths);
-    for (const file of a.files) {
+    for (const file of same.files) {
       expect(statSync(join(dest, file.path)).mode & 0o777, file.path).toBe(file.mode);
       expect(readFileSync(join(dest, file.path)).equals(file.content), file.path).toBe(true);
     }

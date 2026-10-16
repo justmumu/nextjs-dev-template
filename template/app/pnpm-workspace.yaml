@@ -1,4 +1,10 @@
 # The application owns its dependency graph: this file makes it a standalone
 # workspace root, so nothing is resolved from a parent directory.
+# Dependency policy (KTD7, KTD11): protected, reviewed separately from dependency changes.
+strictDepBuilds: true
+verifyDepsBeforeRun: error
+enablePrePostScripts: false
+skills:
+  dirs: []
 allowBuilds:
   unrs-resolver: false

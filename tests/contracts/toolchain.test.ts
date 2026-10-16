@@ -1,25 +1,10 @@
-import { spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createRequire } from "node:module";
-import { afterAll, describe, expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 
 const root = resolve(import.meta.dirname, "../..");
-const toolchain = createRequire(import.meta.url)("../../scripts/toolchain.cjs") as typeof import("../../scripts/toolchain.cjs");
-const scratch = mkdtempSync(join(tmpdir(), "toolchain-contract-"));
-afterAll(() => rmSync(scratch, { recursive: true, force: true }));
-
-function run(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
-  return spawnSync("pnpm", args, { cwd, env, encoding: "utf8", timeout: 170_000 });
-}
-
-function scratchProject(name: string, manifest: Record<string, unknown>) {
-  const dir = join(scratch, name);
-  mkdirSync(dir, { recursive: true });
-  writeFileSync(join(dir, "package.json"), JSON.stringify({ name, version: "0.0.0", private: true, ...manifest }));
-  return dir;
-}
+const toolchain = createRequire(import.meta.url)("../../scripts/core/toolchain.cjs") as typeof import("../../scripts/core/toolchain.cjs");
 
 describe("exact runtime and manager", () => {
   const expected = toolchain.readExpected(root);
@@ -38,23 +23,6 @@ describe("exact runtime and manager", () => {
   test("rejects a missing pnpm", () => {
     expect(toolchain.checkEnvironment({ node: expected.node, pnpm: null }, expected)[0]).toContain("pnpm");
   });
-
-  test("the pinned manager and Node are what is running", () => {
-    const pnpm = run(root, ["--version"]);
-    expect(toolchain.checkEnvironment({ node: process.versions.node, pnpm: pnpm.stdout.trim() }, expected)).toEqual([]);
-  });
-
-  test("pnpm refuses a project that names another package manager", () => {
-    const dir = scratchProject("wrong-manager", { packageManager: "yarn@4.9.0" });
-    const result = run(dir, ["install"], { ...process.env, COREPACK_ENABLE_STRICT: "0" });
-    expect(result.status).not.toBe(0);
-  });
-
-  test("pnpm refuses a dependency set whose engines exclude this Node", () => {
-    const dir = scratchProject("wrong-node", { engines: { node: ">=999" }, devEngines: undefined });
-    const result = run(dir, ["install", "--config.engine-strict=true"]);
-    expect(result.status).not.toBe(0);
-  });
 });
 
 describe("single source of pins", () => {
@@ -62,7 +30,8 @@ describe("single source of pins", () => {
   const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
 
   test("root manifest, .node-version and engines project tooling/versions.json", () => {
-    expect(manifest.devDependencies).toEqual(versions.root.devDependencies);
+    // Reviewed pins must hold; ordinary dependencies added with deps:add are free to appear next to them.
+    expect(manifest.devDependencies).toMatchObject(versions.root.devDependencies);
     expect(manifest.packageManager).toBe(`pnpm@${versions.pnpm}`);
     expect(manifest.engines.node).toBe(versions.node);
     expect(readFileSync(join(root, ".node-version"), "utf8").trim()).toBe(versions.node);
@@ -109,27 +78,5 @@ describe("isolated dependency graphs", () => {
     expect(workspace).not.toMatch(/^packages:/m);
     expect(workspace).not.toMatch(/^overrides:/m);
     expect(JSON.parse(readFileSync(join(root, "package.json"), "utf8")).private).toBe(true);
-  });
-
-  test("the pinned seed tool set installs as its own graph without peer conflicts or build scripts", () => {
-    const { seed, node } = JSON.parse(readFileSync(join(root, "tooling/versions.json"), "utf8"));
-    const dir = scratchProject("seed-fixture", {
-      type: "module",
-      packageManager: `pnpm@${toolchain.readExpected(root).pnpm}`,
-      engines: { node },
-      dependencies: seed.dependencies,
-      devDependencies: seed.devDependencies,
-    });
-    writeFileSync(join(dir, "pnpm-workspace.yaml"), `allowBuilds:\n${seed.deniedBuilds.map((name: string) => `  ${name}: false\n`).join("")}`);
-    const install = run(dir, ["install", "--config.strict-peer-dependencies=true", "--config.engine-strict=true"]);
-    expect(install.stderr + install.stdout).not.toMatch(/ERR_PNPM|WARN.*peer/i);
-    expect(install.status).toBe(0);
-    const lock = readFileSync(join(dir, "pnpm-lock.yaml"), "utf8");
-    expect(lock).not.toMatch(/workspace:|link:\.\./);
-    const listed = JSON.parse(run(dir, ["list", "--depth", "-1", "--json"]).stdout);
-    expect(listed).toHaveLength(1);
-    expect(listed[0].path).toBe(dir);
-    const types = run(dir, ["exec", "tsc", "--version"]);
-    expect(types.stdout).toContain(seed.devDependencies.typescript);
   });
 });

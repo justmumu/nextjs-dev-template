@@ -42,7 +42,7 @@ describe("cold store", () => {
     render.writeTree(files, dest);
     const cold = join(scratch, "cold");
     mkdirSync(cold);
-    const env = { ...process.env, XDG_CACHE_HOME: join(cold, "cache"), XDG_DATA_HOME: join(cold, "data"), XDG_STATE_HOME: join(cold, "state"), npm_config_store_dir: join(cold, "store") };
+    const env = { ...process.env, XDG_CACHE_HOME: join(cold, "cache"), XDG_DATA_HOME: join(cold, "data"), XDG_STATE_HOME: join(cold, "state"), pnpm_config_store_dir: join(cold, "store") };
     const install = pnpm(dest, ["install", "--frozen-lockfile", "--config.strict-peer-dependencies=true", "--config.engine-strict=true"], env);
     expect(install.stderr + install.stdout).not.toMatch(/ERR_PNPM|ignored build|minimumReleaseAge/i);
     expect(install.status).toBe(0);

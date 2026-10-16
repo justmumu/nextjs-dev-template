@@ -9,9 +9,18 @@
     "node": "24.21.0"
   },
   "scripts": {
-    "template:render": "node scripts/template/render.cjs",
+    "check": "node scripts/development.cjs check",
+    "deps:add": "node scripts/dependencies.cjs add",
+    "deps:remove": "node scripts/dependencies.cjs remove",
+    "deps:upgrade": "node scripts/dependencies.cjs upgrade",
+    "format": "node scripts/development.cjs format",
+    "lint:fix": "node scripts/development.cjs lint:fix",
+    "template:create": "node scripts/development.cjs template:create",
+    "template:seed:refresh": "node scripts/development.cjs template:seed:refresh",
+    "test:integration": "node scripts/development.cjs test:integration",
     "test:one": "node scripts/development.cjs test:one",
-    "toolchain:verify": "node scripts/toolchain.cjs verify"
+    "test:permissions": "node scripts/development.cjs test:permissions",
+    "typecheck": "node scripts/development.cjs typecheck"
   },
   "devDependencies": {
     "@types/node": "24.19.2",

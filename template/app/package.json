@@ -5,6 +5,17 @@
   "engines": {
     "node": "24.21.0"
   },
+  "scripts": {
+    "check": "node scripts/development.cjs check",
+    "deps:add": "node scripts/dependencies.cjs add",
+    "deps:remove": "node scripts/dependencies.cjs remove",
+    "deps:upgrade": "node scripts/dependencies.cjs upgrade",
+    "format": "node scripts/development.cjs format",
+    "lint:fix": "node scripts/development.cjs lint:fix",
+    "test:one": "node scripts/development.cjs test:one",
+    "test:permissions": "node scripts/development.cjs test:permissions",
+    "typecheck": "node scripts/development.cjs typecheck"
+  },
   "dependencies": {
     "next": "16.4.1",
     "react": "19.3.0",

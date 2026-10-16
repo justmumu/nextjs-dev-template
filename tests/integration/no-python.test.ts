@@ -1,13 +1,13 @@
 import { spawnSync } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { copyFileSync, mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { afterAll, expect, test } from "vitest";
 
 const root = resolve(import.meta.dirname, "../..");
-const toolchain = createRequire(import.meta.url)("../../scripts/toolchain.cjs") as typeof import("../../scripts/toolchain.cjs");
-const scratch = mkdtempSync(join(tmpdir(), "no-python-"));
+const toolchain = createRequire(import.meta.url)("../../scripts/core/toolchain.cjs") as typeof import("../../scripts/core/toolchain.cjs");
+const scratch = realpathSync(mkdtempSync(join(tmpdir(), "no-python-")));
 afterAll(() => rmSync(scratch, { recursive: true, force: true }));
 
 test("frozen install and vitest work with only node and pnpm on PATH", () => {
