@@ -1,0 +1,25 @@
+{
+  "extraKnownMarketplaces": {
+    "claude-plugins-official": {
+      "source": {
+        "source": "github",
+        "repo": "anthropics/claude-plugins-official"
+      },
+      "autoUpdate": true
+    },
+    "compound-engineering-plugin": {
+      "source": {
+        "source": "github",
+        "repo": "EveryInc/compound-engineering-plugin"
+      },
+      "autoUpdate": true
+    }
+  },
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "enabledPlugins": {
+    "compound-engineering@compound-engineering-plugin": true
+  }
+}

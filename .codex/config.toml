@@ -1,0 +1,12 @@
+# Planning bootstrap. No protected-files guard is installed yet.
+# Review project settings before trusting this checkout.
+sandbox_mode = "danger-full-access"
+approval_policy = "on-request"
+approvals_reviewer = "user"
+
+[marketplaces.compound-engineering-plugin]
+source_type = "git"
+source = "https://github.com/EveryInc/compound-engineering-plugin.git"
+
+[plugins."compound-engineering@compound-engineering-plugin"]
+enabled = true

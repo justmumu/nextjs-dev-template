@@ -1,0 +1,17 @@
+.private/
+.compound-engineering/config.local.yaml
+.claude/settings.local.json
+.env
+.env.*
+!.env.example
+node_modules/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+next-env.d.ts
+*.tsbuildinfo
+.DS_Store
