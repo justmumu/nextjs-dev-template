@@ -41,6 +41,15 @@ Write reports, summaries and handoffs through the `ce-noslop` skill.
 When clarification is necessary, ask visibly in the conversation and wait for
 the answer; do not use asynchronous background questions.
 
+## Next.js documentation
+
+Before writing or changing Next.js code, read the guide for the installed version in
+`node_modules/next/dist/docs/` instead of relying on memory; the APIs and file
+conventions differ between versions. This text is maintained by hand: the template
+sets `agentRules: false`, so `next dev` never writes its own block into this file,
+and a managed Next.js block found here fails the typecheck until it is migrated
+explicitly.
+
 ## Planning bootstrap limits
 
 No test suite or development command facade exists at this stage. Validate planning artifacts

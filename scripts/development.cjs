@@ -2,11 +2,13 @@
 "use strict";
 // Routine development commands behind `pnpm run <script>`. The definitions below are the single
 // source of the package.json scripts of both the generator and generated applications.
-const { existsSync, readFileSync, readdirSync } = require("node:fs");
-const { join, relative, resolve, sep } = require("node:path");
+const { existsSync, readdirSync } = require("node:fs");
+const nodePath = require("node:path");
 const { UsageError, parseArgs } = require("./core/args.cjs");
 const { runLogged } = require("./core/process.cjs");
 const { gateErrors, readRole } = require("./core/toolchain.cjs");
+const { FORMAT_GLOBS, managedAgentBlockErrors } = require("./core/quality.cjs");
+const { isObject, readObject } = require("./core/json.cjs");
 const { checkLock } = require("./core/transaction.cjs");
 
 /**
@@ -16,12 +18,12 @@ const { checkLock } = require("./core/transaction.cjs");
  * @typedef {(args: readonly string[], context: Context) => number} Handler
  */
 
-const ROLES = /** @type {const} */ (["generator", "application"]);
 const INTEGRATION_SCENARIOS = /** @type {Record<string, string>} */ ({
   dependencies: "tests/integration/dependencies.test.ts",
   toolchain: "tests/integration/toolchain.test.ts",
   "rendered-app-install": "tests/integration/rendered-app-install.test.ts",
   "no-python": "tests/integration/no-python.test.ts",
+  "static-policy": "tests/integration/static-policy.test.ts",
 });
 
 /** @param {string} owner @param {string} what @returns {Handler} */
@@ -39,10 +41,11 @@ function noArgs(args) {
 
 /** @param {string} root @param {string} pkg @param {string} bin @returns {string} */
 function packageBin(root, pkg, bin) {
-  const dir = join(root, "node_modules", pkg);
-  const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
-  const rel = typeof manifest.bin === "string" ? manifest.bin : manifest.bin[bin];
-  return join(dir, rel);
+  const dir = nodePath.join(root, "node_modules", pkg);
+  const { bin: bins } = readObject(nodePath.join(dir, "package.json"));
+  const rel = typeof bins === "string" ? bins : isObject(bins) ? bins[bin] : undefined;
+  if (typeof rel !== "string") throw new Error(`${pkg} does not provide the ${bin} executable`);
+  return nodePath.join(dir, rel);
 }
 
 /** @param {Context} context @param {string} pkg @param {string} bin @param {string[]} args */
@@ -60,12 +63,12 @@ function runNodeTool({ root, io }, pkg, bin, args) {
  */
 function testOneArgs(args, root) {
   const flags = parseArgs(args, { test: { required: true }, name: {} });
-  const path = resolve(root, flags.test);
-  const rel = relative(root, path);
-  if (rel.startsWith("..") || !rel.startsWith(`tests${sep}`) || !/\.test\.ts$/.test(rel) || !existsSync(path)) {
+  const path = nodePath.resolve(root, flags.test);
+  const rel = nodePath.relative(root, path);
+  if (rel.startsWith("..") || !rel.startsWith(`tests${nodePath.sep}`) || !/\.test\.ts$/.test(rel) || !existsSync(path)) {
     throw new UsageError(`--test must name an existing *.test.ts file under tests/ (got ${flags.test})`);
   }
-  const selected = ["run", rel.split(sep).join("/")];
+  const selected = ["run", rel.split(nodePath.sep).join("/")];
   if (flags.name !== undefined) selected.push("-t", flags.name.replace(/[.*+?^${}()|[\]\\\-/]/g, "\\$&"));
   return selected;
 }
@@ -78,16 +81,74 @@ function testOne(args, context) {
 /** @type {Handler} */
 function testIntegration(args, context) {
   const { scenario } = parseArgs(args, { scenario: { values: Object.keys(INTEGRATION_SCENARIOS) } });
-  const files = scenario === undefined
-    ? readdirSync(join(context.root, "tests", "integration")).filter((name) => name.endsWith(".test.ts")).sort().map((name) => `tests/integration/${name}`)
-    : [INTEGRATION_SCENARIOS[scenario]];
+  const files =
+    scenario === undefined
+      ? readdirSync(nodePath.join(context.root, "tests", "integration"))
+          .filter((name) => name.endsWith(".test.ts"))
+          .sort()
+          .map((name) => `tests/integration/${name}`)
+      : [INTEGRATION_SCENARIOS[scenario] ?? ""];
   return runNodeTool(context, "vitest", "vitest", ["run", ...files]);
+}
+
+/**
+ * Runs the tools in order and stops at the first failure.
+ * @param {Context} context
+ * @param {[pkg: string, bin: string, args: string[]][]} steps
+ * @returns {number}
+ */
+function runSteps(context, steps) {
+  for (const [pkg, bin, args] of steps) {
+    const status = runNodeTool(context, pkg, bin, args);
+    if (status !== 0) return status;
+  }
+  return 0;
 }
 
 /** @type {Handler} */
 function typecheckGenerator(args, context) {
   noArgs(args);
-  return runNodeTool(context, "typescript", "tsc", ["--noEmit", "-p", "tsconfig.json"]);
+  return runSteps(context, [["typescript", "tsc", ["--noEmit", "-p", "tsconfig.json"]]]);
+}
+
+/** @type {Handler} */
+function typecheckApplication(args, context) {
+  noArgs(args);
+  const blocks = managedAgentBlockErrors(context.root);
+  if (blocks.length > 0) {
+    context.io.stderr(`${blocks.join("\n")}\n`);
+    return 1;
+  }
+  // Route types are generated first so a checkout without .next or next-env.d.ts type-checks.
+  return runSteps(context, [
+    ["next", "next", ["typegen"]],
+    ["typescript", "tsc", ["--noEmit", "-p", "tsconfig.json"]],
+    ["typescript", "tsc", ["--noEmit", "-p", "tsconfig.tooling.json"]],
+  ]);
+}
+
+/** @type {Handler} */
+function format(args, context) {
+  noArgs(args);
+  return runSteps(context, [["prettier", "prettier", ["--write", "--log-level=warn", ...FORMAT_GLOBS]]]);
+}
+
+/** @type {Handler} */
+function formatCheck(args, context) {
+  noArgs(args);
+  return runSteps(context, [["prettier", "prettier", ["--check", "--log-level=warn", ...FORMAT_GLOBS]]]);
+}
+
+/** @type {Handler} */
+function lint(args, context) {
+  noArgs(args);
+  return runSteps(context, [["eslint", "eslint", ["--max-warnings=0", "."]]]);
+}
+
+/** @type {Handler} */
+function lintFix(args, context) {
+  noArgs(args);
+  return runSteps(context, [["eslint", "eslint", ["--max-warnings=0", "--fix", "."]]]);
 }
 
 /** @type {Handler} */
@@ -101,9 +162,9 @@ function check(args, context) {
     failures.push("lock");
   }
   const gates = /** @type {[string, Handler][]} */ ([
-    ["format", unavailable("U4", "format check")],
-    ["lint", unavailable("U4", "lint")],
-    ["typecheck", COMMANDS.typecheck.handlers[readRole(context.root)] ?? unavailable("U4", "typecheck")],
+    ["format", formatCheck],
+    ["lint", lint],
+    ["typecheck", readRole(context.root) === "application" ? typecheckApplication : typecheckGenerator],
     ["unit", unavailable("U5", "unit tests with coverage")],
   ]);
   for (const [name, gate] of gates) {
@@ -114,21 +175,18 @@ function check(args, context) {
   return failures.length > 0 ? 1 : 0;
 }
 
-/** @type {Handler} */
-function templateCreate(args, { cwd, io }) {
-  const flags = parseArgs(args, { name: { required: true }, owner: { required: true }, dest: { required: true } });
-  const render = require("./template/render.cjs");
-  const { manifest, bases } = render.defaultInputs();
-  const { files, digest } = render.renderTree({ manifest, bases, answers: { name: flags.name, owner: flags.owner } });
-  render.writeTree(files, resolve(cwd, flags.dest));
-  io.stdout(`${JSON.stringify({ files: files.length, digest })}\n`);
-  return 0;
-}
-
-/** @type {Handler} */
-function seedRefresh(args, { root, io }) {
-  noArgs(args);
-  return require("./template/seed.cjs").refreshSeed({ root, io });
+/**
+ * Generator-only commands live under scripts/template, which generated applications do not receive,
+ * so the module is loaded by a computed path only when the command runs.
+ * @param {"templateCreate" | "seedRefresh"} name
+ * @returns {Handler}
+ */
+function generatorCommand(name) {
+  return (args, context) => {
+    /** @type {unknown} */
+    const commands = require(nodePath.join(__dirname, "template", "commands.cjs"));
+    return /** @type {Record<typeof name, Handler>} */ (commands)[name](args, context);
+  };
 }
 
 /**
@@ -138,17 +196,22 @@ function seedRefresh(args, { root, io }) {
  */
 const COMMANDS = {
   check: { script: "node scripts/development.cjs check", handlers: { generator: check, application: check } },
-  typecheck: { script: "node scripts/development.cjs typecheck", handlers: { generator: typecheckGenerator, application: unavailable("U4", "application typecheck") } },
-  format: { script: "node scripts/development.cjs format", handlers: { generator: unavailable("U4", "format"), application: unavailable("U4", "format") } },
-  "lint:fix": { script: "node scripts/development.cjs lint:fix", handlers: { generator: unavailable("U4", "lint:fix"), application: unavailable("U4", "lint:fix") } },
+  typecheck: { script: "node scripts/development.cjs typecheck", handlers: { generator: typecheckGenerator, application: typecheckApplication } },
+  format: { script: "node scripts/development.cjs format", handlers: { generator: format, application: format } },
+  "format:check": { script: "node scripts/development.cjs format:check", handlers: { generator: formatCheck, application: formatCheck } },
+  lint: { script: "node scripts/development.cjs lint", handlers: { generator: lint, application: lint } },
+  "lint:fix": { script: "node scripts/development.cjs lint:fix", handlers: { generator: lintFix, application: lintFix } },
   "test:one": { script: "node scripts/development.cjs test:one", handlers: { generator: testOne, application: testOne } },
   "test:integration": { script: "node scripts/development.cjs test:integration", handlers: { generator: testIntegration } },
-  "test:permissions": { script: "node scripts/development.cjs test:permissions", handlers: { generator: unavailable("U6", "test:permissions"), application: unavailable("U6", "test:permissions") } },
+  "test:permissions": {
+    script: "node scripts/development.cjs test:permissions",
+    handlers: { generator: unavailable("U6", "test:permissions"), application: unavailable("U6", "test:permissions") },
+  },
   "deps:add": { script: "node scripts/dependencies.cjs add", handlers: {} },
   "deps:remove": { script: "node scripts/dependencies.cjs remove", handlers: {} },
   "deps:upgrade": { script: "node scripts/dependencies.cjs upgrade", handlers: {} },
-  "template:create": { script: "node scripts/development.cjs template:create", handlers: { generator: templateCreate } },
-  "template:seed:refresh": { script: "node scripts/development.cjs template:seed:refresh", handlers: { generator: seedRefresh } },
+  "template:create": { script: "node scripts/development.cjs template:create", handlers: { generator: generatorCommand("templateCreate") } },
+  "template:seed:refresh": { script: "node scripts/development.cjs template:seed:refresh", handlers: { generator: generatorCommand("seedRefresh") } },
 };
 const EXTERNAL = new Set(["deps:add", "deps:remove", "deps:upgrade"]);
 
@@ -159,8 +222,7 @@ const EXTERNAL = new Set(["deps:add", "deps:remove", "deps:upgrade"]);
  */
 function scriptsFor(role) {
   const scripts = /** @type {Record<string, string>} */ ({});
-  for (const name of Object.keys(COMMANDS).sort()) {
-    const { script, handlers } = COMMANDS[name];
+  for (const [name, { script, handlers }] of Object.entries(COMMANDS).sort(([a], [b]) => (a < b ? -1 : 1))) {
     if (EXTERNAL.has(name) || handlers[role]) scripts[name] = script;
   }
   return scripts;
@@ -172,7 +234,7 @@ function scriptsFor(role) {
  * @returns {number}
  */
 function main(argv, options = {}) {
-  const root = options.root ?? resolve(__dirname, "..");
+  const root = options.root ?? nodePath.resolve(__dirname, "..");
   const io = options.io ?? { stdout: (text) => process.stdout.write(text), stderr: (text) => process.stderr.write(text) };
   const [name, ...args] = argv;
   const command = name !== undefined && Object.hasOwn(COMMANDS, name) && !EXTERNAL.has(name) ? COMMANDS[name] : null;
@@ -183,7 +245,7 @@ function main(argv, options = {}) {
   const role = readRole(root);
   const handler = command.handlers[role];
   if (!handler) {
-    io.stderr(`${name} is not part of ${role} projects\n`);
+    io.stderr(`${name ?? ""} is not part of ${role} projects\n`);
     return 2;
   }
   try {

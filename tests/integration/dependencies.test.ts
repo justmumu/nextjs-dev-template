@@ -1,9 +1,26 @@
 import { spawnSync } from "node:child_process";
-import { chmodSync, cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, readlinkSync, realpathSync, rmSync, statSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  cpSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  readlinkSync,
+  realpathSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { afterAll, afterEach, describe, expect, test } from "vitest";
+import { parseJson, type EditableManifest, type Versions } from "../support/json.ts";
 
 const require = createRequire(import.meta.url);
 const root = resolve(import.meta.dirname, "../..");
@@ -15,7 +32,9 @@ const dependencies = require("../../scripts/dependencies.cjs") as typeof import(
 const development = require("../../scripts/development.cjs") as typeof import("../../scripts/development.cjs");
 
 const scratch = realpathSync(mkdtempSync(join(tmpdir(), "dependencies-integration-")));
-afterAll(() => rmSync(scratch, { recursive: true, force: true }));
+afterAll(() => {
+  rmSync(scratch, { recursive: true, force: true });
+});
 
 const POLICY = "strictDepBuilds: true\nverifyDepsBeforeRun: error\nenablePrePostScripts: false\nskills:\n  dirs: []\n";
 // A registry dependency for lock and repair scenarios: the disposable lock copy holds metadata only,
@@ -23,7 +42,7 @@ const POLICY = "strictDepBuilds: true\nverifyDepsBeforeRun: error\nenablePrePost
 const REGISTRY = { typescript: "6.0.3" };
 const ENV_KEYS = ["FIXTURE_PROJECT", "FIXTURE_MODE", "FIXTURE_FAIL", "pnpm_config_store_dir"];
 afterEach(() => {
-  for (const key of ENV_KEYS) delete process.env[key];
+  for (const key of ENV_KEYS) Reflect.deleteProperty(process.env, key);
 });
 
 function sink() {
@@ -42,7 +61,13 @@ function pnpm(cwd: string, args: string[]) {
 }
 
 function git(cwd: string, args: string[]) {
-  const env = { ...process.env, GIT_AUTHOR_NAME: "fixture", GIT_AUTHOR_EMAIL: "fixture@users.noreply.github.com", GIT_COMMITTER_NAME: "fixture", GIT_COMMITTER_EMAIL: "fixture@users.noreply.github.com" };
+  const env = {
+    ...process.env,
+    GIT_AUTHOR_NAME: "fixture",
+    GIT_AUTHOR_EMAIL: "fixture@users.noreply.github.com",
+    GIT_COMMITTER_NAME: "fixture",
+    GIT_COMMITTER_EMAIL: "fixture@users.noreply.github.com",
+  };
   const result = spawnSync("git", args, { cwd, env, encoding: "utf8" });
   expect(result.status, result.stderr).toBe(0);
 }
@@ -82,7 +107,9 @@ function makeProject({ deps = {}, allow = {}, install = true }: Options = {}) {
     devDependencies: deps,
   };
   writeFileSync(join(dir, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`);
-  const builds = Object.entries(allow).map(([name, value]) => `  "${name}@file:pkgs/${name}": ${value}\n`).join("");
+  const builds = Object.entries(allow)
+    .map(([name, value]) => `  "${name}@file:pkgs/${name}": ${value}\n`)
+    .join("");
   writeFileSync(join(dir, "pnpm-workspace.yaml"), `${POLICY}allowBuilds:\n${builds || "  placeholder-free: false\n"}`);
   if (install) {
     const result = pnpm(dir, ["install", "--prefer-offline"]);
@@ -91,7 +118,11 @@ function makeProject({ deps = {}, allow = {}, install = true }: Options = {}) {
   return dir;
 }
 
-const fileSpec = (name: string) => ({ lockCopy: ["pkgs"], steps: [["add", "--save-dev", "--save-exact", `file:./pkgs/${name}`]], plan: { action: "add" as const, group: "dev" as const, name, valueOk: (value: string) => value.startsWith("file:") } });
+const fileSpec = (name: string) => ({
+  lockCopy: ["pkgs"],
+  steps: [["add", "--save-dev", "--save-exact", `file:./pkgs/${name}`]],
+  plan: { action: "add" as const, group: "dev" as const, name, valueOk: (value: string) => value.startsWith("file:") },
+});
 
 describe("lock consistency gate", () => {
   test("a matching lock passes and no byte of the active tree moves", () => {
@@ -105,7 +136,7 @@ describe("lock consistency gate", () => {
 
   test("a stale or missing lock fails nonzero and changes nothing", () => {
     const dir = makeProject({ deps: REGISTRY });
-    const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+    const manifest = parseJson<EditableManifest>(readFileSync(join(dir, "package.json"), "utf8"));
     manifest.devDependencies["needs-build"] = "file:./pkgs/needs-build";
     writeFileSync(join(dir, "package.json"), JSON.stringify(manifest, null, 2));
     let before = tree(dir);
@@ -120,14 +151,15 @@ describe("lock consistency gate", () => {
     expect(existsSync(join(dir, "pnpm-lock.yaml"))).toBe(false);
   });
 
-  test("the generator's own check reports the lock as ok and the unowned gates as failures, touching nothing tracked", () => {
+  test("the generator's own check passes the lock, format, lint and typecheck and fails only the unowned unit gate, touching nothing tracked", () => {
     const before = transaction.snapshot(root);
     const out = sink();
     expect(development.main(["check"], { root, io: out.io })).toBe(1);
     expect(transaction.changedPaths(before, transaction.snapshot(root))).toEqual([]);
     expect(out.out.join("")).toContain("lock: ok");
-    expect(out.err.join("")).toMatch(/format check is not available yet/);
-    expect(out.err.join("")).toMatch(/check failed: format, lint, unit/);
+    for (const gate of ["lock", "format", "lint", "typecheck"]) expect(out.out.join("")).toContain(`${gate}: ok`);
+    expect(out.err.join("")).toMatch(/unit tests with coverage is not available yet/);
+    expect(out.err.join("")).toMatch(/check failed: unit\n$/);
   });
 });
 
@@ -140,9 +172,11 @@ describe("dependency add transaction with real pnpm and local fixture packages",
     expect(result.violations).toEqual([]);
     expect(result.ok).toBe(true);
     const after = tree(dir);
-    const changed = Object.keys(after).filter((path) => after[path] !== before[path]).sort();
+    const changed = Object.keys(after)
+      .filter((path) => after[path] !== before[path])
+      .sort();
     expect(changed).toEqual(["package.json", "pnpm-lock.yaml"]);
-    expect(JSON.parse(after["package.json"]).devDependencies).toEqual({ "plain-lib": "file:pkgs/plain-lib" });
+    expect(parseJson<EditableManifest>(after["package.json"] ?? "").devDependencies).toEqual({ "plain-lib": "file:pkgs/plain-lib" });
     expect(installState.dirtyReason(dir)).toBeNull();
   });
 
@@ -155,7 +189,7 @@ describe("dependency add transaction with real pnpm and local fixture packages",
     };
   }
   const rewriteCheck = (dir: string) => () => {
-    const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+    const manifest = parseJson<EditableManifest>(readFileSync(join(dir, "package.json"), "utf8"));
     manifest.scripts.check = "node evil.cjs";
     writeFileSync(join(dir, "package.json"), JSON.stringify(manifest, null, 2));
   };
@@ -195,7 +229,9 @@ describe("dependency add transaction with real pnpm and local fixture packages",
     const before = tree(dir);
     Object.assign(process.env, { FIXTURE_PROJECT: dir, FIXTURE_MODE: mode });
     const { steps, plan, lockCopy } = fileSpec("lifecycle-mutator");
-    const append = () => writeFileSync(join(dir, "pnpm-workspace.yaml"), `${readFileSync(join(dir, "pnpm-workspace.yaml"), "utf8")}  other-pkg: set this to true or false\n`);
+    const append = () => {
+      writeFileSync(join(dir, "pnpm-workspace.yaml"), `${readFileSync(join(dir, "pnpm-workspace.yaml"), "utf8")}  other-pkg: set this to true or false\n`);
+    };
     const runner = mode === "placeholder" ? withLateWrite(dir, append) : undefined;
     const result = transaction.runTransaction({ root: dir, steps, plan, lockCopy, runner });
     expect(result.ok).toBe(false);
@@ -281,7 +317,7 @@ describe("repair", () => {
 
   test("a stale lock is not repaired by regenerating it and nothing is removed", () => {
     const dir = makeProject({ deps: REGISTRY });
-    const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+    const manifest = parseJson<EditableManifest>(readFileSync(join(dir, "package.json"), "utf8"));
     manifest.devDependencies["needs-build"] = "file:./pkgs/needs-build";
     writeFileSync(join(dir, "package.json"), JSON.stringify(manifest, null, 2));
     const before = tree(dir);
@@ -317,8 +353,8 @@ describe("deps-lock after an approved manifest edit", () => {
     git(dir, ["commit", "-q", "-m", "baseline"]);
     return dir;
   }
-  function approveEdit(dir: string, change: (manifest: any) => void = (manifest) => (manifest.devDependencies.typescript = "6.0.3")) {
-    const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+  function approveEdit(dir: string, change: (manifest: EditableManifest) => void = (manifest) => (manifest.devDependencies.typescript = "6.0.3")) {
+    const manifest = parseJson<EditableManifest>(readFileSync(join(dir, "package.json"), "utf8"));
     change(manifest);
     writeFileSync(join(dir, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`);
   }
@@ -339,10 +375,10 @@ describe("deps-lock after an approved manifest edit", () => {
   });
 
   test.each([
-    ["a script", (manifest: any) => (manifest.scripts.check = "node evil.cjs")],
-    ["an engine", (manifest: any) => (manifest.engines.node = "*")],
-    ["a non-exact dependency", (manifest: any) => (manifest.devDependencies.typescript = "^6.0.0")],
-    ["a file dependency", (manifest: any) => (manifest.devDependencies.typescript = "file:./pkgs/plain-lib")],
+    ["a script", (manifest: EditableManifest) => (manifest.scripts.check = "node evil.cjs")],
+    ["an engine", (manifest: EditableManifest) => (manifest.engines.node = "*")],
+    ["a non-exact dependency", (manifest: EditableManifest) => (manifest.devDependencies.typescript = "^6.0.0")],
+    ["a file dependency", (manifest: EditableManifest) => (manifest.devDependencies.typescript = "file:./pkgs/plain-lib")],
   ])("%s is outside the approved boundary", (_label, change) => {
     const dir = committed();
     approveEdit(dir, change);
@@ -466,7 +502,18 @@ describe("transaction covers the whole policy-defining surface", () => {
 
   test("the whole inventory is one shared source that both roles' static configs come from", () => {
     const inventory = require("../../scripts/core/protected.cjs") as typeof import("../../scripts/core/protected.cjs");
-    for (const path of ["AGENTS.md", "CLAUDE.md", ".pnpmfile.mjs", "tsconfig.json", "next.config.ts", "eslint.config.mjs", ".prettierrc.json", "vitest.config.ts", "playwright.config.ts", "pnpm-workspace.yaml"]) {
+    for (const path of [
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".pnpmfile.mjs",
+      "tsconfig.json",
+      "next.config.ts",
+      "eslint.config.mjs",
+      ".prettierrc.json",
+      "vitest.config.ts",
+      "playwright.config.ts",
+      "pnpm-workspace.yaml",
+    ]) {
       expect(inventory.isProtectedFile(path), path).toBe(true);
     }
     expect(inventory.isProtectedFile("src/app/page.tsx")).toBe(false);
@@ -480,7 +527,14 @@ describe("transaction covers the whole policy-defining surface", () => {
     const dir = makeProject();
     mkdirSync(join(dir, "src"));
     writeFileSync(join(dir, "src/page.tsx"), "a\n");
-    const result = transaction.runTransaction({ root: dir, steps: [["install"]], plan: { action: "none" }, runner: succeeds(() => writeFileSync(join(dir, "src/page.tsx"), "b\n")) });
+    const result = transaction.runTransaction({
+      root: dir,
+      steps: [["install"]],
+      plan: { action: "none" },
+      runner: succeeds(() => {
+        writeFileSync(join(dir, "src/page.tsx"), "b\n");
+      }),
+    });
     expect(result.ok).toBe(true);
   });
 
@@ -580,7 +634,7 @@ describe("late edits to the requested package are caught by the frozen lock", ()
       steps: [["noop"]],
       plan: { action: "add", group: "dev", name: "typescript", version: "6.0.3" },
       runner: succeeds(() => {
-        const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+        const manifest = parseJson<EditableManifest>(readFileSync(join(dir, "package.json"), "utf8"));
         manifest.devDependencies.typescript = "6.0.3";
         writeFileSync(join(dir, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`);
       }),
@@ -603,7 +657,7 @@ describe("deps-lock retry after a failed relock", () => {
 
   test("failure keeps the drift, a retry of the same approved relock succeeds, and normal pnpm run works with the manifest bytes preserved", () => {
     const dir = committedEmpty();
-    const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+    const manifest = parseJson<EditableManifest>(readFileSync(join(dir, "package.json"), "utf8"));
     manifest.devDependencies.typescript = "6.0.3";
     writeFileSync(join(dir, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`);
     const approvedBytes = readFileSync(join(dir, "package.json"), "utf8");
@@ -634,7 +688,7 @@ describe("deps-lock retry after a failed relock", () => {
 
   test("a retry still refuses a policy edit made after the failure and keeps the drift", () => {
     const dir = committedEmpty();
-    const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+    const manifest = parseJson<EditableManifest>(readFileSync(join(dir, "package.json"), "utf8"));
     manifest.devDependencies.typescript = "6.0.3";
     writeFileSync(join(dir, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`);
     const notAStore = join(scratch, `not-a-store-${counter++}`);
@@ -695,29 +749,27 @@ describe("guard seam fails closed", () => {
 describe("reviewed tool pins versus ordinary dependencies", () => {
   function generatorProject() {
     const dir = makeProject({ install: false });
-    const versions = JSON.parse(readFileSync(join(root, "tooling/versions.json"), "utf8"));
+    const versions = parseJson<Versions>(readFileSync(join(root, "tooling/versions.json"), "utf8"));
     cpSync(join(root, "tooling/versions.json"), join(dir, "tooling/versions.json"));
     writeFileSync(join(dir, "tooling/project-role.json"), JSON.stringify({ role: "generator" }));
-    const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+    const manifest = parseJson<EditableManifest>(readFileSync(join(dir, "package.json"), "utf8"));
     manifest.devDependencies = versions.root.devDependencies;
     writeFileSync(join(dir, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`);
     return dir;
   }
 
-  test.each([
-    [["add", "--package=typescript@6.0.2", "--group=dev"]],
-    [["remove", "--package=typescript", "--group=dev"]],
-    [["upgrade", "--package=vitest"]],
-  ])("%j is refused before anything runs, because the pin is a reviewed tooling change", (argv) => {
-    const dir = generatorProject();
-    const before = tree(dir);
-    const out = sink();
-    expect(dependencies.main(argv, { root: dir, io: out.io })).toBe(1);
-    expect(out.err.join("")).toContain("reviewed tool pin");
-    expect(tree(dir)).toEqual(before);
-    expect(installState.dirtyReason(dir)).toBeNull();
-  });
-
+  test.each([[["add", "--package=typescript@6.0.2", "--group=dev"]], [["remove", "--package=typescript", "--group=dev"]], [["upgrade", "--package=vitest"]]])(
+    "%j is refused before anything runs, because the pin is a reviewed tooling change",
+    (argv) => {
+      const dir = generatorProject();
+      const before = tree(dir);
+      const out = sink();
+      expect(dependencies.main(argv, { root: dir, io: out.io })).toBe(1);
+      expect(out.err.join("")).toContain("reviewed tool pin");
+      expect(tree(dir)).toEqual(before);
+      expect(installState.dirtyReason(dir)).toBeNull();
+    },
+  );
 
   test("an application has no reviewed pins, so its own dependencies are never blocked by the generator's", () => {
     const dir = makeProject({ install: false });
@@ -737,7 +789,8 @@ describe("rollback ownership: only recorded protected paths are ever removed", (
     act();
     return { status: 1, stdout: "", stderr: "" };
   };
-  const rollback = (dir: string, act: () => void) => transaction.runTransaction({ root: dir, steps: [["install"]], plan: { action: "none" }, runner: failing(act) });
+  const rollback = (dir: string, act: () => void) =>
+    transaction.runTransaction({ root: dir, steps: [["install"]], plan: { action: "none" }, runner: failing(act) });
 
   test("a shadow override added inside ordinary source goes; the source directory and its files stay", () => {
     const dir = bare();
@@ -819,10 +872,10 @@ describe("rollback ownership: only recorded protected paths are ever removed", (
 describe("deps:upgrade without a name is the whole set or nothing", () => {
   test("in the generator it refuses before running pnpm and names the pins and the reviewed path", () => {
     const dir = makeProject({ install: false });
-    const versions = JSON.parse(readFileSync(join(root, "tooling/versions.json"), "utf8"));
+    const versions = parseJson<Versions>(readFileSync(join(root, "tooling/versions.json"), "utf8"));
     cpSync(join(root, "tooling/versions.json"), join(dir, "tooling/versions.json"));
     writeFileSync(join(dir, "tooling/project-role.json"), JSON.stringify({ role: "generator" }));
-    const manifest = JSON.parse(readFileSync(join(dir, "package.json"), "utf8"));
+    const manifest = parseJson<EditableManifest>(readFileSync(join(dir, "package.json"), "utf8"));
     manifest.devDependencies = { ...versions.root.devDependencies, "left-pad": "1.3.0" };
     writeFileSync(join(dir, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`);
     const before = tree(dir);

@@ -4,10 +4,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createRequire } from "node:module";
 import { afterAll, describe, expect, test } from "vitest";
+import { parseJson, type Listed } from "../support/json.ts";
 
 const render = createRequire(import.meta.url)("../../scripts/template/render.cjs") as typeof import("../../scripts/template/render.cjs");
 const scratch = realpathSync(mkdtempSync(join(tmpdir(), "rendered-install-")));
-afterAll(() => rmSync(scratch, { recursive: true, force: true }));
+afterAll(() => {
+  rmSync(scratch, { recursive: true, force: true });
+});
 
 function pnpm(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
   return spawnSync("pnpm", args, { cwd, env, encoding: "utf8", timeout: 170_000 });
@@ -26,10 +29,10 @@ describe("rendered seeds install frozen against the reviewed lock", () => {
       const install = pnpm(dest, ["install", "--frozen-lockfile", "--config.strict-peer-dependencies=true", "--config.engine-strict=true"]);
       expect(install.stderr + install.stdout).not.toMatch(/ERR_PNPM|ignored build/i);
       expect(install.status).toBe(0);
-      const listed = JSON.parse(pnpm(dest, ["list", "--depth", "-1", "--json"]).stdout);
+      const listed = parseJson<Listed[]>(pnpm(dest, ["list", "--depth", "-1", "--json"]).stdout);
       expect(listed).toHaveLength(1);
-      expect(listed[0].path).toBe(dest);
-      expect(listed[0].name).toBe(answers.name);
+      expect(listed[0]?.path).toBe(dest);
+      expect(listed[0]?.name).toBe(answers.name);
     });
   }
 });
@@ -42,7 +45,13 @@ describe("cold store", () => {
     render.writeTree(files, dest);
     const cold = join(scratch, "cold");
     mkdirSync(cold);
-    const env = { ...process.env, XDG_CACHE_HOME: join(cold, "cache"), XDG_DATA_HOME: join(cold, "data"), XDG_STATE_HOME: join(cold, "state"), pnpm_config_store_dir: join(cold, "store") };
+    const env = {
+      ...process.env,
+      XDG_CACHE_HOME: join(cold, "cache"),
+      XDG_DATA_HOME: join(cold, "data"),
+      XDG_STATE_HOME: join(cold, "state"),
+      pnpm_config_store_dir: join(cold, "store"),
+    };
     const install = pnpm(dest, ["install", "--frozen-lockfile", "--config.strict-peer-dependencies=true", "--config.engine-strict=true"], env);
     expect(install.stderr + install.stdout).not.toMatch(/ERR_PNPM|ignored build|minimumReleaseAge/i);
     expect(install.status).toBe(0);

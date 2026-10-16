@@ -176,6 +176,9 @@ importers:
         specifier: 19.3.0
         version: 19.3.0(react@19.3.0)
     devDependencies:
+      '@eslint/js':
+        specifier: 9.39.5
+        version: 9.39.5
       '@playwright/test':
         specifier: 1.64.1
         version: 1.64.1
@@ -197,9 +200,18 @@ importers:
       eslint-config-next:
         specifier: 16.4.1
         version: 16.4.1(@typescript-eslint/parser@8.71.2(eslint@9.39.5(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3))(eslint@9.39.5(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)
+      globals:
+        specifier: 16.4.0
+        version: 16.4.0
+      prettier:
+        specifier: 3.9.10
+        version: 3.9.10
       typescript:
         specifier: 6.0.3
         version: 6.0.3
+      typescript-eslint:
+        specifier: 8.71.2
+        version: 8.71.2(eslint@9.39.5(supports-color@7.2.0))(supports-color@7.2.0)(typescript@6.0.3)
       vitest:
         specifier: 5.0.5
         version: 5.0.5(@types/node@24.19.2)(@vitest/coverage-v8@5.0.5)(vite@8.3.4(@types/node@24.19.2))
@@ -1955,6 +1967,11 @@ packages:
   prelude-ls@1.2.1:
     resolution: {integrity: sha512-vkcDPrRZo1QZLbn5RLGPpg/WmIQ65qoWWhcGKf/b5eplkkarX0m9z8ppCat4mlOqUsWpyNuYgO3VRyrYHSzX5g==}
     engines: {node: '>= 0.8.0'}
+
+  prettier@3.9.10:
+    resolution: {integrity: sha512-skGHTH1Yb9QvaTC4hWnRTzEYtCpApF0UMBPz+t/0ZPzP8ihefo/btKd+QA7pUE0fEwA1SbS/NmhyEcstdXOIdA==}
+    engines: {node: '>=14'}
+    hasBin: true
 
   prop-types@15.8.1:
     resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
@@ -4154,6 +4171,8 @@ snapshots:
       source-map-js: 1.2.2
 
   prelude-ls@1.2.1: {}
+
+  prettier@3.9.10: {}
 
   prop-types@15.8.1:
     dependencies:

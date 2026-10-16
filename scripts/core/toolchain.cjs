@@ -3,31 +3,34 @@
 // Dependency-free toolchain facts and preflight. Must keep working when node_modules is
 // missing or broken, so it uses only Node built-ins.
 const { accessSync, constants, readFileSync, statSync } = require("node:fs");
-const { delimiter, join } = require("node:path");
+const nodePath = require("node:path");
 const { dirtyReason, recoveryCommand } = require("./install-state.cjs");
+const { readObject } = require("./json.cjs");
 const { run } = require("./process.cjs");
 
-/** @param {string} path @returns {any} */
+/** @typedef {{ forbiddenTools: string[], install: { frozenLockfile: boolean, dependencyBuildScripts: string }, commitIdentity: { emailPattern: string } }} Policy */
+
+/** @param {string} path @returns {import("./json.cjs").JsonObject} */
 function readJson(path) {
-  return JSON.parse(readFileSync(path, "utf8"));
+  return readObject(path);
 }
 
 /** @param {string} dir @returns {{ node: string, pnpm: string }} */
 function readExpected(dir) {
-  const manifest = readJson(join(dir, "package.json"));
-  const match = /^pnpm@(\d+\.\d+\.\d+)$/.exec(manifest.packageManager ?? "");
+  const manifest = readJson(nodePath.join(dir, "package.json"));
+  const match = /^pnpm@(\d+\.\d+\.\d+)$/.exec(typeof manifest.packageManager === "string" ? manifest.packageManager : "");
   if (!match) throw new Error("package.json packageManager must name an exact pnpm version");
-  return { node: readFileSync(join(dir, ".node-version"), "utf8").trim(), pnpm: match[1] };
+  return { node: readFileSync(nodePath.join(dir, ".node-version"), "utf8").trim(), pnpm: match[1] ?? "" };
 }
 
-/** @param {string} dir */
+/** @param {string} dir @returns {Policy} */
 function readPolicy(dir) {
-  return readJson(join(dir, "tooling", "policy.json"));
+  return /** @type {Policy} */ (readJson(nodePath.join(dir, "tooling", "policy.json")));
 }
 
 /** @param {string} dir @returns {"generator" | "application"} */
 function readRole(dir) {
-  const role = readJson(join(dir, "tooling", "project-role.json")).role;
+  const role = readJson(nodePath.join(dir, "tooling", "project-role.json")).role;
   if (role !== "generator" && role !== "application") throw new Error(`tooling/project-role.json has an unknown role: ${JSON.stringify(role)}`);
   return role;
 }
@@ -44,7 +47,9 @@ function checkEnvironment(actual, expected, detail = "") {
     errors.push(`Node ${expected.node} is required (found ${actual.node}). Install exactly that version.`);
   }
   if (actual.pnpm === null) {
-    errors.push(`pnpm ${expected.pnpm} is required but could not be run without downloading or switching package managers (found none${detail ? `: ${detail}` : ""}). Install exactly that version (for example with Corepack); no runtime downloads it for you.`);
+    errors.push(
+      `pnpm ${expected.pnpm} is required but could not be run without downloading or switching package managers (found none${detail ? `: ${detail}` : ""}). Install exactly that version (for example with Corepack); no runtime downloads it for you.`,
+    );
   } else if (actual.pnpm !== expected.pnpm) {
     errors.push(`pnpm ${expected.pnpm} is required (found ${actual.pnpm}). Install exactly that version.`);
   }
@@ -69,9 +74,9 @@ function commitIdentityErrors(entries, emailPattern) {
 
 /** @param {string} name @param {string} pathValue @returns {string | null} */
 function resolveOnPath(name, pathValue) {
-  for (const dir of pathValue.split(delimiter)) {
+  for (const dir of pathValue.split(nodePath.delimiter)) {
     if (!dir) continue;
-    const candidate = join(dir, name);
+    const candidate = nodePath.join(dir, name);
     try {
       accessSync(candidate, constants.X_OK);
       if (statSync(candidate).isFile()) return candidate;
@@ -95,7 +100,7 @@ const NO_MANAGER_SWITCH = { COREPACK_ENABLE_NETWORK: "0", COREPACK_ENABLE_AUTO_P
 function probePnpm(cwd) {
   const result = run("pnpm", ["--version"], { cwd, env: { ...process.env, ...NO_MANAGER_SWITCH } });
   const version = result.status === 0 ? result.stdout.trim() : null;
-  return { version, detail: version === null ? (result.stderr || result.stdout).trim().split("\n")[0] ?? "" : "" };
+  return { version, detail: version === null ? ((result.stderr || result.stdout).trim().split("\n")[0] ?? "") : "" };
 }
 
 /** @param {string} cwd @returns {string | null} */
@@ -125,4 +130,16 @@ function gateErrors(dir) {
   return errors;
 }
 
-module.exports = { NO_MANAGER_SWITCH, checkEnvironment, commitIdentityErrors, gateErrors, pnpmVersion, preflightErrors, readExpected, readJson, readPolicy, readRole, resolveOnPath };
+module.exports = {
+  NO_MANAGER_SWITCH,
+  checkEnvironment,
+  commitIdentityErrors,
+  gateErrors,
+  pnpmVersion,
+  preflightErrors,
+  readExpected,
+  readJson,
+  readPolicy,
+  readRole,
+  resolveOnPath,
+};

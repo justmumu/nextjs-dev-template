@@ -1,5 +1,6 @@
+// @ts-check
 "use strict";
-const { RenderError } = require("./manifest.cjs");
+const { RenderError, isRecord } = require("./manifest.cjs");
 
 const ANSWER_KEYS = new Set(["name", "description", "owner", "version"]);
 const NAME = /^(?:@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
@@ -7,10 +8,12 @@ const OWNER = /^[A-Za-z0-9](?:[A-Za-z0-9-]{0,38})$/;
 const SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/;
 const DEFAULT_VERSION = "0.0.0";
 
+/** @param {unknown} value @param {string} label @param {number} maxLength @returns {string} */
 function text(value, label, maxLength) {
   if (typeof value !== "string") throw new RenderError(`answer ${label} must be a string`);
-  if (value.length > maxLength) throw new RenderError(`answer ${label} is longer than ${maxLength} characters`);
+  if (value.length > maxLength) throw new RenderError(`answer ${label} is longer than ${String(maxLength)} characters`);
   if (!value.isWellFormed()) throw new RenderError(`answer ${label} is not well-formed Unicode`);
+  // eslint-disable-next-line no-control-regex -- rejecting control characters in untrusted input is the purpose of this pattern
   if (/[\u0000-\u001f\u007f]/.test(value)) throw new RenderError(`answer ${label} contains a control character`);
   return value;
 }
@@ -20,7 +23,7 @@ function text(value, label, maxLength) {
  * @returns {{ name: string, description: string, owner: string | null, version: string }}
  */
 function validateAnswers(raw) {
-  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) throw new RenderError("answers must be an object");
+  if (!isRecord(raw)) throw new RenderError("answers must be an object");
   for (const key of Object.keys(raw)) {
     if (!ANSWER_KEYS.has(key)) throw new RenderError(`unknown answer: ${key}`);
   }

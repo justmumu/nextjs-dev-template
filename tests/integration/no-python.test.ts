@@ -8,7 +8,9 @@ import { afterAll, expect, test } from "vitest";
 const root = resolve(import.meta.dirname, "../..");
 const toolchain = createRequire(import.meta.url)("../../scripts/core/toolchain.cjs") as typeof import("../../scripts/core/toolchain.cjs");
 const scratch = realpathSync(mkdtempSync(join(tmpdir(), "no-python-")));
-afterAll(() => rmSync(scratch, { recursive: true, force: true }));
+afterAll(() => {
+  rmSync(scratch, { recursive: true, force: true });
+});
 
 test("frozen install and vitest work with only node and pnpm on PATH", () => {
   const pnpm = toolchain.resolveOnPath("pnpm", process.env.PATH ?? "");

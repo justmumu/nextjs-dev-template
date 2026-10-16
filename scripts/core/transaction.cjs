@@ -5,10 +5,11 @@
 // manifest mutation (plus the lock) is rolled back to the preimage and the environment is marked dirty.
 const fs = require("node:fs");
 const { tmpdir } = require("node:os");
-const { dirname, join } = require("node:path");
+const nodePath = require("node:path");
 const { clearDirty, markDirty } = require("./install-state.cjs");
 const { manifestViolations } = require("./dependency-policy.cjs");
 const { isProtectedFile, isShadowOverride, isSkippedDir, DIRS } = require("./protected.cjs");
+const { parseObject } = require("./json.cjs");
 const { run } = require("./process.cjs");
 
 const MUTABLE = new Set(["package.json", "pnpm-lock.yaml"]);
@@ -33,9 +34,9 @@ function locate(root) {
 
 /** @param {Location} where @param {string} key @returns {string} */
 function pathOf(where, key) {
-  if (!key.startsWith(GIT_PREFIX) || !where.git) return join(where.root, key);
+  if (!key.startsWith(GIT_PREFIX) || !where.git) return nodePath.join(where.root, key);
   const [kind, ...rest] = key.slice(GIT_PREFIX.length).split("/");
-  return join(kind === "common" ? where.git.common : where.git.dir, ...rest);
+  return nodePath.join(kind === "common" ? where.git.common : where.git.dir, ...rest);
 }
 
 /** @param {unknown} error */
@@ -64,11 +65,12 @@ function walk(path, key, into, select, dirs) {
   }
   if (stat.isDirectory()) {
     dirs.add(key);
+    /** @type {Map<string, Entry>} */
     const here = new Map();
     let any = false;
     for (const child of fs.readdirSync(path).sort()) {
       if (isSkippedDir(child)) continue;
-      any = walk(join(path, child), `${key}/${child}`, here, select, dirs) || any;
+      any = walk(nodePath.join(path, child), `${key}/${child}`, here, select, dirs) || any;
     }
     if (!any && !select(key)) return false;
     into.set(key, { type: "dir" });
@@ -85,20 +87,21 @@ function snapshot(location) {
   const where = typeof location === "string" ? locate(location) : location;
   /** @type {Snapshot} */
   const into = new Map();
+  /** @type {Set<string>} */
   const dirs = new Set();
   into.dirs = dirs;
-  const protectedDir = (/** @type {string} */ key) => DIRS.includes(key.split("/")[0]);
+  const protectedDir = (/** @type {string} */ key) => DIRS.includes(key.split("/")[0] ?? "");
   for (const name of fs.readdirSync(where.root).sort()) {
     if (isSkippedDir(name)) continue;
-    walk(join(where.root, name), name, into, (key) => protectedDir(key) || isProtectedFile(key) || isShadowOverride(key), dirs);
+    walk(nodePath.join(where.root, name), name, into, (key) => protectedDir(key) || isProtectedFile(key) || isShadowOverride(key), dirs);
   }
   if (where.git) {
     const all = () => true;
-    walk(join(where.git.common, "config"), `${GIT_PREFIX}common/config`, into, all, dirs);
-    walk(join(where.git.common, "hooks"), `${GIT_PREFIX}common/hooks`, into, all, dirs);
+    walk(nodePath.join(where.git.common, "config"), `${GIT_PREFIX}common/config`, into, all, dirs);
+    walk(nodePath.join(where.git.common, "hooks"), `${GIT_PREFIX}common/hooks`, into, all, dirs);
     if (where.git.dir !== where.git.common) {
-      walk(join(where.git.dir, "config.worktree"), `${GIT_PREFIX}dir/config.worktree`, into, all, dirs);
-      walk(join(where.git.dir, "hooks"), `${GIT_PREFIX}dir/hooks`, into, all, dirs);
+      walk(nodePath.join(where.git.dir, "config.worktree"), `${GIT_PREFIX}dir/config.worktree`, into, all, dirs);
+      walk(nodePath.join(where.git.dir, "hooks"), `${GIT_PREFIX}dir/hooks`, into, all, dirs);
     }
   }
   return into;
@@ -154,14 +157,17 @@ function restore(where, before) {
             throw error;
           }
         });
-    } else if (current.type === "symlink" || before.get(path)?.type !== current.type) attempt(path, () => fs.unlinkSync(target));
+    } else if (current.type === "symlink" || before.get(path)?.type !== current.type)
+      attempt(path, () => {
+        fs.unlinkSync(target);
+      });
   }
   const current = snapshot(where);
   for (const [path, entry] of [...before].sort(([a], [b]) => (a < b ? -1 : 1))) {
     if (sameEntry(entry, current.get(path))) continue;
     const target = pathOf(where, path);
     attempt(path, () => {
-      fs.mkdirSync(dirname(target), { recursive: true });
+      fs.mkdirSync(nodePath.dirname(target), { recursive: true });
       if (entry.type === "dir") fs.mkdirSync(target, { recursive: true });
       else if (entry.type === "symlink") fs.symlinkSync(entry.target, target);
       else {
@@ -179,7 +185,13 @@ function pnpmRunner(root) {
 }
 
 /** Restores the preimage and marks the environment dirty; a rollback that cannot finish says so in the marker and throws. */
-function rollBack(/** @type {string} */ root, /** @type {Location} */ where, /** @type {Snapshot} */ before, /** @type {string} */ reason, /** @type {string | undefined} */ kind) {
+function rollBack(
+  /** @type {string} */ root,
+  /** @type {Location} */ where,
+  /** @type {Snapshot} */ before,
+  /** @type {string} */ reason,
+  /** @type {string | undefined} */ kind,
+) {
   try {
     restore(where, before);
   } catch (error) {
@@ -202,7 +214,7 @@ function rollBack(/** @type {string} */ root, /** @type {Location} */ where, /**
  * manifest that was edited after pnpm's own write consistent. `kind` is stored with the incomplete-
  * install marker so recovery knows which command can progress; `lockCopy` lists extra relative paths
  * the disposable lock check needs (file: fixtures in tests; real dependencies are registry-only).
- * @param {{ root: string, steps: readonly (readonly string[])[], plan: Plan, runner?: Runner, kind?: string, lockCopy?: readonly string[] }} options
+ * @param {{ root: string, steps: readonly (readonly string[])[], plan: Plan, runner?: Runner | undefined, kind?: string | undefined, lockCopy?: readonly string[] }} options
  * @returns {TransactionResult}
  */
 function runTransaction({ root, steps, plan, runner = pnpmRunner(root), kind, lockCopy = [] }) {
@@ -210,7 +222,7 @@ function runTransaction({ root, steps, plan, runner = pnpmRunner(root), kind, lo
   const before = snapshot(where);
   const preimage = before.get("package.json");
   if (preimage?.type !== "file") throw new Error("package.json is missing");
-  const manifestBefore = JSON.parse(preimage.content.toString("utf8"));
+  const manifestBefore = parseObject(preimage.content.toString("utf8"));
   markDirty(root, "a dependency transaction did not finish", kind);
   let status = 0;
   let output = "";
@@ -228,16 +240,19 @@ function runTransaction({ root, steps, plan, runner = pnpmRunner(root), kind, lo
     throw error;
   }
   const after = snapshot(where);
-  const violations = changedPaths(before, after).filter((path) => !MUTABLE.has(path)).map((path) => `protected path changed: ${path}`);
+  const violations = changedPaths(before, after)
+    .filter((path) => !MUTABLE.has(path))
+    .map((path) => `protected path changed: ${path}`);
   const manifest = after.get("package.json");
   try {
     if (manifest?.type !== "file") throw new Error("package.json is missing");
-    violations.push(...manifestViolations(manifestBefore, JSON.parse(manifest.content.toString("utf8")), plan));
+    violations.push(...manifestViolations(manifestBefore, parseObject(manifest.content.toString("utf8")), plan));
   } catch (error) {
     violations.push(`package.json is unreadable after the transaction: ${/** @type {Error} */ (error).message}`);
   }
   if (!after.has("pnpm-lock.yaml")) violations.push("pnpm-lock.yaml is missing after the transaction");
-  else if (status === 0 && violations.length === 0 && !checkLock(root, lockCopy).ok) violations.push("the lock does not match package.json after the transaction");
+  else if (status === 0 && violations.length === 0 && !checkLock(root, lockCopy).ok)
+    violations.push("the lock does not match package.json after the transaction");
   const ok = status === 0 && violations.length === 0;
   if (ok) clearDirty(root);
   else {
@@ -254,13 +269,13 @@ function runTransaction({ root, steps, plan, runner = pnpmRunner(root), kind, lo
  * @returns {{ ok: boolean, output: string }}
  */
 function checkLock(root, extra = []) {
-  const copy = fs.realpathSync(fs.mkdtempSync(join(tmpdir(), "lock-check-")));
+  const copy = fs.realpathSync(fs.mkdtempSync(nodePath.join(tmpdir(), "lock-check-")));
   try {
     for (const name of LOCK_INPUTS) {
-      const source = join(root, name);
-      if (fs.existsSync(source)) fs.writeFileSync(join(copy, name), fs.readFileSync(source), { mode: 0o600 });
+      const source = nodePath.join(root, name);
+      if (fs.existsSync(source)) fs.writeFileSync(nodePath.join(copy, name), fs.readFileSync(source), { mode: 0o600 });
     }
-    for (const name of extra) fs.cpSync(join(root, name), join(copy, name), { recursive: true });
+    for (const name of extra) fs.cpSync(nodePath.join(root, name), nodePath.join(copy, name), { recursive: true });
     const result = pnpmRunner(copy)(["install", "--frozen-lockfile", "--lockfile-only", "--offline"]);
     return { ok: result.status === 0, output: result.stdout + result.stderr };
   } finally {

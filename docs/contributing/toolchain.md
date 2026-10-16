@@ -6,14 +6,16 @@ Python-based pre-commit or Commitizen.
 
 ## Exact versions
 
-| Tool | Version | Where it is pinned |
-| --- | --- | --- |
-| Node | 24.21.0 | `.node-version`, `engines.node` |
-| pnpm | 12.14.0 | `packageManager` |
-| Next.js / React / React DOM | 16.4.1 / 19.3.0 / 19.3.0 | `tooling/versions.json` (app seed) |
-| TypeScript | 6.0.3 | `tooling/versions.json` |
-| ESLint / eslint-config-next | 9.39.5 / 16.4.1 | `tooling/versions.json` (app seed) |
-| Vitest / Playwright | 5.0.5 / 1.64.1 | `tooling/versions.json` |
+| Tool                                     | Version                  | Where it is pinned                 |
+| ---------------------------------------- | ------------------------ | ---------------------------------- |
+| Node                                     | 24.21.0                  | `.node-version`, `engines.node`    |
+| pnpm                                     | 12.14.0                  | `packageManager`                   |
+| Next.js / React / React DOM              | 16.4.1 / 19.3.0 / 19.3.0 | `tooling/versions.json` (app seed) |
+| TypeScript                               | 6.0.3                    | `tooling/versions.json`            |
+| ESLint / eslint-config-next              | 9.39.5 / 16.4.1          | `tooling/versions.json` (app seed) |
+| Vitest / Playwright                      | 5.0.5 / 1.64.1           | `tooling/versions.json`            |
+| typescript-eslint / @eslint/js / globals | 8.71.2 / 9.39.5 / 16.4.0 | `tooling/versions.json`            |
+| Prettier                                 | 3.9.10                   | `tooling/versions.json`            |
 
 `tooling/versions.json` is the reviewed source. The root `package.json` projects
 its `root` section; a test fails when they drift. Node and pnpm are host-owned
@@ -30,6 +32,9 @@ Chosen from registry engines/peers and proven with a real Next.js fixture
 - ESLint 9.39.5, not 10.x: `eslint-plugin-import`, `eslint-plugin-jsx-a11y` and
   `eslint-plugin-react` (via `eslint-config-next@16.4.1`) do not accept ESLint 10.
 - React DOM 19.3.0, not 19.3.1: 19.3.1 requires a `react@^19.3.1` that is not published.
+- typescript-eslint 8.71.2 is the newest release older than the 24-hour release-age limit that accepts
+  TypeScript 6.0.3 and ESLint 9; `@eslint/js` follows ESLint, and `globals` 16.4.0 is the version
+  `eslint-config-next@16.4.1` uses.
 - `@types/node` 24.x matches the Node 24 runtime.
 - `unrs-resolver` build scripts are denied (`allowBuilds`); its prebuilt native
   binary is used. A dependency that needs a source build fails the install.
@@ -58,18 +63,19 @@ written `--name=value`; there is no `--` separator and no extra flag is accepted
 The scripts are defined once in `scripts/development.cjs` and projected into the
 generator and application `package.json` files; a test fails on drift.
 
-| Command | Status |
-| --- | --- |
-| `node scripts/bootstrap.cjs setup` | Checks exact Node and pnpm, installs from the frozen lock. Hooks are not installed yet (the installer arrives later). |
-| `node scripts/bootstrap.cjs repair` | Rebuilds project-local `node_modules` from the frozen lock and clears the incomplete-install marker. Never regenerates a manifest or lock; the global store is untouched. |
-| `node scripts/bootstrap.cjs deps-lock` | Relocks and installs after a dependency-manifest edit that was approved separately. Refuses any protected difference from the committed `HEAD`. |
-| `pnpm run check` | Lock consistency (checked on a disposable copy of the metadata), format, lint, typecheck, unit tests. Format, lint and unit/coverage are not available yet and make `check` fail rather than pass. |
-| `pnpm run typecheck` | Generator: `tsc --noEmit`. Application: not available yet. |
-| `pnpm run test:one --test=<path> [--name=<literal>]` | One test file under `tests/`, optionally one literal test name. |
-| `pnpm run test:integration [--scenario=<id>]` | Real pnpm and filesystem scenarios (generator only). |
-| `pnpm run deps:add --package=<name[@version]> --group=<prod\|dev>`, `deps:remove`, `deps:upgrade [--package=<name>]` | Dependency transactions. |
-| `pnpm run template:create --name=<name> --owner=<login> --dest=<path>`, `template:seed:refresh` | Generator only. |
-| `pnpm run format`, `lint:fix`, `test:permissions` | Not available yet; they fail with the owning unit named. |
+| Command                                                                                                              | Status                                                                                                                                                                            |
+| -------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `node scripts/bootstrap.cjs setup`                                                                                   | Checks exact Node and pnpm, installs from the frozen lock. Hooks are not installed yet (the installer arrives later).                                                             |
+| `node scripts/bootstrap.cjs repair`                                                                                  | Rebuilds project-local `node_modules` from the frozen lock and clears the incomplete-install marker. Never regenerates a manifest or lock; the global store is untouched.         |
+| `node scripts/bootstrap.cjs deps-lock`                                                                               | Relocks and installs after a dependency-manifest edit that was approved separately. Refuses any protected difference from the committed `HEAD`.                                   |
+| `pnpm run check`                                                                                                     | Lock consistency (checked on a disposable copy of the metadata), format, lint, typecheck, unit tests. Unit/coverage is not available yet and makes `check` fail rather than pass. |
+| `pnpm run format`, `format:check`, `lint`, `lint:fix`                                                                | Prettier and ESLint with the project's own configuration; see [Static quality](static-quality.md).                                                                                |
+| `pnpm run typecheck`                                                                                                 | Generator: `tsc --noEmit`. Application: managed-block check, `next typegen`, then `tsc` for the app and for the checked-JS tooling.                                               |
+| `pnpm run test:one --test=<path> [--name=<literal>]`                                                                 | One test file under `tests/`, optionally one literal test name.                                                                                                                   |
+| `pnpm run test:integration [--scenario=<id>]`                                                                        | Real pnpm and filesystem scenarios (generator only).                                                                                                                              |
+| `pnpm run deps:add --package=<name[@version]> --group=<prod\|dev>`, `deps:remove`, `deps:upgrade [--package=<name>]` | Dependency transactions.                                                                                                                                                          |
+| `pnpm run template:create --name=<name> --owner=<login> --dest=<path>`, `template:seed:refresh`                      | Generator only.                                                                                                                                                                   |
+| `pnpm run test:permissions`                                                                                          | Not available yet; it fails with the owning unit named.                                                                                                                           |
 
 pnpm keeps `verifyDepsBeforeRun: error`. After a dependency-manifest edit, or with
 `node_modules` missing, `pnpm run` refuses to start; use `bootstrap.cjs repair` or

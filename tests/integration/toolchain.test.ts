@@ -4,11 +4,14 @@ import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { afterAll, describe, expect, test } from "vitest";
+import { parseJson, type Listed, type Versions } from "../support/json.ts";
 
 const root = resolve(import.meta.dirname, "../..");
 const toolchain = createRequire(import.meta.url)("../../scripts/core/toolchain.cjs") as typeof import("../../scripts/core/toolchain.cjs");
 const scratch = realpathSync(mkdtempSync(join(tmpdir(), "toolchain-integration-")));
-afterAll(() => rmSync(scratch, { recursive: true, force: true }));
+afterAll(() => {
+  rmSync(scratch, { recursive: true, force: true });
+});
 
 function run(cwd: string, args: string[], env: NodeJS.ProcessEnv = process.env) {
   return spawnSync("pnpm", args, { cwd, env, encoding: "utf8", timeout: 170_000 });
@@ -50,7 +53,10 @@ describe("preflight never downloads or switches the package manager", () => {
     const bin = join(scratch, name, "bin");
     mkdirSync(bin, { recursive: true });
     const log = join(scratch, name, "env.log");
-    writeFileSync(join(bin, "pnpm"), `#!/bin/sh\necho "$COREPACK_ENABLE_NETWORK $COREPACK_ENABLE_AUTO_PIN $pnpm_config_pm_on_fail" > '${log}'\necho ${version}\n`);
+    writeFileSync(
+      join(bin, "pnpm"),
+      `#!/bin/sh\necho "$COREPACK_ENABLE_NETWORK $COREPACK_ENABLE_AUTO_PIN $pnpm_config_pm_on_fail" > '${log}'\necho ${version}\n`,
+    );
     chmodSync(join(bin, "pnpm"), 0o755);
     return { bin, log };
   }
@@ -59,7 +65,7 @@ describe("preflight never downloads or switches the package manager", () => {
     const { bin, log } = fakePnpm("env-capture", expected.pnpm);
     const dir = scratchProject("preflight-env", { packageManager: `pnpm@${expected.pnpm}` });
     writeFileSync(join(dir, ".node-version"), `${process.versions.node}\n`);
-    const saved = process.env.PATH;
+    const saved = process.env.PATH ?? "";
     process.env.PATH = `${bin}:${saved}`;
     try {
       expect(toolchain.preflightErrors(dir)).toEqual([]);
@@ -73,7 +79,7 @@ describe("preflight never downloads or switches the package manager", () => {
     const { bin } = fakePnpm("wrong-version", "9.15.0");
     const dir = scratchProject("preflight-wrong", { packageManager: `pnpm@${expected.pnpm}` });
     writeFileSync(join(dir, ".node-version"), `${process.versions.node}\n`);
-    const saved = process.env.PATH;
+    const saved = process.env.PATH ?? "";
     process.env.PATH = `${bin}:${saved}`;
     try {
       const errors = toolchain.preflightErrors(dir).join("\n");
@@ -93,7 +99,7 @@ describe("preflight never downloads or switches the package manager", () => {
     mkdirSync(bin, { recursive: true });
     writeFileSync(join(bin, "pnpm"), `#!/bin/sh\nexec '${process.execPath}' '${cached}' "$@"\n`);
     chmodSync(join(bin, "pnpm"), 0o755);
-    const saved = process.env.PATH;
+    const saved = process.env.PATH ?? "";
     process.env.PATH = `${bin}:${saved}`;
     try {
       expect(toolchain.pnpmVersion(dir)).toBe(expected.pnpm);
@@ -105,11 +111,11 @@ describe("preflight never downloads or switches the package manager", () => {
   test("a manager that cannot be run without a download is an expected/found error, not a download", () => {
     const bin = join(scratch, "refusing", "bin");
     mkdirSync(bin, { recursive: true });
-    writeFileSync(join(bin, "pnpm"), "#!/bin/sh\necho \"Network access disabled by the environment\" >&2\nexit 1\n");
+    writeFileSync(join(bin, "pnpm"), '#!/bin/sh\necho "Network access disabled by the environment" >&2\nexit 1\n');
     chmodSync(join(bin, "pnpm"), 0o755);
     const dir = scratchProject("preflight-refused", { packageManager: `pnpm@${expected.pnpm}` });
     writeFileSync(join(dir, ".node-version"), `${process.versions.node}\n`);
-    const saved = process.env.PATH;
+    const saved = process.env.PATH ?? "";
     process.env.PATH = `${bin}:${saved}`;
     try {
       const errors = toolchain.preflightErrors(dir).join("\n");
@@ -123,7 +129,7 @@ describe("preflight never downloads or switches the package manager", () => {
 
 describe("isolated seed dependency graph", () => {
   test("the pinned seed tool set installs as its own graph without peer conflicts or build scripts", () => {
-    const { seed, node } = JSON.parse(readFileSync(join(root, "tooling/versions.json"), "utf8"));
+    const { seed, node } = parseJson<Versions>(readFileSync(join(root, "tooling/versions.json"), "utf8"));
     const dir = scratchProject("seed-fixture", {
       type: "module",
       packageManager: `pnpm@${toolchain.readExpected(root).pnpm}`,
@@ -137,9 +143,9 @@ describe("isolated seed dependency graph", () => {
     expect(install.status).toBe(0);
     const lock = readFileSync(join(dir, "pnpm-lock.yaml"), "utf8");
     expect(lock).not.toMatch(/workspace:|link:\.\./);
-    const listed = JSON.parse(run(dir, ["list", "--depth", "-1", "--json"]).stdout);
+    const listed = parseJson<Listed[]>(run(dir, ["list", "--depth", "-1", "--json"]).stdout);
     expect(listed).toHaveLength(1);
-    expect(listed[0].path).toBe(dir);
+    expect(listed[0]?.path).toBe(dir);
     const types = run(dir, ["exec", "tsc", "--version"]);
     expect(types.stdout).toContain(seed.devDependencies.typescript);
   });

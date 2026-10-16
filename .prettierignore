@@ -1,0 +1,9 @@
+# Generated, vendored or immutable inputs are never reformatted. The pnpm lock files belong to pnpm.
+node_modules/
+pnpm-lock.yaml
+template/app/pnpm-lock.yaml
+tests/fixtures/
+.compound-engineering/
+.private/
+.next/
+coverage/

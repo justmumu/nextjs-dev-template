@@ -3,7 +3,7 @@
 // The one inventory of files that define a project's rules and tooling, for both roles. The
 // dependency transaction snapshots exactly this surface; the protected-files guard (U6) extends
 // this module instead of keeping a second list. Dependency-free and pure so hooks can load it.
-const { basename } = require("node:path");
+const nodePath = require("node:path");
 
 // Exact root-level names.
 const FILES = [
@@ -64,7 +64,21 @@ const SHADOW_NAMES = [
 ];
 
 // Never scanned: dependency trees, build output and other generated state.
-const SKIPPED_DIRS = new Set(["node_modules", ".git", ".next", "out", "dist", "build", "coverage", "site", "test-results", "playwright-report", ".turbo", ".cache", ".pnpm-store"]);
+const SKIPPED_DIRS = new Set([
+  "node_modules",
+  ".git",
+  ".next",
+  "out",
+  "dist",
+  "build",
+  "coverage",
+  "site",
+  "test-results",
+  "playwright-report",
+  ".turbo",
+  ".cache",
+  ".pnpm-store",
+]);
 // Not scanned for shadow overrides: the generator's application seed and test fixtures legitimately carry their own configuration.
 const SHADOW_EXEMPT_PREFIXES = ["template/", "tests/fixtures/"];
 
@@ -73,16 +87,17 @@ function isProtectedFile(rel) {
   if (rel.startsWith(SEED_PREFIX)) return isProtectedFile(rel.slice(SEED_PREFIX.length));
   const parts = rel.split("/");
   if (parts.length === 1) return FILES.includes(rel) || CONFIG_NAMES.some((pattern) => pattern.test(rel));
-  if (DIRS.includes(parts[0])) return true;
-  if (parts[0] !== "docs") return false;
-  return (parts.length === 2 && DOCS_CONFIG.test(parts[1])) || VITEPRESS_CONFIG.test(parts.slice(1).join("/"));
+  const [first = "", second = ""] = parts;
+  if (DIRS.includes(first)) return true;
+  if (first !== "docs") return false;
+  return (parts.length === 2 && DOCS_CONFIG.test(second)) || VITEPRESS_CONFIG.test(parts.slice(1).join("/"));
 }
 
 /** @param {string} rel @returns {boolean} true for a shadow-capable config name below the root */
 function isShadowOverride(rel) {
   if (!rel.includes("/")) return false;
   if (SHADOW_EXEMPT_PREFIXES.some((prefix) => rel.startsWith(prefix))) return false;
-  return SHADOW_NAMES.some((pattern) => pattern.test(basename(rel)));
+  return SHADOW_NAMES.some((pattern) => pattern.test(nodePath.basename(rel)));
 }
 
 /** @param {string} name a directory name @returns {boolean} */

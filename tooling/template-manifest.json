@@ -3,23 +3,222 @@
   "protocol": 1,
   "role": "application",
   "entries": [
-    { "type": "json-metadata", "projection": "package-json", "base": "template", "source": "package.json", "destination": "package.json" },
-    { "type": "copy", "base": "template", "source": "pnpm-lock.yaml", "destination": "pnpm-lock.yaml" },
-    { "type": "copy", "base": "template", "source": "pnpm-workspace.yaml", "destination": "pnpm-workspace.yaml" },
-    { "type": "copy", "base": "template", "source": ".gitignore", "destination": ".gitignore" },
-    { "type": "copy", "base": "template", "source": "tooling/project-role.json", "destination": "tooling/project-role.json" },
-    { "type": "copy", "base": "root", "source": ".node-version", "destination": ".node-version" },
-    { "type": "copy", "base": "root", "source": "scripts/bootstrap.cjs", "destination": "scripts/bootstrap.cjs" },
-    { "type": "copy", "base": "root", "source": "scripts/dependencies.cjs", "destination": "scripts/dependencies.cjs" },
-    { "type": "copy", "base": "root", "source": "scripts/development.cjs", "destination": "scripts/development.cjs" },
-    { "type": "copy", "base": "root", "source": "scripts/core/args.cjs", "destination": "scripts/core/args.cjs" },
-    { "type": "copy", "base": "root", "source": "scripts/core/dependency-policy.cjs", "destination": "scripts/core/dependency-policy.cjs" },
-    { "type": "copy", "base": "root", "source": "scripts/core/install-state.cjs", "destination": "scripts/core/install-state.cjs" },
-    { "type": "copy", "base": "root", "source": "scripts/core/protected.cjs", "destination": "scripts/core/protected.cjs" },
-    { "type": "copy", "base": "root", "source": "scripts/core/process.cjs", "destination": "scripts/core/process.cjs" },
-    { "type": "copy", "base": "root", "source": "scripts/core/toolchain.cjs", "destination": "scripts/core/toolchain.cjs" },
-    { "type": "copy", "base": "root", "source": "scripts/core/transaction.cjs", "destination": "scripts/core/transaction.cjs" },
-    { "type": "copy", "base": "root", "source": "tooling/capabilities.json", "destination": "tooling/capabilities.json" },
-    { "type": "copy", "base": "root", "source": "tooling/policy.json", "destination": "tooling/policy.json" }
+    {
+      "type": "json-metadata",
+      "projection": "package-json",
+      "base": "template",
+      "source": "package.json",
+      "destination": "package.json"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "pnpm-lock.yaml",
+      "destination": "pnpm-lock.yaml"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "pnpm-workspace.yaml",
+      "destination": "pnpm-workspace.yaml"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": ".gitignore",
+      "destination": ".gitignore"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tooling/project-role.json",
+      "destination": "tooling/project-role.json"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": ".env.example",
+      "destination": ".env.example"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": ".prettierignore",
+      "destination": ".prettierignore"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "eslint.config.mjs",
+      "destination": "eslint.config.mjs"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "next.config.ts",
+      "destination": "next.config.ts"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "public/favicon.svg",
+      "destination": "public/favicon.svg"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "src/app/error.tsx",
+      "destination": "src/app/error.tsx"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "src/app/globals.css",
+      "destination": "src/app/globals.css"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "src/app/layout.tsx",
+      "destination": "src/app/layout.tsx"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "src/app/not-found.tsx",
+      "destination": "src/app/not-found.tsx"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "src/app/page.module.css",
+      "destination": "src/app/page.module.css"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "src/app/page.tsx",
+      "destination": "src/app/page.tsx"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tsconfig.json",
+      "destination": "tsconfig.json"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tsconfig.tooling.json",
+      "destination": "tsconfig.tooling.json"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": ".node-version",
+      "destination": ".node-version"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/bootstrap.cjs",
+      "destination": "scripts/bootstrap.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/dependencies.cjs",
+      "destination": "scripts/dependencies.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/development.cjs",
+      "destination": "scripts/development.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/args.cjs",
+      "destination": "scripts/core/args.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/dependency-policy.cjs",
+      "destination": "scripts/core/dependency-policy.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/install-state.cjs",
+      "destination": "scripts/core/install-state.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/protected.cjs",
+      "destination": "scripts/core/protected.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/process.cjs",
+      "destination": "scripts/core/process.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/toolchain.cjs",
+      "destination": "scripts/core/toolchain.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/transaction.cjs",
+      "destination": "scripts/core/transaction.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tooling/capabilities.json",
+      "destination": "tooling/capabilities.json"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tooling/policy.json",
+      "destination": "tooling/policy.json"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": ".prettierrc.json",
+      "destination": ".prettierrc.json"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/json.cjs",
+      "destination": "scripts/core/json.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/quality.cjs",
+      "destination": "scripts/core/quality.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tooling/eslint/shared.mjs",
+      "destination": "tooling/eslint/shared.mjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tooling/eslint/suppression-policy.mjs",
+      "destination": "tooling/eslint/suppression-policy.mjs"
+    }
   ]
 }

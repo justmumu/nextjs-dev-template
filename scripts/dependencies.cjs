@@ -2,11 +2,12 @@
 "use strict";
 // Dependency commands: pnpm run deps:add | deps:remove | deps:upgrade (KTD11).
 // Only the requested dependency-map change and the lock may change; the transaction enforces it.
-const { existsSync, readFileSync } = require("node:fs");
-const { join, resolve } = require("node:path");
+const { existsSync } = require("node:fs");
+const nodePath = require("node:path");
 const { UsageError, parseArgs } = require("./core/args.cjs");
 const { buildReview, isExactVersion } = require("./core/dependency-policy.cjs");
 const { guardRefusal } = require("./core/install-state.cjs");
+const { isObject, readObject } = require("./core/json.cjs");
 const { redact } = require("./core/process.cjs");
 const { gateErrors, readRole } = require("./core/toolchain.cjs");
 const { runTransaction } = require("./core/transaction.cjs");
@@ -26,7 +27,8 @@ function parseSpec(spec) {
   const name = at > 0 ? spec.slice(0, at) : spec;
   const selector = at > 0 ? spec.slice(at + 1) : null;
   if (!NAME.test(name) || name.length > 214) throw new UsageError(`unsupported package name: ${JSON.stringify(spec)}`);
-  if (selector !== null && !SELECTOR.test(selector)) throw new UsageError(`unsupported version selector (use an exact version or a dist-tag): ${JSON.stringify(spec)}`);
+  if (selector !== null && !SELECTOR.test(selector))
+    throw new UsageError(`unsupported version selector (use an exact version or a dist-tag): ${JSON.stringify(spec)}`);
   return { name, selector };
 }
 
@@ -93,10 +95,18 @@ function planFor(request, pinned = {}) {
  * @returns {Record<string, string>}
  */
 function reviewedPins(root) {
-  const file = join(root, "tooling", "versions.json");
+  const file = nodePath.join(root, "tooling", "versions.json");
   if (!existsSync(file) || readRole(root) !== "generator") return {};
-  const { root: pins } = JSON.parse(readFileSync(file, "utf8"));
-  return { ...pins.dependencies, ...pins.devDependencies };
+  const versions = readObject(file);
+  const pins = isObject(versions.root) ? versions.root : {};
+  return { ...stringMap(pins.dependencies), ...stringMap(pins.devDependencies) };
+}
+
+/** @param {unknown} value @returns {Record<string, string>} the string entries of an object, or none */
+function stringMap(value) {
+  return isObject(value)
+    ? /** @type {Record<string, string>} */ (Object.fromEntries(Object.entries(value).filter((entry) => typeof entry[1] === "string")))
+    : {};
 }
 
 /**
@@ -107,8 +117,15 @@ function reviewedPins(root) {
  * @returns {string[]} the pinned names that are dependencies of the project
  */
 function pinnedDependencies(root, pins) {
-  const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
-  return [...new Set([...Object.keys(manifest.dependencies ?? {}), ...Object.keys(manifest.devDependencies ?? {})])].filter((name) => Object.hasOwn(pins, name)).sort();
+  const manifest = readObject(nodePath.join(root, "package.json"));
+  return [
+    ...new Set([
+      ...Object.keys(isObject(manifest.dependencies) ? manifest.dependencies : {}),
+      ...Object.keys(isObject(manifest.devDependencies) ? manifest.devDependencies : {}),
+    ]),
+  ]
+    .filter((name) => Object.hasOwn(pins, name))
+    .sort();
 }
 
 /**
@@ -117,14 +134,16 @@ function pinnedDependencies(root, pins) {
  * @returns {number}
  */
 function main(argv, options = {}) {
-  const root = options.root ?? resolve(__dirname, "..");
+  const root = options.root ?? nodePath.resolve(__dirname, "..");
   const io = options.io ?? { stdout: (text) => process.stdout.write(text), stderr: (text) => process.stderr.write(text) };
   let request;
   try {
     request = requestFromArgv(argv[0] ?? "", argv.slice(1));
   } catch (error) {
     if (!(error instanceof UsageError)) throw error;
-    io.stderr(`${error.message}\nusage: pnpm run deps:add --package=<name[@version]> --group=<prod|dev> | deps:remove --package=<name> --group=<prod|dev> | deps:upgrade [--package=<name>]\n`);
+    io.stderr(
+      `${error.message}\nusage: pnpm run deps:add --package=<name[@version]> --group=<prod|dev> | deps:remove --package=<name> --group=<prod|dev> | deps:upgrade [--package=<name>]\n`,
+    );
     return 2;
   }
   const refusals = [...gateErrors(root), ...[guardRefusal(root)].filter((message) => message !== null)];
@@ -134,17 +153,23 @@ function main(argv, options = {}) {
   }
   const pins = reviewedPins(root);
   if (request.action !== "upgrade" && Object.hasOwn(pins, request.name)) {
-    io.stderr(`${request.name} is a reviewed tool pin (${pins[request.name]}); changing it is a reviewed tooling change, not a dependency change. Nothing was changed.\n`);
+    io.stderr(
+      `${request.name} is a reviewed tool pin (${pins[request.name] ?? ""}); changing it is a reviewed tooling change, not a dependency change. Nothing was changed.\n`,
+    );
     return 1;
   }
   if (request.action === "upgrade" && request.name !== null && Object.hasOwn(pins, request.name)) {
-    io.stderr(`${request.name} is a reviewed tool pin (${pins[request.name]}); upgrading it is a reviewed tooling change, not a dependency change. Nothing was changed.\n`);
+    io.stderr(
+      `${request.name} is a reviewed tool pin (${pins[request.name] ?? ""}); upgrading it is a reviewed tooling change, not a dependency change. Nothing was changed.\n`,
+    );
     return 1;
   }
   if (request.action === "upgrade" && request.name === null) {
     const pinned = pinnedDependencies(root, pins);
     if (pinned.length > 0) {
-      io.stderr(`An all-dependency upgrade cannot run: these are reviewed tool pins (${pinned.map((name) => `${name}@${pins[name]}`).join(", ")}) and change only through a reviewed tooling change (tooling/versions.json, then the matching manifest edit and node scripts/bootstrap.cjs deps-lock). Upgrade other dependencies one at a time with deps:upgrade --package=<name>. Nothing was changed.\n`);
+      io.stderr(
+        `An all-dependency upgrade cannot run: these are reviewed tool pins (${pinned.map((name) => `${name}@${pins[name] ?? ""}`).join(", ")}) and change only through a reviewed tooling change (tooling/versions.json, then the matching manifest edit and node scripts/bootstrap.cjs deps-lock). Upgrade other dependencies one at a time with deps:upgrade --package=<name>. Nothing was changed.\n`,
+      );
       return 1;
     }
   }
@@ -152,7 +177,9 @@ function main(argv, options = {}) {
   io.stdout(redact(result.output));
   if (!result.ok) {
     const review = buildReview(result.output);
-    io.stderr(`dependency change rejected; package.json, the lock and protected files were restored and the install is marked incomplete.\n${result.violations.map((line) => `- ${line}\n`).join("")}`);
+    io.stderr(
+      `dependency change rejected; package.json, the lock and protected files were restored and the install is marked incomplete.\n${result.violations.map((line) => `- ${line}\n`).join("")}`,
+    );
     if (review.length > 0) io.stderr(`These packages need a reviewed build decision (not adopted automatically): ${review.join(", ")}\n`);
     io.stderr("Run: node scripts/bootstrap.cjs repair\n");
     return 1;
@@ -163,4 +190,4 @@ function main(argv, options = {}) {
 
 module.exports = { main, parseSpec, planFor, pnpmArgsFor, requestFromArgv, reviewedPins };
 
-if (require.main === module) process.exitCode = main(process.argv.slice(2), { root: join(__dirname, "..") });
+if (require.main === module) process.exitCode = main(process.argv.slice(2), { root: nodePath.join(__dirname, "..") });

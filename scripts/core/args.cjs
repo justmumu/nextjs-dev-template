@@ -15,9 +15,11 @@ class UsageError extends Error {
  */
 
 /**
+ * A flag declared `required` is always a string in the result; any other flag may be absent.
+ * @template {Record<string, FlagSpec>} const Schema
  * @param {readonly string[]} argv
- * @param {Record<string, FlagSpec>} schema
- * @returns {Record<string, string>}
+ * @param {Schema} schema
+ * @returns {{ [Name in keyof Schema]: Schema[Name] extends { required: true } ? string : string | undefined }}
  */
 function parseArgs(argv, schema) {
   /** @type {Record<string, string>} */
@@ -25,12 +27,13 @@ function parseArgs(argv, schema) {
   for (const arg of argv) {
     const match = /^--([a-z][a-z-]*)=([\s\S]*)$/.exec(arg);
     if (!match) throw new UsageError(`unexpected argument: ${JSON.stringify(arg)} (flags are written --name=value)`);
-    const [, name, value] = match;
-    if (!Object.hasOwn(schema, name)) throw new UsageError(`unknown flag: --${name}`);
+    const [, name, value] = /** @type {RegExpExecArray & [string, string, string]} */ (match);
+    const spec = Object.hasOwn(schema, name) ? schema[name] : undefined;
+    if (spec === undefined) throw new UsageError(`unknown flag: --${name}`);
     if (Object.hasOwn(parsed, name)) throw new UsageError(`duplicate flag: --${name}`);
     if (value === "") throw new UsageError(`--${name} must not be empty`);
+    // eslint-disable-next-line no-control-regex -- rejecting control characters in untrusted input is the purpose of this pattern
     if (/[\u0000-\u001f\u007f]/.test(value)) throw new UsageError(`--${name} contains a control character`);
-    const spec = schema[name];
     if (spec.values && !spec.values.includes(value)) throw new UsageError(`--${name} must be one of: ${spec.values.join(", ")}`);
     if (spec.pattern && !spec.pattern.test(value)) throw new UsageError(`--${name} has an unsupported value: ${JSON.stringify(value)}`);
     parsed[name] = value;
@@ -38,7 +41,7 @@ function parseArgs(argv, schema) {
   for (const [name, spec] of Object.entries(schema)) {
     if (spec.required && !Object.hasOwn(parsed, name)) throw new UsageError(`--${name} is required`);
   }
-  return parsed;
+  return /** @type {never} */ (parsed);
 }
 
 module.exports = { UsageError, parseArgs };

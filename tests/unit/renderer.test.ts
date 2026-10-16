@@ -1,17 +1,39 @@
-import fs, { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, realpathSync, rmSync, statSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
+import fs, {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  realpathSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { afterAll, afterEach, describe, expect, test, vi } from "vitest";
+import { parseJson } from "../support/json.ts";
 
 const require = createRequire(import.meta.url);
 const render = require("../../scripts/template/render.cjs") as typeof import("../../scripts/template/render.cjs");
 
 const fixture = resolve(import.meta.dirname, "../fixtures/render");
-const manifest = JSON.parse(readFileSync(join(fixture, "manifest.json"), "utf8"));
+interface ManifestEntry {
+  type: string;
+  base: string;
+  source: string;
+  destination: string;
+}
+const manifest = parseJson<{ entries: ManifestEntry[] } & Record<string, unknown>>(readFileSync(join(fixture, "manifest.json"), "utf8"));
 const bases = { template: join(fixture, "template"), root: join(fixture, "root") };
 const scratch = realpathSync(mkdtempSync(join(tmpdir(), "renderer-unit-")));
-afterAll(() => rmSync(scratch, { recursive: true, force: true }));
+afterAll(() => {
+  rmSync(scratch, { recursive: true, force: true });
+});
 
 let counter = 0;
 function fresh(label: string) {
@@ -65,7 +87,7 @@ describe("metadata projection", () => {
   function projected(overrides: Record<string, unknown>) {
     const { files } = render.renderTree({ manifest, bases, answers: { ...answers, ...overrides } });
     const file = files.find((entry) => entry.path === "package.json");
-    return { text: (file?.content as Buffer).toString("utf8"), json: JSON.parse((file?.content as Buffer).toString("utf8")) };
+    return { text: (file?.content as Buffer).toString("utf8"), json: parseJson((file?.content as Buffer).toString("utf8")) };
   }
 
   test("quotes, backslashes, Unicode and numeric-looking text survive losslessly", () => {
@@ -120,6 +142,7 @@ describe("answers validation", () => {
 
 describe("manifest validation", () => {
   const entry = manifest.entries[2];
+  if (entry === undefined) throw new Error("the fixture manifest needs three entries");
   function withEntries(entries: unknown[], extra: Record<string, unknown> = {}) {
     return { ...manifest, entries, ...extra };
   }
@@ -209,7 +232,7 @@ describe("source safety", () => {
     writeFileSync(join(dir, "template", "odd.txt"), "x");
     chmodSync(join(dir, "template", "odd.txt"), 0o666);
     const { files } = render.renderTree({ manifest: one("odd.txt"), bases: { template: join(dir, "template"), root: dir }, answers });
-    expect(files[0].mode).toBe(0o644);
+    expect(files[0]?.mode).toBe(0o644);
   });
 });
 
@@ -233,7 +256,9 @@ describe("destination safety", () => {
     const dest = fresh("full");
     mkdirSync(dest);
     writeFileSync(join(dest, "keep.txt"), "mine");
-    expect(() => render.writeTree(files, dest)).toThrow(/not empty/);
+    expect(() => {
+      render.writeTree(files, dest);
+    }).toThrow(/not empty/);
     expect(listTree(dest)).toEqual(["keep.txt"]);
     expect(readFileSync(join(dest, "keep.txt"), "utf8")).toBe("mine");
   });
@@ -243,28 +268,38 @@ describe("destination safety", () => {
     mkdirSync(target);
     const link = fresh("link");
     symlinkSync(target, link);
-    expect(() => render.writeTree(files, link)).toThrow(/symlink/);
+    expect(() => {
+      render.writeTree(files, link);
+    }).toThrow(/symlink/);
     expect(listTree(target)).toEqual([]);
     const file = fresh("file");
     writeFileSync(file, "x");
-    expect(() => render.writeTree(files, file)).toThrow(render.RenderError);
+    expect(() => {
+      render.writeTree(files, file);
+    }).toThrow(render.RenderError);
   });
 
   test("rejects a relative destination root", () => {
-    expect(() => render.writeTree(files, "relative/dest")).toThrow(/absolute/);
+    expect(() => {
+      render.writeTree(files, "relative/dest");
+    }).toThrow(/absolute/);
   });
 
   test("never writes outside the destination for tampered file lists", () => {
     const dest = fresh("tamper");
     const evil = [{ path: "../escape.txt", mode: 0o644, content: Buffer.from("x") }];
-    expect(() => render.writeTree(evil, dest)).toThrow(render.RenderError);
+    expect(() => {
+      render.writeTree(evil, dest);
+    }).toThrow(render.RenderError);
     expect(existsSync(join(dest, "..", "escape.txt"))).toBe(false);
   });
 
   test("removes what it created when a write fails midway", () => {
     const dest = join(fresh("rollback"), "deeper");
     const broken = [...files, { path: "package.json/nested", mode: 0o644, content: Buffer.from("x") }];
-    expect(() => render.writeTree(broken, dest)).toThrow();
+    expect(() => {
+      render.writeTree(broken, dest);
+    }).toThrow();
     expect(existsSync(dest)).toBe(false);
     expect(existsSync(join(dest, ".."))).toBe(false);
   });
@@ -277,7 +312,9 @@ describe("symlinked ancestors", () => {
     mkdirSync(outside);
     const alias = fresh("alias");
     symlinkSync(outside, alias);
-    expect(() => render.writeTree(files, join(alias, "app"))).toThrow(/symlink/);
+    expect(() => {
+      render.writeTree(files, join(alias, "app"));
+    }).toThrow(/symlink/);
     expect(listTree(outside)).toEqual([]);
   });
 
@@ -288,7 +325,9 @@ describe("symlinked ancestors", () => {
     const alias = fresh("alias");
     symlinkSync(real, alias);
     const entries = [{ type: "copy", base: "template", source: "a.txt", destination: "a.txt" }];
-    expect(() => render.renderTree({ manifest: { ...manifest, entries }, bases: { template: join(alias, "template"), root: real }, answers })).toThrow(/symlink/);
+    expect(() => render.renderTree({ manifest: { ...manifest, entries }, bases: { template: join(alias, "template"), root: real }, answers })).toThrow(
+      /symlink/,
+    );
   });
 });
 
@@ -299,22 +338,28 @@ describe("rollback ownership", () => {
   /** Runs `before` just before the renderer writes the named file; a `fail` error replaces that write. */
   function interceptWrite(name: string, before: () => void, fail?: Error) {
     const original = fs.writeFileSync;
-    vi.spyOn(fs, "writeFileSync").mockImplementation(((target: string, ...rest: unknown[]) => {
+    vi.spyOn(fs, "writeFileSync").mockImplementation((target: unknown, ...rest: unknown[]) => {
       if (String(target).endsWith(`/${name}`)) {
         before();
         if (fail) throw fail;
       }
-      return (original as (...args: unknown[]) => void)(target, ...rest);
-    }) as typeof fs.writeFileSync);
+      (original as (...args: unknown[]) => void)(target, ...rest);
+    });
   }
 
   test("removes owned files and newly created parents after an actual write failure", () => {
     const parent = fresh("failed-write-parents");
     const dest = join(parent, "deeper");
-    interceptWrite("b.txt", () => {
-      expect(readFileSync(join(dest, "a.txt"), "utf8")).toBe("generated a.txt\n");
-    }, new Error("simulated disk write failure"));
-    expect(() => render.writeTree(planned, dest)).toThrow(/simulated disk write failure/);
+    interceptWrite(
+      "b.txt",
+      () => {
+        expect(readFileSync(join(dest, "a.txt"), "utf8")).toBe("generated a.txt\n");
+      },
+      new Error("simulated disk write failure"),
+    );
+    expect(() => {
+      render.writeTree(planned, dest);
+    }).toThrow(/simulated disk write failure/);
     expect(existsSync(parent)).toBe(false);
   });
 
@@ -322,8 +367,12 @@ describe("rollback ownership", () => {
     const dest = fresh("collision");
     // The user's write goes through the unmocked function; the renderer's wx write then hits EEXIST.
     const original = fs.writeFileSync;
-    interceptWrite("b.txt", () => original(join(dest, "b.txt"), "user content\n"));
-    expect(() => render.writeTree(planned, dest)).toThrow(/EEXIST/);
+    interceptWrite("b.txt", () => {
+      original(join(dest, "b.txt"), "user content\n");
+    });
+    expect(() => {
+      render.writeTree(planned, dest);
+    }).toThrow(/EEXIST/);
     expect(listTree(dest)).toEqual(["b.txt"]);
     expect(readFileSync(join(dest, "b.txt"), "utf8")).toBe("user content\n");
   });
@@ -331,8 +380,16 @@ describe("rollback ownership", () => {
   test("preserves a created file that changed concurrently, and still removes the rest", () => {
     const dest = fresh("edited");
     const original = fs.writeFileSync;
-    interceptWrite("c.txt", () => original(join(dest, "a.txt"), "edited by user\n"), new Error("boom"));
-    expect(() => render.writeTree(planned, dest)).toThrow(/boom/);
+    interceptWrite(
+      "c.txt",
+      () => {
+        original(join(dest, "a.txt"), "edited by user\n");
+      },
+      new Error("boom"),
+    );
+    expect(() => {
+      render.writeTree(planned, dest);
+    }).toThrow(/boom/);
     expect(listTree(dest)).toEqual(["a.txt"]);
     expect(readFileSync(join(dest, "a.txt"), "utf8")).toBe("edited by user\n");
   });
@@ -348,7 +405,9 @@ describe("rollback ownership", () => {
       },
       new Error("boom"),
     );
-    expect(() => render.writeTree(planned, dest)).toThrow(/boom/);
+    expect(() => {
+      render.writeTree(planned, dest);
+    }).toThrow(/boom/);
     expect(listTree(dest)).toEqual(["a.txt"]);
   });
 
@@ -359,8 +418,16 @@ describe("rollback ownership", () => {
       { path: "g.txt", mode: 0o644, content: Buffer.from("g") },
     ];
     const original = fs.writeFileSync;
-    interceptWrite("g.txt", () => original(join(dest, "d", "user.txt"), "mine"), new Error("boom"));
-    expect(() => render.writeTree(nested, dest)).toThrow(/boom/);
+    interceptWrite(
+      "g.txt",
+      () => {
+        original(join(dest, "d", "user.txt"), "mine");
+      },
+      new Error("boom"),
+    );
+    expect(() => {
+      render.writeTree(nested, dest);
+    }).toThrow(/boom/);
     expect(listTree(dest)).toEqual(["d/user.txt"]);
   });
 });

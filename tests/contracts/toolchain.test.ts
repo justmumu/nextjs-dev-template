@@ -1,7 +1,8 @@
 import { readdirSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { describe, expect, test } from "vitest";
+import { parseJson, type Manifest, type Versions } from "../support/json.ts";
 
 const root = resolve(import.meta.dirname, "../..");
 const toolchain = createRequire(import.meta.url)("../../scripts/core/toolchain.cjs") as typeof import("../../scripts/core/toolchain.cjs");
@@ -26,14 +27,14 @@ describe("exact runtime and manager", () => {
 });
 
 describe("single source of pins", () => {
-  const versions = JSON.parse(readFileSync(join(root, "tooling/versions.json"), "utf8"));
-  const manifest = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+  const versions = parseJson<Versions>(readFileSync(join(root, "tooling/versions.json"), "utf8"));
+  const manifest = parseJson<Manifest>(readFileSync(join(root, "package.json"), "utf8"));
 
   test("root manifest, .node-version and engines project tooling/versions.json", () => {
     // Reviewed pins must hold; ordinary dependencies added with deps:add are free to appear next to them.
     expect(manifest.devDependencies).toMatchObject(versions.root.devDependencies);
     expect(manifest.packageManager).toBe(`pnpm@${versions.pnpm}`);
-    expect(manifest.engines.node).toBe(versions.node);
+    expect(manifest.engines?.node).toBe(versions.node);
     expect(readFileSync(join(root, ".node-version"), "utf8").trim()).toBe(versions.node);
     expect(manifest.devEngines).toBeUndefined();
   });
@@ -61,7 +62,12 @@ describe("commit identity", () => {
   });
 
   test("no owner e-mail is stored in template manifests or state", () => {
-    const tracked = ["package.json", ...readdirSync(join(root, "tooling")).map((name) => `tooling/${name}`)];
+    const tracked = [
+      "package.json",
+      ...readdirSync(join(root, "tooling"), { recursive: true, withFileTypes: true })
+        .filter((entry) => entry.isFile())
+        .map((entry) => join("tooling", relative(join(root, "tooling"), join(entry.parentPath, entry.name)))),
+    ];
     expect(tracked.length).toBeGreaterThan(0);
     for (const file of tracked) {
       const emails = readFileSync(join(root, file), "utf8").match(/[\w.+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z][A-Za-z0-9-]*)+/g) ?? [];
@@ -77,6 +83,6 @@ describe("isolated dependency graphs", () => {
     const workspace = readFileSync(join(root, "pnpm-workspace.yaml"), "utf8");
     expect(workspace).not.toMatch(/^packages:/m);
     expect(workspace).not.toMatch(/^overrides:/m);
-    expect(JSON.parse(readFileSync(join(root, "package.json"), "utf8")).private).toBe(true);
+    expect(parseJson<Manifest>(readFileSync(join(root, "package.json"), "utf8")).private).toBe(true);
   });
 });

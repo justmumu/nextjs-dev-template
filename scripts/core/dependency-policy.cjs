@@ -2,6 +2,7 @@
 "use strict";
 // Semantic dependency policy: what a dependency change may touch, and which workspace/.npmrc
 // fields are never part of one. Dependency-free and pure so the guard can reuse it later.
+const { isObject } = require("./json.cjs");
 
 const MAPS = /** @type {const} */ (["dependencies", "devDependencies"]);
 const GROUP_MAP = /** @type {const} */ ({ prod: "dependencies", dev: "devDependencies" });
@@ -56,21 +57,22 @@ function parseWorkspace(text) {
   if (lines.at(-1) === "") lines.pop();
   lines.forEach((raw, index) => {
     const line = raw.endsWith("\r") ? raw.slice(0, -1) : raw;
-    const where = `pnpm-workspace.yaml line ${index + 1}`;
+    const where = `pnpm-workspace.yaml line ${String(index + 1)}`;
     if (/^\s*(?:#.*)?$/.test(line)) return;
     if (line.includes("\t")) return void problems.push(`${where}: tabs are not supported`);
-    const top = TOP_KEY.exec(line);
+    const top = /** @type {(RegExpExecArray & [string, string, string | undefined]) | null} */ (TOP_KEY.exec(line));
     if (top) {
       const inline = top[2] ?? null;
-      if (inline !== null && !SCALAR.test(inline)) return void problems.push(`${where}: unsupported YAML value ${JSON.stringify(inline)} (only bare scalars, [] and {} are supported)`);
+      if (inline !== null && !SCALAR.test(inline))
+        return void problems.push(`${where}: unsupported YAML value ${JSON.stringify(inline)} (only bare scalars, [] and {} are supported)`);
       if (keys.has(top[1])) return void problems.push(`${where}: duplicate key ${top[1]}`);
       current = { inline, children: new Map() };
       keys.set(top[1], current);
       return;
     }
-    const child = CHILD.exec(line);
+    const child = /** @type {(RegExpExecArray & [string, string | undefined, string | undefined, string | undefined, string]) | null} */ (CHILD.exec(line));
     if (child && current && current.inline === null) {
-      const name = child[1] ?? child[2] ?? child[3];
+      const name = child[1] ?? child[2] ?? child[3] ?? "";
       if (!SCALAR.test(child[4])) return void problems.push(`${where}: unsupported YAML value for ${name} (${JSON.stringify(child[4])})`);
       if (current.children.has(name)) return void problems.push(`${where}: duplicate key ${name}`);
       current.children.set(name, child[4]);
@@ -93,7 +95,8 @@ function workspaceViolations(text, options) {
     if (keys.get(key)?.inline !== expected) violations.push(`${key}: ${expected} is required`);
   }
   const skills = keys.get("skills");
-  if (skills?.inline !== null || skills.children.size !== 1 || skills.children.get("dirs") !== "[]") violations.push("skills.dirs: [] is required (no implicit skill linking)");
+  if (skills?.inline !== null || skills.children.size !== 1 || skills.children.get("dirs") !== "[]")
+    violations.push("skills.dirs: [] is required (no implicit skill linking)");
   for (const key of keys.keys()) {
     if (FORBIDDEN_WORKSPACE_KEYS.includes(key)) violations.push(`${key} is not a dependency field and needs its own protected review`);
     else if (!ALLOWED_TOP.has(key)) violations.push(`${key} is not part of the reviewed workspace policy and needs its own protected review`);
@@ -112,16 +115,16 @@ function workspaceViolations(text, options) {
 function npmrcViolations(text) {
   const violations = [];
   const hook = FORBIDDEN_NPMRC.exec(text);
-  if (hook) violations.push(`.npmrc ${hook[1]} is not allowed`);
+  if (hook) violations.push(`.npmrc ${hook[1] ?? ""} is not allowed`);
   for (const match of text.matchAll(NPMRC_CREDENTIAL)) {
-    if (!/^\$\{[A-Z0-9_]+\}$/.test(match[2])) violations.push(`.npmrc holds a literal ${match[1]}; credentials stay external`);
+    if (!/^\$\{[A-Z0-9_]+\}$/.test(match[2] ?? "")) violations.push(`.npmrc holds a literal ${match[1] ?? ""}; credentials stay external`);
   }
   return violations;
 }
 
-/** @param {string} value */
+/** @param {unknown} value @returns {boolean} */
 function isExactVersion(value) {
-  return EXACT.test(value);
+  return typeof value === "string" && EXACT.test(value);
 }
 
 /** @param {unknown} value @returns {string} */
@@ -129,8 +132,12 @@ function canonical(value) {
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
   if (value !== null && typeof value === "object") {
     const record = /** @type {Record<string, unknown>} */ (value);
-    return `{${Object.keys(record).sort().map((key) => `${JSON.stringify(key)}:${canonical(record[key])}`).join(",")}}`;
+    return `{${Object.keys(record)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${canonical(record[key])}`)
+      .join(",")}}`;
   }
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- TypeScript lib limitation: JSON.stringify returns undefined for functions and symbols but is typed string
   return JSON.stringify(value) ?? "undefined";
 }
 
@@ -138,23 +145,21 @@ function canonical(value) {
 const same = (a, b) => canonical(a) === canonical(b);
 
 /**
- * @param {Record<string, any>} manifest
+ * @param {Record<string, unknown>} manifest
  * @param {string} map
- * @returns {Record<string, string>}
+ * @returns {Record<string, unknown>}
  */
 function mapOf(manifest, map) {
   const value = manifest[map];
-  return value !== null && typeof value === "object" ? value : {};
+  return isObject(value) ? value : {};
 }
 
 /**
- * @param {Record<string, any>} manifest
- * @returns {Record<string, any>}
+ * @param {Record<string, unknown>} manifest
+ * @returns {Record<string, unknown>}
  */
 function withoutMaps(manifest) {
-  const rest = { ...manifest };
-  for (const map of MAPS) delete rest[map];
-  return rest;
+  return Object.fromEntries(Object.entries(manifest).filter(([key]) => !(/** @type {readonly string[]} */ (MAPS).includes(key))));
 }
 
 /**
@@ -164,8 +169,8 @@ function withoutMaps(manifest) {
 /**
  * Compares two parsed package.json objects against the one mutation a plan allows.
  * Returns an empty list only when nothing outside that mutation changed.
- * @param {Record<string, any>} before
- * @param {Record<string, any>} after
+ * @param {Record<string, unknown>} before
+ * @param {Record<string, unknown>} after
  * @param {DependencyPlan & { valueOk?: (value: string) => boolean, pinned?: Record<string, string> }} plan
  * @returns {string[]}
  */
@@ -175,11 +180,14 @@ function manifestViolations(before, after, plan) {
     for (const map of MAPS) {
       const was = Object.hasOwn(mapOf(before, map), name);
       const now = mapOf(after, map)[name];
-      if (was && now !== version) violations.push(`${map}.${name} is a reviewed tool pin (${version}); changing it is a reviewed tooling change, not a dependency change`);
+      if (was && now !== version)
+        violations.push(`${map}.${name} is a reviewed tool pin (${version}); changing it is a reviewed tooling change, not a dependency change`);
       if (!was && now !== undefined && now !== version) violations.push(`${map}.${name} would shadow a reviewed tool pin (${version})`);
     }
   }
-  const valueOk = plan.valueOk ?? isExactVersion;
+  const valueOptions = plan.valueOk;
+  /** @param {unknown} value */
+  const valueOk = (value) => typeof value === "string" && (valueOptions ? valueOptions(value) : isExactVersion(value));
   if (!same(withoutMaps(before), withoutMaps(after))) {
     violations.push("package.json changed outside the dependency maps (scripts, engines, packageManager, overrides and other fields are protected)");
   }
@@ -205,8 +213,10 @@ function manifestViolations(before, after, plan) {
       touched("unexpected change", own ? changed.filter((key) => key !== plan.name) : changed);
       touched("unexpected addition", own ? added.filter((key) => key !== plan.name) : added);
       if (own && !Object.hasOwn(now, plan.name)) violations.push(`${map}.${plan.name} was not added`);
-      if (own && Object.hasOwn(now, plan.name) && !valueOk(now[plan.name])) violations.push(`${map}.${plan.name} must be an exact registry version (got ${JSON.stringify(now[plan.name])})`);
-      else if (own && plan.version && Object.hasOwn(now, plan.name) && now[plan.name] !== plan.version) violations.push(`${map}.${plan.name} must be the requested version ${plan.version} (got ${JSON.stringify(now[plan.name])})`);
+      if (own && Object.hasOwn(now, plan.name) && !valueOk(now[plan.name]))
+        violations.push(`${map}.${plan.name} must be an exact registry version (got ${JSON.stringify(now[plan.name])})`);
+      else if (own && plan.version && Object.hasOwn(now, plan.name) && now[plan.name] !== plan.version)
+        violations.push(`${map}.${plan.name} must be the requested version ${plan.version} (got ${JSON.stringify(now[plan.name])})`);
     } else if (plan.action === "remove") {
       const own = map === GROUP_MAP[plan.group];
       touched("unexpected addition", added);
@@ -214,7 +224,7 @@ function manifestViolations(before, after, plan) {
       touched("unexpected removal", own ? removed.filter((key) => key !== plan.name) : removed);
       if (own && Object.hasOwn(now, plan.name)) violations.push(`${map}.${plan.name} was not removed`);
       if (own && !Object.hasOwn(was, plan.name)) violations.push(`${map}.${plan.name} was not a dependency to remove`);
-    } else if (plan.action === "upgrade") {
+    } else {
       touched("unexpected addition", added);
       touched("unexpected removal", removed);
       touched("unexpected change", plan.name === null ? [] : changed.filter((key) => key !== plan.name));
@@ -226,7 +236,7 @@ function manifestViolations(before, after, plan) {
 
 /** @param {string} text pnpm-workspace.yaml @returns {string[]} names with an allowed build */
 function buildPermissions(text) {
-  const children = parseWorkspace(text).keys.get("allowBuilds")?.children ?? new Map();
+  const children = parseWorkspace(text).keys.get("allowBuilds")?.children ?? /** @type {Map<string, string>} */ (new Map());
   return [...children].filter(([, value]) => value === "true").map(([name]) => name);
 }
 
@@ -237,7 +247,12 @@ function buildPermissions(text) {
  */
 function buildReview(output) {
   const match = /Ignored build scripts:\s*([^\n]+)/.exec(output);
-  return match ? match[1].split(",").map((entry) => entry.trim()).filter(Boolean) : [];
+  return (
+    match?.[1]
+      ?.split(",")
+      .map((entry) => entry.trim())
+      .filter(Boolean) ?? []
+  );
 }
 
 module.exports = { GROUP_MAP, buildPermissions, buildReview, isExactVersion, manifestViolations, npmrcViolations, parseWorkspace, same, workspaceViolations };

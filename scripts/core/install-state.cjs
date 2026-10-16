@@ -3,12 +3,13 @@
 // Project-local install state: the "dirty" marker for incomplete environments, safe removal of
 // node_modules for repair, and the explicit capability boundary to units that are not built yet.
 const fs = require("node:fs");
-const { join } = require("node:path");
+const nodePath = require("node:path");
+const { isObject, readObject } = require("./json.cjs");
 
 const MARKER = ".template-environment-dirty";
 
 /** @param {string} root */
-const markerPath = (root) => join(root, "node_modules", MARKER);
+const markerPath = (root) => nodePath.join(root, "node_modules", MARKER);
 
 /** @param {string} root @returns {string | null} the reason, or null when the environment is not marked dirty */
 function dirtyReason(root) {
@@ -30,7 +31,7 @@ function dirtyKind(root) {
 
 /** @param {string} root @param {string} reason @param {string} [kind] */
 function markDirty(root, reason, kind) {
-  fs.mkdirSync(join(root, "node_modules"), { recursive: true });
+  fs.mkdirSync(nodePath.join(root, "node_modules"), { recursive: true });
   fs.writeFileSync(markerPath(root), `${reason}\n${kind ? `kind=${kind}\n` : ""}`);
 }
 
@@ -55,7 +56,7 @@ function clearDirty(root) {
  * @param {string} root
  */
 function removeInstallState(root) {
-  const target = join(root, "node_modules");
+  const target = nodePath.join(root, "node_modules");
   const stat = fs.lstatSync(target, { throwIfNoEntry: false });
   if (!stat) return;
   if (stat.isSymbolicLink() || !stat.isDirectory()) fs.unlinkSync(target);
@@ -67,7 +68,7 @@ function removeInstallState(root) {
  * @returns {{ guard: boolean, hooks: boolean }}
  */
 function capabilities(root) {
-  const parsed = JSON.parse(fs.readFileSync(join(root, "tooling", "capabilities.json"), "utf8"));
+  const parsed = readObject(nodePath.join(root, "tooling", "capabilities.json"));
   return { guard: parsed.guard === true, hooks: parsed.hooks === true };
 }
 
@@ -82,16 +83,19 @@ function capabilities(root) {
  */
 function guardRefusal(root) {
   if (!capabilities(root).guard) return null;
-  const module = join(root, "scripts", "hooks", "state.cjs");
-  if (!fs.existsSync(module)) return "the guard is registered in tooling/capabilities.json but scripts/hooks/state.cjs is missing";
-  /** @type {any} */
+  const statePath = nodePath.join(root, "scripts", "hooks", "state.cjs");
+  if (!fs.existsSync(statePath)) return "the guard is registered in tooling/capabilities.json but scripts/hooks/state.cjs is missing";
+  /** @type {unknown} */
   let state;
   try {
-    state = require(module).status(root);
+    /** @type {unknown} */
+    const loaded = require(statePath);
+    state = /** @type {{ status: (root: string) => unknown }} */ (loaded).status(root);
   } catch (error) {
     return `the guard state could not be read (${/** @type {Error} */ (error).message}); resolve it before changing dependencies`;
   }
-  if (state?.clean !== true) return `the guard reports an unresolved protected state (${typeof state?.reason === "string" ? state.reason : "unknown"}); resolve it before changing dependencies`;
+  if (!isObject(state) || state.clean !== true)
+    return `the guard reports an unresolved protected state (${isObject(state) && typeof state.reason === "string" ? state.reason : "unknown"}); resolve it before changing dependencies`;
   return null;
 }
 

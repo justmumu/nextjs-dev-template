@@ -22,7 +22,9 @@ function redact(text) {
  */
 function run(command, args, options) {
   const result = spawnSync(command, args, { cwd: options.cwd, env: options.env ?? process.env, encoding: "utf8", shell: false, maxBuffer: 64 * 1024 * 1024 });
-  return { status: result.status, stdout: result.stdout ?? "", stderr: result.stderr ?? (result.error ? String(result.error.message) : "") };
+  // A process that could not be spawned has null output streams although the types promise strings.
+  const { error, status, stdout, stderr } = /** @type {import("node:child_process").SpawnSyncReturns<string | null>} */ (result);
+  return { status, stdout: stdout ?? "", stderr: stderr ?? error?.message ?? "" };
 }
 
 /**

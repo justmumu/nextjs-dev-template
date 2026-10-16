@@ -3,10 +3,11 @@
 // Dependency-free setup, repair and lock reconciliation. Works without node_modules and never
 // downloads a tool: exact Node and pnpm are verified, not fetched.
 const { existsSync, readFileSync } = require("node:fs");
-const { join, resolve } = require("node:path");
+const nodePath = require("node:path");
 const { UsageError, parseArgs } = require("./core/args.cjs");
 const { buildPermissions, manifestViolations, npmrcViolations, workspaceViolations } = require("./core/dependency-policy.cjs");
 const { capabilities, clearDirty, dirtyKind, dirtyReason, guardRefusal, recoveryCommand, removeInstallState } = require("./core/install-state.cjs");
+const { parseObject } = require("./core/json.cjs");
 const { redact, run } = require("./core/process.cjs");
 const { preflightErrors } = require("./core/toolchain.cjs");
 const { isProtectedFile, isShadowOverride } = require("./core/protected.cjs");
@@ -19,7 +20,9 @@ function transact(root, steps, plan, io, kind) {
   const result = runTransaction({ root, steps, plan, kind });
   io.stdout(redact(result.output));
   if (!result.ok) {
-    io.stderr(`install failed or was rejected; protected files were restored and the install is marked incomplete (recover with: ${recoveryCommand(root)}).\n${result.violations.map((line) => `- ${line}\n`).join("")}`);
+    io.stderr(
+      `install failed or was rejected; protected files were restored and the install is marked incomplete (recover with: ${recoveryCommand(root)}).\n${result.violations.map((line) => `- ${line}\n`).join("")}`,
+    );
   }
   return result.ok;
 }
@@ -32,7 +35,9 @@ function setup(root, io) {
   if (dirty) return fail(io, [`An incomplete install was left behind (${dirty}). Run: ${recoveryCommand(root)}`]);
   if (!transact(root, [["install", "--frozen-lockfile"]], { action: "none" }, io)) return 1;
   if (capabilities(root).hooks) {
-    require(join(root, "scripts", "hooks", "install.cjs")).install({ root });
+    /** @type {unknown} */
+    const loaded = require(nodePath.join(root, "scripts", "hooks", "install.cjs"));
+    /** @type {{ install: (options: { root: string }) => void }} */ (loaded).install({ root });
     io.stdout("Git hooks installed.\n");
   } else {
     io.stdout("Dependencies installed from the frozen lock. Git hooks are not installed: the hook installer is not available yet.\n");
@@ -47,7 +52,10 @@ function repair(root, io) {
   const lock = checkLock(root);
   if (!lock.ok) {
     const retry = dirtyKind(root) === "deps-lock" ? " A relock was interrupted: run node scripts/bootstrap.cjs deps-lock again once the failure is fixed." : "";
-    return fail(io, [`pnpm-lock.yaml does not match package.json; repair only reinstalls from the lock and never regenerates manifests or locks. Nothing was removed.${retry}`, redact(lock.output)]);
+    return fail(io, [
+      `pnpm-lock.yaml does not match package.json; repair only reinstalls from the lock and never regenerates manifests or locks. Nothing was removed.${retry}`,
+      redact(lock.output),
+    ]);
   }
   removeInstallState(root);
   if (!transact(root, [["install", "--frozen-lockfile"]], { action: "none" }, io)) return 1;
@@ -82,21 +90,42 @@ function depsLock(root, io) {
   const head = git(root, ["show", "HEAD:package.json"]);
   if (head.status !== 0) return fail(io, ["deps-lock needs a committed baseline (HEAD:package.json); commit the approved state first."]);
   const status = git(root, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]);
-  const differing = status.stdout.split("\0").filter((entry) => entry.length > 3).map((entry) => entry.slice(3)).filter((path) => path !== "package.json" && path !== "pnpm-lock.yaml" && (isProtectedFile(path) || isShadowOverride(path)));
+  const differing = status.stdout
+    .split("\0")
+    .filter((entry) => entry.length > 3)
+    .map((entry) => entry.slice(3))
+    .filter((path) => path !== "package.json" && path !== "pnpm-lock.yaml" && (isProtectedFile(path) || isShadowOverride(path)));
   if (status.status !== 0 || differing.length > 0) {
-    return fail(io, ["Protected files differ from the committed baseline; deps-lock does not approve them:", ...(status.status === 0 ? differing : ["git status failed"])]);
+    return fail(io, [
+      "Protected files differ from the committed baseline; deps-lock does not approve them:",
+      ...(status.status === 0 ? differing : ["git status failed"]),
+    ]);
   }
   const problems = [];
-  const workspace = readFileSync(join(root, "pnpm-workspace.yaml"), "utf8");
+  const workspace = readFileSync(nodePath.join(root, "pnpm-workspace.yaml"), "utf8");
   problems.push(...workspaceViolations(workspace, { reviewedBuilds: buildPermissions(workspace) }));
-  if (existsSync(join(root, ".npmrc"))) problems.push(...npmrcViolations(readFileSync(join(root, ".npmrc"), "utf8")));
+  if (existsSync(nodePath.join(root, ".npmrc"))) problems.push(...npmrcViolations(readFileSync(nodePath.join(root, ".npmrc"), "utf8")));
   try {
-    problems.push(...manifestViolations(JSON.parse(head.stdout), JSON.parse(readFileSync(join(root, "package.json"), "utf8")), { action: "approved-edit" }));
+    problems.push(
+      ...manifestViolations(parseObject(head.stdout), parseObject(readFileSync(nodePath.join(root, "package.json"), "utf8")), { action: "approved-edit" }),
+    );
   } catch (error) {
     problems.push(`package.json is not valid JSON: ${/** @type {Error} */ (error).message}`);
   }
   if (problems.length > 0) return fail(io, ["The manifest or workspace is outside the dependency-only boundary:", ...problems.map((line) => `- ${line}`)]);
-  if (!transact(root, [["install", "--lockfile-only", "--no-frozen-lockfile"], ["install", "--frozen-lockfile"]], { action: "none" }, io, "deps-lock")) return 1;
+  if (
+    !transact(
+      root,
+      [
+        ["install", "--lockfile-only", "--no-frozen-lockfile"],
+        ["install", "--frozen-lockfile"],
+      ],
+      { action: "none" },
+      io,
+      "deps-lock",
+    )
+  )
+    return 1;
   io.stdout("Lock regenerated from the approved manifest and installed frozen.\n");
   return 0;
 }
@@ -113,7 +142,7 @@ function fail(io, lines) {
  * @returns {number}
  */
 function main(argv, options = {}) {
-  const root = options.root ?? resolve(__dirname, "..");
+  const root = options.root ?? nodePath.resolve(__dirname, "..");
   const io = options.io ?? { stdout: (text) => process.stdout.write(text), stderr: (text) => process.stderr.write(text) };
   const [command, ...args] = argv;
   try {

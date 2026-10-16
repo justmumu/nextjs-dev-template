@@ -2,13 +2,14 @@ import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { describe, expect, test } from "vitest";
+import { parseJson, type Versions } from "../support/json.ts";
 
 const require = createRequire(import.meta.url);
 const root = resolve(import.meta.dirname, "../..");
 const policy = require("../../scripts/core/dependency-policy.cjs") as typeof import("../../scripts/core/dependency-policy.cjs");
 
 const read = (path: string) => readFileSync(join(root, path), "utf8");
-const versions = JSON.parse(read("tooling/versions.json"));
+const versions = parseJson<Versions>(read("tooling/versions.json"));
 const GOOD = "strictDepBuilds: true\nverifyDepsBeforeRun: error\nenablePrePostScripts: false\nskills:\n  dirs: []\nallowBuilds:\n  unrs-resolver: false\n";
 
 describe("workspace policy", () => {
@@ -24,7 +25,7 @@ describe("workspace policy", () => {
     ["enablePrePostScripts: true", /enablePrePostScripts/],
     ["skills:\n  dirs:\n    - .agents", /skills\.dirs/],
   ])("rejects a weakened setting %s", (replacement, message) => {
-    const key = replacement.split(":")[0];
+    const key = replacement.split(":")[0] ?? "";
     const text = key === "skills" ? GOOD.replace("skills:\n  dirs: []", replacement) : GOOD.replace(new RegExp(`^${key}:.*$`, "m"), replacement);
     expect(policy.workspaceViolations(text, { reviewedBuilds: [] }).join("\n")).toMatch(message);
   });
@@ -33,7 +34,20 @@ describe("workspace policy", () => {
     expect(policy.workspaceViolations("allowBuilds: {}\n", { reviewedBuilds: [] }).length).toBe(4);
   });
 
-  test.each(["permissions:\n  build: true", "scriptShell: /bin/sh", "shellEmulator: false", "pnpmfile: ./x.cjs", "globalPnpmfile: x", "hooks:\n  a: b", "overrides:\n  a: 1.0.0", "packages:\n  - a", "packageExtensions: {}", "patchedDependencies: {}", "dangerouslyAllowAllBuilds: true", "onlyBuiltDependencies:\n  - a"])("rejects higher-priority or hook field %j", (extra) => {
+  test.each([
+    "permissions:\n  build: true",
+    "scriptShell: /bin/sh",
+    "shellEmulator: false",
+    "pnpmfile: ./x.cjs",
+    "globalPnpmfile: x",
+    "hooks:\n  a: b",
+    "overrides:\n  a: 1.0.0",
+    "packages:\n  - a",
+    "packageExtensions: {}",
+    "patchedDependencies: {}",
+    "dangerouslyAllowAllBuilds: true",
+    "onlyBuiltDependencies:\n  - a",
+  ])("rejects higher-priority or hook field %j", (extra) => {
     expect(policy.workspaceViolations(`${GOOD}${extra}\n`, { reviewedBuilds: [] }).length).toBeGreaterThan(0);
   });
 
@@ -78,7 +92,15 @@ describe("workspace policy", () => {
 
   test("project .npmrc may not inject shells or hooks and holds no literal credentials", () => {
     expect(policy.npmrcViolations("registry=https://registry.example/\n")).toEqual([]);
-    for (const line of ["script-shell=/bin/sh", "shell-emulator=false", "pnpmfile=x.cjs", "global-pnpmfile=x.cjs", "//r.example/:_authToken=abc", "_password=abc", "//r.example/:_authToken=${TOKEN}x"]) {
+    for (const line of [
+      "script-shell=/bin/sh",
+      "shell-emulator=false",
+      "pnpmfile=x.cjs",
+      "global-pnpmfile=x.cjs",
+      "//r.example/:_authToken=abc",
+      "_password=abc",
+      "//r.example/:_authToken=${TOKEN}x",
+    ]) {
       if (line.endsWith("${TOKEN}x")) continue;
       expect(policy.npmrcViolations(`${line}\n`).length, line).toBeGreaterThan(0);
     }
@@ -141,9 +163,17 @@ describe("manifest delta", () => {
   test("reviewed tool pins change only through a reviewed tooling change; other dependencies are free", () => {
     const pinned = { b: "2.0.0" };
     expect(policy.manifestViolations(base, { ...clone(), devDependencies: { b: "2.0.0", c: "3.0.0" } }, { ...add, pinned })).toEqual([]);
-    expect(policy.manifestViolations(base, { ...clone(), devDependencies: { b: "2.1.0" } }, { action: "upgrade", name: null, pinned }).join()).toMatch(/reviewed tool pin/);
-    expect(policy.manifestViolations(base, { ...clone(), devDependencies: {} }, { action: "remove", group: "dev", name: "b", pinned }).join()).toMatch(/reviewed tool pin/);
-    expect(policy.manifestViolations(base, { ...clone(), dependencies: { a: "1.0.0", b: "9.9.9" }, devDependencies: { b: "2.0.0", c: "3.0.0" } }, { ...add, pinned }).join()).toMatch(/shadow a reviewed tool pin/);
+    expect(policy.manifestViolations(base, { ...clone(), devDependencies: { b: "2.1.0" } }, { action: "upgrade", name: null, pinned }).join()).toMatch(
+      /reviewed tool pin/,
+    );
+    expect(policy.manifestViolations(base, { ...clone(), devDependencies: {} }, { action: "remove", group: "dev", name: "b", pinned }).join()).toMatch(
+      /reviewed tool pin/,
+    );
+    expect(
+      policy
+        .manifestViolations(base, { ...clone(), dependencies: { a: "1.0.0", b: "9.9.9" }, devDependencies: { b: "2.0.0", c: "3.0.0" } }, { ...add, pinned })
+        .join(),
+    ).toMatch(/shadow a reviewed tool pin/);
   });
 
   test("relock and reconcile accept no manifest change at all", () => {
