@@ -9,6 +9,7 @@
     "node": "24.21.0"
   },
   "scripts": {
+    "template:render": "node scripts/template/render.cjs",
     "test:one": "node scripts/development.cjs test:one",
     "toolchain:verify": "node scripts/toolchain.cjs verify"
   },

@@ -1,0 +1,13 @@
+{
+  "schema": "nextjs-dev-template/manifest",
+  "protocol": 1,
+  "role": "application",
+  "entries": [
+    { "type": "json-metadata", "projection": "package-json", "base": "template", "source": "package.json", "destination": "package.json" },
+    { "type": "copy", "base": "template", "source": "pnpm-lock.yaml", "destination": "pnpm-lock.yaml" },
+    { "type": "copy", "base": "template", "source": "pnpm-workspace.yaml", "destination": "pnpm-workspace.yaml" },
+    { "type": "copy", "base": "template", "source": ".gitignore", "destination": ".gitignore" },
+    { "type": "copy", "base": "template", "source": "tooling/project-role.json", "destination": "tooling/project-role.json" },
+    { "type": "copy", "base": "root", "source": ".node-version", "destination": ".node-version" }
+  ]
+}

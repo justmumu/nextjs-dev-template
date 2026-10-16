@@ -1,0 +1,4 @@
+# The application owns its dependency graph: this file makes it a standalone
+# workspace root, so nothing is resolved from a parent directory.
+allowBuilds:
+  unrs-resolver: false

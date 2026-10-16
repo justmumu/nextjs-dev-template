@@ -10,9 +10,9 @@ Python-based pre-commit or Commitizen.
 | --- | --- | --- |
 | Node | 24.21.0 | `.node-version`, `engines.node` |
 | pnpm | 12.14.0 | `packageManager` |
-| Next.js / React / React DOM | 16.4.2 / 19.3.0 / 19.3.0 | `tooling/versions.json` (app seed) |
+| Next.js / React / React DOM | 16.4.1 / 19.3.0 / 19.3.0 | `tooling/versions.json` (app seed) |
 | TypeScript | 6.0.3 | `tooling/versions.json` |
-| ESLint / eslint-config-next | 9.39.5 / 16.4.2 | `tooling/versions.json` (app seed) |
+| ESLint / eslint-config-next | 9.39.5 / 16.4.1 | `tooling/versions.json` (app seed) |
 | Vitest / Playwright | 5.0.5 / 1.64.1 | `tooling/versions.json` |
 
 `tooling/versions.json` is the reviewed source. The root `package.json` projects
@@ -28,11 +28,17 @@ Chosen from registry engines/peers and proven with a real Next.js fixture
 - TypeScript 6.0.3, not 7.x: `typescript-eslint` (required by `eslint-config-next`)
   supports TypeScript `<6.1.0`.
 - ESLint 9.39.5, not 10.x: `eslint-plugin-import`, `eslint-plugin-jsx-a11y` and
-  `eslint-plugin-react` (via `eslint-config-next@16.4.2`) do not accept ESLint 10.
+  `eslint-plugin-react` (via `eslint-config-next@16.4.1`) do not accept ESLint 10.
 - React DOM 19.3.0, not 19.3.1: 19.3.1 requires a `react@^19.3.1` that is not published.
 - `@types/node` 24.x matches the Node 24 runtime.
 - `unrs-resolver` build scripts are denied (`allowBuilds`); its prebuilt native
   binary is used. A dependency that needs a source build fails the install.
+
+Next.js and eslint-config-next use 16.4.1: the first cold-cache test rejected
+16.4.2 because it was younger than pnpm's default 24-hour release-age limit.
+The [16.4.2 release notes](https://github.com/vercel/next.js/releases/tag/v16.4.2)
+list Turbopack and documentation fixes. No release-age exception was added.
+The rendered application is tested with a fresh package store and cache.
 
 Re-run the fixture proof when any pin changes. Pins are exact; ranges are rejected.
 
