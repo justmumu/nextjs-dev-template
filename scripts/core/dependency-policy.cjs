@@ -17,7 +17,6 @@ const FORBIDDEN_WORKSPACE_KEYS = [
   "pnpmfile",
   "globalPnpmfile",
   "hooks",
-  "overrides",
   "packages",
   "packageExtensions",
   "patchedDependencies",
@@ -26,15 +25,23 @@ const FORBIDDEN_WORKSPACE_KEYS = [
   "neverBuiltDependencies",
   "ignoredBuiltDependencies",
 ];
+// The one reviewed graph rewrite. VitePress 1.6.4 pins DocSearch 3.8.2, whose peers stop at React 18;
+// DocSearch 3.9.0 adds React 19 support (https://github.com/algolia/docsearch/releases/tag/v3.9.0).
+// This is a compatible package replacement scoped to that parent, not a peer-dependency suppression.
+// Roots and generated projects share this declaration; a workspace file may carry exactly this block
+// or none, and dependency commands never add, remove or change it.
+const REVIEWED_OVERRIDES = Object.freeze({
+  "vitepress@1.6.4>@docsearch/js": "3.9.0",
+  "vitepress@1.6.4>@docsearch/css": "3.9.0",
+});
 const REQUIRED_SCALARS = /** @type {const} */ ({ strictDepBuilds: "true", verifyDepsBeforeRun: "error", enablePrePostScripts: "false" });
 const FORBIDDEN_NPMRC = /^\s*(script-shell|shell-emulator|pnpmfile|global-pnpmfile)\s*=/im;
 const NPMRC_CREDENTIAL = /^\s*(?:\/\/[^\s=]*:)?(_authToken|_auth|_password)\s*=\s*(\S*)/gim;
 
 const TOP_KEY = /^([A-Za-z][A-Za-z0-9]*):(?: (.+))?$/;
-// Plain, double- or single-quoted names with no escapes: exactly what the reviewed files use.
 const CHILD = /^ {2}(?:([A-Za-z0-9][A-Za-z0-9._/-]*)|"([^"\\\n]+)"|'([^'\n]+)'): (\S.*)$/;
 const SCALAR = /^(?:[A-Za-z0-9][A-Za-z0-9._/-]*|\[\]|\{\})$/;
-const ALLOWED_TOP = new Set([...Object.keys(REQUIRED_SCALARS), "skills", "allowBuilds"]);
+const ALLOWED_TOP = new Set([...Object.keys(REQUIRED_SCALARS), "skills", "allowBuilds", "overrides"]);
 
 /**
  * Parses the deliberately narrow canonical subset of pnpm-workspace.yaml that the policy files use:
@@ -83,6 +90,12 @@ function parseWorkspace(text) {
   return { keys, problems };
 }
 
+/** @param {{ inline: string | null, children: Map<string, string> }} block the parsed `overrides` key @returns {boolean} whether it is exactly the reviewed map */
+function reviewedOverrides(block) {
+  const reviewed = Object.entries(REVIEWED_OVERRIDES);
+  return block.inline === null && block.children.size === reviewed.length && reviewed.every(([name, version]) => block.children.get(name) === version);
+}
+
 /**
  * @param {string} text pnpm-workspace.yaml
  * @param {{ reviewedBuilds: readonly string[] }} options
@@ -101,6 +114,16 @@ function workspaceViolations(text, options) {
     if (FORBIDDEN_WORKSPACE_KEYS.includes(key)) violations.push(`${key} is not a dependency field and needs its own protected review`);
     else if (!ALLOWED_TOP.has(key)) violations.push(`${key} is not part of the reviewed workspace policy and needs its own protected review`);
   }
+  const overrides = keys.get("overrides");
+  if (overrides && !reviewedOverrides(overrides)) {
+    violations.push(
+      "overrides: only the reviewed block (" +
+        Object.entries(REVIEWED_OVERRIDES)
+          .map(([name, version]) => `${name}: ${version}`)
+          .join(", ") +
+        ") is allowed, and all of it",
+    );
+  }
   const builds = keys.get("allowBuilds");
   if (builds && builds.inline !== null && builds.inline !== "{}") violations.push("allowBuilds must be a block of name: true|false entries (or {})");
   for (const [name, value] of builds?.children ?? []) {
@@ -109,6 +132,22 @@ function workspaceViolations(text, options) {
     else if (!options.reviewedBuilds.includes(name)) violations.push(`allowBuilds.${name}: true is not a reviewed build permission`);
   }
   return violations;
+}
+
+/**
+ * What a workspace file says, independent of key order, quoting, blank lines and comments: every
+ * key and scalar of the canonical subset. Layout-only rewrites by the formatter keep it equal.
+ * @param {string} text pnpm-workspace.yaml
+ * @returns {string | null} null when the file is outside the canonical subset and so cannot be compared
+ */
+function workspaceMeaning(text) {
+  const { keys, problems } = parseWorkspace(text);
+  if (problems.length > 0) return null;
+  const facts = [...keys].flatMap(([key, block]) => [
+    JSON.stringify([key, block.inline]),
+    ...[...block.children].map(([name, value]) => JSON.stringify([key, name, value])),
+  ]);
+  return facts.sort().join("\n");
 }
 
 /** @param {string} text .npmrc @returns {string[]} */
@@ -255,4 +294,15 @@ function buildReview(output) {
   );
 }
 
-module.exports = { GROUP_MAP, buildPermissions, buildReview, isExactVersion, manifestViolations, npmrcViolations, parseWorkspace, same, workspaceViolations };
+module.exports = {
+  GROUP_MAP,
+  buildPermissions,
+  buildReview,
+  isExactVersion,
+  manifestViolations,
+  npmrcViolations,
+  parseWorkspace,
+  same,
+  workspaceMeaning,
+  workspaceViolations,
+};

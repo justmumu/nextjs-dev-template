@@ -1,6 +1,5 @@
 // @ts-check
 "use strict";
-// The generator-only development commands. Applications do not receive this directory.
 const nodePath = require("node:path");
 const { parseArgs } = require("../core/args.cjs");
 

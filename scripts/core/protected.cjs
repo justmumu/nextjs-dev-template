@@ -1,108 +1,102 @@
 // @ts-check
 "use strict";
-// The one inventory of files that define a project's rules and tooling, for both roles. The
-// dependency transaction snapshots exactly this surface; the protected-files guard (U6) extends
-// this module instead of keeping a second list. Dependency-free and pure so hooks can load it.
+// The one inventory of files that define a project's rules and tooling, for both roles. It is
+// declared once, in tooling/policy.json: the dependency transaction snapshots exactly this surface
+// and the protected-files guard classifies paths with the same declaration. Dependency-free so
+// hooks can load it without an install.
 const nodePath = require("node:path");
+const { isObject, readObject } = require("./json.cjs");
 
-// Exact root-level names.
-const FILES = [
-  "package.json",
-  "pnpm-lock.yaml",
-  "pnpm-workspace.yaml",
-  ".npmrc",
-  ".node-version",
-  ".nvmrc",
-  ".gitignore",
-  ".gitattributes",
-  ".editorconfig",
-  ".prettierignore",
-  ".eslintignore",
-  ".npmignore",
-  "AGENTS.md",
-  "CLAUDE.md",
-];
+/**
+ * @typedef {{
+ *   files: string[], dirs: string[], seedPrefix: string, shadowExemptPrefixes: string[],
+ *   configNames: RegExp[], shadowNames: RegExp[], docsConfig: RegExp, vitepressConfig: RegExp,
+ *   skippedAnywhere: Set<string>, generatedDirs: Set<string>,
+ * }} Inventory
+ */
 
-// Root-level static configuration and package-manager hooks, whatever the extension variant.
-const CONFIG_NAMES = [
-  /^\.pnpmfile\..+$/,
-  /^tsconfig(?:\..+)?\.json$/,
-  /^next\.config\.[cm]?[jt]s$/,
-  /^eslint\.config\.[cm]?[jt]s$/,
-  /^\.eslintrc(?:\..+)?$/,
-  /^\.prettierrc(?:\..+)?$/,
-  /^prettier\.config\.[cm]?[jt]s$/,
-  /^vitest\.(?:[a-z]+\.)?(?:config|workspace)\.[cm]?[jt]s$/,
-  /^playwright\.config\.[cm]?[jt]s$/,
-  /^postcss\.config\.[cm]?[jt]s$/,
-];
-
-// Site generators keep their configuration directly under docs/, and VitePress keeps config.* plus
-// its config/ helper directory under docs/.vitepress/ (theme and content stay ordinary source).
-const DOCS_CONFIG = /^[^/]+\.config\.(?:[cm]?[jt]s|json)$/;
-const VITEPRESS_CONFIG = /^\.vitepress\/(?:config\.[cm]?[jt]s|config\/.+)$/;
-
-// The generator's application seed carries the same policy surface under this prefix; the rest of
-// the seed (src, app, public, ...) is ordinary template source and is not protected.
-const SEED_PREFIX = "template/app/";
-
-// Directories whose whole content is protected.
-const DIRS = ["scripts", "tooling", ".claude", ".codex", ".githooks", ".husky"];
-
-// Configuration that wins over the root one when it sits closer to the file it configures: a copy
-// anywhere below the root is a shadow override and is never allowed to appear.
-const SHADOW_NAMES = [
-  /^\.npmrc$/,
-  /^pnpm-workspace\.yaml$/,
-  /^\.pnpmfile\..+$/,
-  /^eslint\.config\.[cm]?[jt]s$/,
-  /^\.eslintrc(?:\..+)?$/,
-  /^\.prettierrc(?:\..+)?$/,
-  /^prettier\.config\.[cm]?[jt]s$/,
-  /^vitest\.(?:[a-z]+\.)?(?:config|workspace)\.[cm]?[jt]s$/,
-  /^playwright\.config\.[cm]?[jt]s$/,
-];
-
-// Never scanned: dependency trees, build output and other generated state.
-const SKIPPED_DIRS = new Set([
-  "node_modules",
-  ".git",
-  ".next",
-  "out",
-  "dist",
-  "build",
-  "coverage",
-  "site",
-  "test-results",
-  "playwright-report",
-  ".turbo",
-  ".cache",
-  ".pnpm-store",
-]);
-// Not scanned for shadow overrides: the generator's application seed and test fixtures legitimately carry their own configuration.
-const SHADOW_EXEMPT_PREFIXES = ["template/", "tests/fixtures/"];
-
-/** @param {string} rel posix path relative to the project root @returns {boolean} */
-function isProtectedFile(rel) {
-  if (rel.startsWith(SEED_PREFIX)) return isProtectedFile(rel.slice(SEED_PREFIX.length));
-  const parts = rel.split("/");
-  if (parts.length === 1) return FILES.includes(rel) || CONFIG_NAMES.some((pattern) => pattern.test(rel));
-  const [first = "", second = ""] = parts;
-  if (DIRS.includes(first)) return true;
-  if (first !== "docs") return false;
-  return (parts.length === 2 && DOCS_CONFIG.test(second)) || VITEPRESS_CONFIG.test(parts.slice(1).join("/"));
+/** @param {unknown} value @param {string} name @returns {string[]} */
+function strings(value, name) {
+  const items = /** @type {unknown[]} */ (Array.isArray(value) ? value : []);
+  /** @type {string[]} */
+  const list = [];
+  for (const item of items) if (typeof item === "string" && item !== "") list.push(item);
+  if (list.length === 0 || list.length !== items.length) throw new Error(`tooling/policy.json: protected.${name} must be a non-empty list of strings`);
+  return list;
 }
 
-/** @param {string} rel @returns {boolean} true for a shadow-capable config name below the root */
-function isShadowOverride(rel) {
-  if (!rel.includes("/")) return false;
-  if (SHADOW_EXEMPT_PREFIXES.some((prefix) => rel.startsWith(prefix))) return false;
-  return SHADOW_NAMES.some((pattern) => pattern.test(nodePath.basename(rel)));
+/** @param {unknown} value @param {string} name @returns {string} */
+function text(value, name) {
+  if (typeof value !== "string" || value === "") throw new Error(`tooling/policy.json: protected.${name} must be a non-empty string`);
+  return value;
 }
 
-/** @param {string} name a directory name @returns {boolean} */
-function isSkippedDir(name) {
-  return SKIPPED_DIRS.has(name);
+/**
+ * Reads the declaration; anything that is not exactly the declared shape is an error, because a
+ * silently smaller inventory would unprotect files.
+ * @param {unknown} declaration the `protected` member of tooling/policy.json
+ * @returns {Inventory}
+ */
+function parseInventory(declaration) {
+  if (!isObject(declaration)) throw new Error("tooling/policy.json: protected must be an object");
+  return {
+    files: strings(declaration.files, "files"),
+    dirs: strings(declaration.dirs, "dirs"),
+    seedPrefix: text(declaration.seedPrefix, "seedPrefix"),
+    shadowExemptPrefixes: strings(declaration.shadowExemptPrefixes, "shadowExemptPrefixes"),
+    configNames: strings(declaration.configNames, "configNames").map((pattern) => new RegExp(pattern)),
+    shadowNames: strings(declaration.shadowNames, "shadowNames").map((pattern) => new RegExp(pattern)),
+    docsConfig: new RegExp(text(declaration.docsConfig, "docsConfig")),
+    vitepressConfig: new RegExp(text(declaration.vitepressConfig, "vitepressConfig")),
+    skippedAnywhere: new Set(strings(declaration.skippedAnywhere, "skippedAnywhere")),
+    generatedDirs: new Set(strings(declaration.generatedDirs, "generatedDirs")),
+  };
 }
 
-module.exports = { DIRS, FILES, isProtectedFile, isShadowOverride, isSkippedDir };
+/**
+ * The classification functions of one declaration. The guard builds one from the declaration it
+ * recorded in its baseline, so an edited working copy cannot shrink what is protected.
+ * @param {unknown} declaration
+ */
+function createInventory(declaration) {
+  const inventory = parseInventory(declaration);
+
+  /** @param {string} rel posix path relative to the project root @returns {boolean} */
+  function isProtectedFile(rel) {
+    if (rel.startsWith(inventory.seedPrefix)) return isProtectedFile(rel.slice(inventory.seedPrefix.length));
+    const parts = rel.split("/");
+    if (parts.length === 1) return inventory.files.includes(rel) || inventory.configNames.some((pattern) => pattern.test(rel));
+    const [first = "", second = ""] = parts;
+    if (inventory.dirs.includes(first)) return true;
+    if (first !== "docs") return false;
+    return (parts.length === 2 && inventory.docsConfig.test(second)) || inventory.vitepressConfig.test(parts.slice(1).join("/"));
+  }
+
+  /** @param {string} rel @returns {boolean} true for a shadow-capable config name below the root */
+  function isShadowOverride(rel) {
+    if (!rel.includes("/")) return false;
+    if (inventory.shadowExemptPrefixes.some((prefix) => rel.startsWith(prefix))) return false;
+    return inventory.shadowNames.some((pattern) => pattern.test(nodePath.basename(rel)));
+  }
+
+  /**
+   * Dependency trees and Git data are never scanned. Build output names are generated state at the
+   * root and below ordinary source, but not below a protected directory: `scripts/dist/new.cjs` is
+   * protected content, not a build product.
+   * @param {string} name a directory name
+   * @param {string} [parent] the posix path of the directory that holds it; empty for the project root
+   * @returns {boolean}
+   */
+  function isSkippedDir(name, parent = "") {
+    if (inventory.skippedAnywhere.has(name)) return true;
+    if (!inventory.generatedDirs.has(name)) return false;
+    return !inventory.dirs.includes(parent.split("/")[0] ?? "");
+  }
+
+  return { DIRS: inventory.dirs, FILES: inventory.files, isProtectedFile, isShadowOverride, isSkippedDir };
+}
+
+const DECLARATION = readObject(nodePath.join(__dirname, "..", "..", "tooling", "policy.json")).protected;
+const { DIRS, FILES, isProtectedFile, isShadowOverride, isSkippedDir } = createInventory(DECLARATION);
+
+module.exports = { DIRS, FILES, createInventory, isProtectedFile, isShadowOverride, isSkippedDir };

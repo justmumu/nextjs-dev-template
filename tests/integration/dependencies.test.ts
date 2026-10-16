@@ -91,7 +91,10 @@ type Options = { deps?: Record<string, string>; allow?: Record<string, boolean>;
 function makeProject({ deps = {}, allow = {}, install = true }: Options = {}) {
   const dir = join(scratch, `project-${counter++}`);
   mkdirSync(join(dir, "tooling"), { recursive: true });
-  cpSync(join(root, "scripts"), join(dir, "scripts"), { recursive: true, filter: (source) => !source.includes("/scripts/template") });
+  cpSync(join(root, "scripts"), join(dir, "scripts"), {
+    recursive: true,
+    filter: (source) => !source.includes("/scripts/template") && !source.includes("/scripts/hooks"),
+  });
   cpSync(join(import.meta.dirname, "../fixtures/packages"), join(dir, "pkgs"), { recursive: true });
   for (const name of ["policy.json", "capabilities.json"]) cpSync(join(root, "tooling", name), join(dir, "tooling", name));
   writeFileSync(join(dir, "tooling/project-role.json"), JSON.stringify({ role: "application", dependencyGraph: "root", seedWorkspaceMember: false }));

@@ -81,7 +81,7 @@ function resolveOnPath(name, pathValue) {
       accessSync(candidate, constants.X_OK);
       if (statSync(candidate).isFile()) return candidate;
     } catch {
-      // not in this directory
+      continue;
     }
   }
   return null;

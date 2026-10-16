@@ -1,6 +1,5 @@
 // @ts-check
 "use strict";
-// Literal `--name=value` grammar. No shell expansion, no `--` separator, no positionals.
 
 class UsageError extends Error {
   /** @param {string} message */

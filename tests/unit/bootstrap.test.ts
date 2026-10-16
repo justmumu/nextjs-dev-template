@@ -23,6 +23,13 @@ function machine(overrides: Partial<Host> = {}) {
     guardRefusal: () => null,
     hooksRegistered: () => false,
     installHooks: () => calls.push("hooks"),
+    guardActive: () => false,
+    bindNode: () => calls.push("bind"),
+    guardDrift: () => [],
+    acceptGuard: () => {
+      calls.push("accept");
+      return 0;
+    },
     checkLock: () => ({ ok: true, output: "" }),
     removeInstallState: () => calls.push("remove"),
     clearDirty: () => calls.push("clear"),
@@ -254,6 +261,13 @@ describe("boundary of an approved relock", () => {
     expect(bootstrap.boundaryProblems({ ...files, manifest: manifest({ dependencies: { left: "1.0.0" } }) })).toEqual([]);
   });
 
+  test("the reviewed override block is inside the boundary and any other form of it is outside", () => {
+    const block = 'overrides:\n  "vitepress@1.6.4>@docsearch/js": 3.9.0\n  "vitepress@1.6.4>@docsearch/css": 3.9.0\n';
+    expect(bootstrap.boundaryProblems({ ...files, workspace: `${workspace}${block}` })).toEqual([]);
+    expect(bootstrap.boundaryProblems({ ...files, workspace: `${workspace}${block.replace('js": 3.9.0', 'js": 3.9.1')}` }).join("\n")).toMatch(/overrides/);
+    expect(bootstrap.boundaryProblems({ ...files, workspace: `${workspace}overrides:\n  left: 1.0.0\n` }).join("\n")).toMatch(/overrides/);
+  });
+
   test("a hostile .npmrc, workspace or non-JSON manifest is outside", () => {
     expect(bootstrap.boundaryProblems({ ...files, npmrc: "script-shell=/bin/evil\n" }).join("\n")).toMatch(/script-shell/);
     expect(bootstrap.boundaryProblems({ ...files, workspace: `${workspace}\nonlyBuiltDependencies:\n  evil: true\n` }).length).toBeGreaterThan(0);
@@ -266,5 +280,84 @@ describe("protected files that differ", () => {
     const porcelain = [" M AGENTS.md", "?? scripts/new.cjs", "A  package.json", " M pnpm-lock.yaml", "?? src/app/page.tsx", "x"].join("\0");
     expect(bootstrap.differingProtected(porcelain)).toEqual(["AGENTS.md", "scripts/new.cjs"]);
     expect(bootstrap.differingProtected("")).toEqual([]);
+  });
+});
+
+describe("the protected-files guard seam", () => {
+  test("an inactive guard accepts nothing and binds nothing", () => {
+    const { host, calls } = machine();
+    expect(run(["guard-accept"], host).err).toMatch(/not active.*Nothing was accepted/s);
+    expect(run(["setup"], host).status).toBe(0);
+    expect(calls).not.toContain("bind");
+    expect(calls).not.toContain("accept");
+  });
+
+  test("an active guard is accepted through the guard itself, and the exit code is the guard's", () => {
+    const { host, calls } = machine({ guardActive: () => true, acceptGuard: () => 1 });
+    expect(run(["guard-accept"], host).status).toBe(1);
+    expect(calls).toEqual([]);
+    const accepted = machine({ guardActive: () => true });
+    expect(run(["guard-accept"], accepted.host).status).toBe(0);
+    expect(accepted.calls).toEqual(["accept"]);
+  });
+
+  test("setup binds the Node binary after the install when the guard is active, and stops when it cannot", () => {
+    const bound = machine({ guardActive: () => true });
+    const result = run(["setup"], bound.host);
+    expect(result.status).toBe(0);
+    expect(bound.calls).toEqual(["transact", "bind"]);
+    expect(result.out).toMatch(/Node binary bound/);
+
+    const refused = machine({
+      guardActive: () => true,
+      bindNode: () => {
+        throw new Error("the Node binary must be outside the project and its dependencies");
+      },
+    });
+    const failed = run(["setup"], refused.host);
+    expect(failed.status).toBe(1);
+    expect(failed.err).toMatch(/could not bind the Node binary: the Node binary must be outside/);
+  });
+
+  test("a relock is judged against the guard's approved baseline, not HEAD, once the guard is active", () => {
+    const git: string[][] = [];
+    const lock = machine({
+      guardActive: () => true,
+      guardDrift: () => ["pnpm-lock.yaml", "pnpm-lock.yaml (staged)"],
+      run: (_command, args) => {
+        git.push([...args]);
+        return args[0] === "show" ? { status: 0, stdout: manifest() } : { status: 0, stdout: " M tooling/versions.json\0" };
+      },
+    });
+    const result = run(["deps-lock"], lock.host);
+    expect(result.status).toBe(0);
+    expect(git.some((args) => args[0] === "status")).toBe(false);
+    expect(lock.calls).toEqual(["transact"]);
+  });
+
+  test("anything the guard has not approved stops the relock, and so does a baseline that cannot be compared", () => {
+    const unapproved = machine({ guardActive: () => true, guardDrift: () => ["package.json", "Git hooks"] });
+    const refused = run(["deps-lock"], unapproved.host);
+    expect(refused.status).toBe(1);
+    expect(refused.err).toMatch(/differ from the guard's approved baseline.*package\.json.*Git hooks/s);
+    expect(unapproved.calls).toEqual([]);
+
+    const broken = machine({
+      guardActive: () => true,
+      guardDrift: () => {
+        throw new Error("the guard has no approved baseline");
+      },
+    });
+    const failed = run(["deps-lock"], broken.host);
+    expect(failed.status).toBe(1);
+    expect(failed.err).toMatch(/could not be compared \(the guard has no approved baseline\); deps-lock approves nothing/);
+    expect(broken.calls).toEqual([]);
+  });
+
+  test("only the lock is excluded from the approved comparison", () => {
+    expect(bootstrap.differingApproved(["pnpm-lock.yaml", "pnpm-lock.yaml (staged)", "package.json", "tooling/versions.json (staged)"])).toEqual([
+      "package.json",
+      "tooling/versions.json (staged)",
+    ]);
   });
 });

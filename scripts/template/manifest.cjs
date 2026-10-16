@@ -1,5 +1,6 @@
 // @ts-check
 "use strict";
+const { isObject: isRecord } = require("../core/json.cjs");
 const SCHEMA = "nextjs-dev-template/manifest";
 const PROTOCOL = 1;
 const ROLE = "application";
@@ -42,11 +43,6 @@ function safeSegments(value, label) {
     if (segment.toLowerCase() === ".git") throw new RenderError(`${label} must not touch .git: ${value}`);
   }
   return segments;
-}
-
-/** @param {unknown} value @returns {value is Record<string, unknown>} */
-function isRecord(value) {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 /** @param {unknown} value @param {string} label @returns {string} a validated relative path */

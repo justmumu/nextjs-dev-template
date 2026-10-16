@@ -1,0 +1,1156 @@
+{
+  "source": {
+    "repository": "https://github.com/justmumu/python-dev-template",
+    "revision": "7f8da69c6f9f69e4fc4d1547c712fb8ef1f1d0b7",
+    "files": ["tests/test_guard.py", "tests/test_agent_permissions.py", "tests/test_guard_completion.py"],
+    "role": "behavior reference only; never executed, never shipped"
+  },
+  "statuses": {
+    "carried": "the behavior is kept and a JavaScript test proves it",
+    "adapted": "the behavior is kept for the JavaScript tool surface; the note names the change",
+    "pending": "owned by a later unit; U6 does not claim it. jsTests, when present, prove only the part U6 carries",
+    "not-carried": "deliberately not carried; the note gives the reason and jsTests, when present, prove the replacement"
+  },
+  "entries": [
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_live_codex_completion",
+      "status": "pending",
+      "owner": "U9",
+      "note": "A real authenticated Codex CLI lane is host verification; U6 does not claim it."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_redirect_into_protected_file_is_restored",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a redirect into a protected file is restored and explained"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_indirect_writes_are_restored",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "is restored after an edit and after a deletion"
+        },
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a worktree edit of each path is restored"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_failed_call_is_still_checked",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a failed call is still checked and reports through the failure channel"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_codex_spawn_failure_releases_reservation",
+      "status": "pending",
+      "owner": "U7",
+      "note": "Releasing a reservation from host completion evidence (a failed spawn) belongs to completion; U6 reservations are settled only by a matching result."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_nested_completion_controls_next_commit_admission",
+      "status": "pending",
+      "owner": "U7",
+      "note": "Nested completion ancestry is U7."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_saved_nested_call_recovers_when_parent_arrives",
+      "status": "pending",
+      "owner": "U7",
+      "note": "Nested completion ancestry is U7."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_nested_recovery_restores_unauthorized_protected_write",
+      "status": "pending",
+      "owner": "U7",
+      "note": "Nested completion ancestry is U7."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_codex_yielded_post_keeps_reservation",
+      "status": "pending",
+      "owner": "U7",
+      "note": "A yielded Codex post is not completion; transcript evidence is U7. U6 settles a reservation on the matching result only."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_recovered_call_still_restores_protected_write",
+      "status": "pending",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a redirect into a protected file is restored and explained"
+        }
+      ],
+      "note": "Recovery from completion evidence is U7; the restore itself is proven by the carried write tests."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_late_post_cannot_approve_another_change",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a result of another call cannot approve the change a waiting call allowed"
+        },
+        {
+          "file": "tests/integration/guard-launch.test.ts",
+          "title": "a call result that arrives late for another call cannot approve the waiting change"
+        },
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a late result that matches no reservation approves nothing"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_rollout_failure_grants_make_allowance_only_after_execution",
+      "status": "pending",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/policy.test.ts",
+          "title": "a failed call changes nothing in the environment and accepts nothing"
+        }
+      ],
+      "note": "Outcome from the rollout is U7; U6 grants a failure allowance with no file scope."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_rollout_accept_requires_success",
+      "status": "pending",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/policy.test.ts",
+          "title": "a failed call changes nothing in the environment and accepts nothing"
+        }
+      ],
+      "note": "Outcome from the rollout is U7; U6 never accepts on a failed call."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_rollout_failed_reinstall_does_not_accept_venv",
+      "status": "pending",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a dependency change that touches the environment is accepted on success only"
+        },
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a failed repair leaves the environment blocked"
+        }
+      ],
+      "note": "Outcome from the rollout is U7; U6 does not accept an environment change from a failed call."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_other_identity_cannot_replace_or_finish_reservation",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/state.test.ts",
+          "title": "only the very call that was admitted settles it, and only then does its allowance count"
+        },
+        {
+          "file": "tests/unit/guard/state.test.ts",
+          "title": "a call is admitted once"
+        },
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a reserved id cannot be reused"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_omitted_history_mode_preserves_normal_post_hook",
+      "status": "pending",
+      "owner": "U7",
+      "note": "The Codex history mode is completion evidence handling."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_pre_commit_preserves_recovered_evaluation_for_stop",
+      "status": "pending",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "finished calls whose result never arrived are judged at the next call or stop"
+        }
+      ],
+      "note": "Recovered evaluations come from completion evidence."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_override_configuration_files_are_removed",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a new shadow configuration %s is removed"
+        },
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a new shadow configuration is removed, whether it is only created or also staged, and ordinary source beside it stays"
+        }
+      ],
+      "note": "Python override names are replaced by the JavaScript shadow names in tooling/policy.json."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_allowlisted_dependency_target_is_accepted",
+      "status": "adapted",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a dependency add may change the dependency map and the lock, and both become approved"
+        },
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a dependency add keeps the dependency map and the lock, and nothing beside them"
+        }
+      ],
+      "note": "make uv-add PKG= is pnpm run deps:add --package= --group=."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_dependency_with_an_environment_marker_is_accepted",
+      "status": "not-carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/policy.test.ts",
+          "title": "pnpm run deps:add --package=left-pad@latest --group=dev"
+        }
+      ],
+      "note": "PEP 508 environment markers are Python packaging; a JavaScript dependency is a name with an exact version or dist-tag."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_other_make_forms_are_not_accepted",
+      "status": "adapted",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/policy.test.ts",
+          "title": "is not a route"
+        },
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "is not a route, so nothing it changes is accepted"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_claude_make_must_run_from_the_root",
+      "status": "adapted",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a route is a route only from the project root"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_codex_accepts_plain_make",
+      "status": "not-carried",
+      "owner": "U6",
+      "note": "There is no Make in a JavaScript project (D1). Plain declared targets have no equivalent route."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_codex_make_is_not_accepted_with_another_makefile",
+      "status": "not-carried",
+      "owner": "U6",
+      "note": "No Makefile exists; the equivalent risk, shadow configuration, is removed (see test_override_configuration_files_are_removed)."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_background_allowlisted_target_is_refused",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a project-run route may not run in the background"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_plain_commit_accepts_pre_commit_formatting",
+      "status": "adapted",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a plain commit accepts formatting by the commit hook and nothing else"
+        }
+      ],
+      "note": "The commit may keep formatting-only changes; every other protected change is restored."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_staged_protected_change_is_unstaged_and_restored",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "an unapproved staged change is unstaged and the file restored"
+        },
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a staged edit of each path is unstaged and restored"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_commits_must_be_standalone",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "%s is refused before it runs"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_commit_hook_rejects_unapproved_staged_content_during_an_agent_commit",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "the commit hook rejects staged protected content during an agent commit, and lets a person commit"
+        },
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "an agent commit that would carry unapproved staged content is rejected by the commit hook"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_plumbing_commit_adding_a_protected_file_blocks_further_calls",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a plumbing commit that adds protected content blocks every further call"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_version_bump_commits_its_own_output",
+      "status": "adapted",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a version bump may change only the version and commit its own output"
+        },
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a version bump commits its own output, and only the version may differ"
+        }
+      ],
+      "note": "The bump route is checked field by field: only the version may differ in the commit it makes."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_plumbing_commit_with_protected_change_blocks_further_calls",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a commit that recorded unapproved protected content blocks further calls"
+        },
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a plumbing commit that adds protected content blocks every further call"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_pre_admission_blocks_unapproved_head_after_completion",
+      "status": "pending",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a head that moved outside any call is judged by the next call"
+        }
+      ],
+      "note": "The unknown/duplicate completion variants are U7; the head check itself is carried."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_pre_admission_accepts_allowed_head",
+      "status": "adapted",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a branch switch to other metadata keeps committed content"
+        },
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a version bump may change only the version and commit its own output"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_stash_pop_keeps_an_approved_change",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a stash pop keeps an approved change"
+        },
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a branch switch to other metadata is accepted, a stash and its pop keep an approved change"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_branch_switch_to_other_metadata_is_accepted",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a branch switch to other metadata keeps committed content"
+        },
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a branch switch to other metadata is accepted, a stash and its pop keep an approved change"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_user_approved_edit_is_accepted",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "an edit the user approved is kept for exactly that path, and another protected path in the same window is not"
+        },
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "an edit the user approved is kept for exactly that path; an unapproved one beside it is restored; ordinary edits pass"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_codex_patch_to_protected_file_is_denied",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a Codex patch to a protected file is denied, including a move destination"
+        },
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a Codex patch to a protected file is denied for real, an ordinary one is not"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_switch_off_commands_are_refused",
+      "status": "adapted",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "%s is refused before it runs"
+        }
+      ],
+      "note": "The Git/skip/config cases are carried; Make and pytest variables are replaced by NODE_OPTIONS, npm_config_*, pnpm --config and directory overrides."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_ordinary_commands_are_not_refused",
+      "status": "adapted",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "%s is not refused"
+        },
+        {
+          "file": "tests/unit/guard/policy.test.ts",
+          "title": "a message that merely mentions a switch-off is not one"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_change_outside_a_call_needs_the_user",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a change made outside a call needs the user, and guard-accept settles it"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_accepted_change_can_be_committed",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a plain commit after the user accepted a change commits it"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_first_run_with_uncommitted_metadata_asks",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "the first run with uncommitted protected content asks, and a denied accept records nothing"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_accept_records_nothing_before_the_user_approves",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "the first run with uncommitted protected content asks, and a denied accept records nothing"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_tampered_venv_must_be_rebuilt",
+      "status": "adapted",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "an environment changed outside an approved route needs a repair, and only a repair lifts it"
+        },
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "an environment change by an add is accepted, one outside a route needs a repair"
+        }
+      ],
+      "note": "The virtual environment is node_modules; the fingerprint claims links and metadata only."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_project_targets_may_sync_the_venv",
+      "status": "adapted",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a dependency change that touches the environment is accepted on success only"
+        },
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "an environment change by an add is accepted, one outside a route needs a repair"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_hand_edited_git_hook_is_restored",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a hand-edited Git hook is restored"
+        },
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a hand-edited hook, a changed mode and a changed hooks path are caught"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_monitor_write_is_restored",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a Monitor call is a shell call and is checked"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_parallel_calls_defer_the_check_to_the_last_one",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "parallel calls defer the check to the last one"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_exclusive_call_runs_alone",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a call that can change protected files runs alone, and nothing runs beside it"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_denied_call_does_not_keep_others_waiting",
+      "status": "pending",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a reservation never expires by age, so an abandoned call keeps the state unclean until it is settled"
+        }
+      ],
+      "note": "A denied permission produces no result; settling it needs transcript evidence (U7). Until then U6 reports it as an unfinished call."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_stop_reports_drift_once",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a drift is reported once and does not repeat while the turn continues"
+        },
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a drift is reported to the user once per turn"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_config_change_blocks_disable_all_hooks",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a settings change that drops the guard or disables hooks is blocked"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_config_change_keeps_the_guard_in_project_settings",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a settings change that drops the guard or disables hooks is blocked"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_codex_user_config_disabling_hooks_is_restored",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a user-level Codex configuration that disables hooks is restored; other changes are recorded"
+        },
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a user-level Codex configuration that disables hooks is restored"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_each_worktree_has_its_own_baseline",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "each linked worktree has its own baseline"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_invalid_hook_input_blocks",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/integration/guard-launch.test.ts",
+          "title": "%s exits with 2, and a stop with 1"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_a_failing_stop_check_does_not_block_the_turn",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/integration/guard-launch.test.ts",
+          "title": "%s exits with 2, and a stop with 1"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_running_calls_expire_after_an_hour",
+      "status": "not-carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a reservation never expires by age, so an abandoned call keeps the state unclean until it is settled"
+        }
+      ],
+      "note": "Deliberate Node-port difference (KTD16, KTD17): a reservation is never completed or reclaimed by age; an abandoned call keeps the state unclean until completion evidence (U7) or offline recovery settles it."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_hook_mode_change_is_restored",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a changed hook mode is restored"
+        },
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a hand-edited hook, a changed mode and a changed hooks path are caught"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_codex_make_is_not_accepted_with_a_makefile_in_build_output",
+      "status": "not-carried",
+      "owner": "U6",
+      "note": "No Makefile exists in a JavaScript project."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_conflicted_merge_is_held_for_the_user",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a merge that stopped half-way is held for the user, not restored, and accept refuses it"
+        },
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a merge that stops on a protected conflict is held, preserved, refuses accept, and clears once the user finished it"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_nested_worktree_keeps_its_files",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a nested checkout keeps its own files"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_denied_call_does_not_strand_a_parallel_write",
+      "status": "pending",
+      "owner": "U7",
+      "note": "Needs completion evidence for the denied call."
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_writes_inside_protected_directories_are_restored",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a new file in a protected directory is removed, including one under a build-output name"
+        },
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a worktree edit of each path is restored"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard.py",
+      "sourceTest": "test_symlinked_protected_file_is_replaced_by_its_content",
+      "status": "carried",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a symlink put in place of a protected file is replaced by its approved content"
+        },
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a symlink put in place of each path is replaced by the approved content"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "(the whole completion corpus)",
+      "status": "pending",
+      "owner": "U7",
+      "note": "Rollout and transcript completion, nested ancestry, lock recovery and yielded Codex sessions are U7. U6 exposes ownership-aware reservations (completion: \"result\") and no age expiry, and claims none of them."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_claude_runs_without_an_os_sandbox",
+      "status": "pending",
+      "owner": "U9",
+      "note": "Host declarations, trust and publishing policy are U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_claude_runs_the_guard_on_every_event",
+      "status": "pending",
+      "owner": "U9",
+      "jsTests": [
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a settings change that drops the guard or disables hooks is blocked"
+        }
+      ],
+      "note": "Host declarations, trust and publishing policy are U9. U6 checks the registered launcher in config-change."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_guard_declares_the_protocol_its_hooks_check",
+      "status": "pending",
+      "owner": "U9",
+      "note": "The host-side protocol guard that lets hooks pass on a checkout without a guard is a U9 declaration concern."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_claude_hooks_pass_on_a_checkout_without_this_guard",
+      "status": "pending",
+      "owner": "U9",
+      "note": "Same as the protocol check."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_claude_guard_hooks_satisfy_the_guards_own_check",
+      "status": "pending",
+      "owner": "U9",
+      "jsTests": [
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a settings change that drops the guard or disables hooks is blocked"
+        }
+      ],
+      "note": "Host declarations, trust and publishing policy are U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_claude_asks_before_editing_a_protected_file",
+      "status": "pending",
+      "owner": "U9",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "an edit the user approved is kept for exactly that path, and another protected path in the same window is not"
+        }
+      ],
+      "note": "The permission prompt is a host declaration (U9); the guard side of an approved edit is carried."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_claude_asks_before_editing_a_protected_directory",
+      "status": "pending",
+      "owner": "U9",
+      "note": "Host declarations, trust and publishing policy are U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_claude_keeps_acceptance_and_protected_edits_with_the_user",
+      "status": "pending",
+      "owner": "U9",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/policy.test.ts",
+          "title": "a user-approved goal is refused unless it is exactly the standalone route"
+        }
+      ],
+      "note": "Host declarations, trust and publishing policy are U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_claude_runs_dependency_targets_without_asking",
+      "status": "pending",
+      "owner": "U9",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/policy.test.ts",
+          "title": "is the %s route"
+        }
+      ],
+      "note": "Host declarations, trust and publishing policy are U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_claude_does_not_preapprove_direct_uv_writes",
+      "status": "pending",
+      "owner": "U9",
+      "note": "Host declarations, trust and publishing policy are U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_claude_asks_before_git_rewrites_the_worktree",
+      "status": "pending",
+      "owner": "U9",
+      "note": "Host declarations, trust and publishing policy are U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_codex_runs_without_a_sandbox",
+      "status": "pending",
+      "owner": "U9",
+      "note": "Host declarations, trust and publishing policy are U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_codex_runs_the_guard_on_every_event",
+      "status": "pending",
+      "owner": "U9",
+      "note": "Host declarations, trust and publishing policy are U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_registered_codex_pre_hook_runs_from_subdirectory",
+      "status": "pending",
+      "owner": "U9",
+      "note": "Host declarations, trust and publishing policy are U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_codex_enables_compound_engineering_from_its_marketplace",
+      "status": "pending",
+      "owner": "U9",
+      "note": "Host declarations, trust and publishing policy are U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_accept_target_runs_the_guard_with_the_system_interpreter",
+      "status": "adapted",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/integration/guard-launch.test.ts",
+          "title": "the bound binary is started with the hardening flags and with every NODE_* variable removed"
+        },
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "guard-accept starts the guard through the launcher with the bound Node, without the caller's NODE_* variables"
+        }
+      ],
+      "note": "bootstrap guard-accept runs the guard through launch.sh and the machine-bound Node, never a project-resolved interpreter. The explicit node bootstrap process itself starts before any sanitization is possible."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_every_allowlisted_target_exists",
+      "status": "adapted",
+      "owner": "U6",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/commands.test.ts",
+          "title": "every route names a command that exists, or one that is explicitly not built yet"
+        }
+      ],
+      "note": "Release routes are declared before their scripts exist; the test lists them explicitly so they cannot pass silently."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_commit_hook_checks_staged_protected_files_first",
+      "status": "pending",
+      "owner": "U9",
+      "jsTests": [
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "an agent commit that would carry unapproved staged content is rejected by the commit hook"
+        }
+      ],
+      "note": "Installing the Git hook is U9/U16; the staged check it calls is carried."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_claude_asks_before_publishing",
+      "status": "pending",
+      "owner": "U9",
+      "note": "Publishing policy is U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_codex_publishing_rules_only_prompt",
+      "status": "pending",
+      "owner": "U9",
+      "note": "Publishing policy is U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_codex_rules_cover_every_publishing_command",
+      "status": "pending",
+      "owner": "U9",
+      "note": "Publishing policy is U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_codex_rules_leave_other_commands_alone",
+      "status": "pending",
+      "owner": "U9",
+      "note": "Publishing policy is U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_codex_prompts_reach_a_person",
+      "status": "pending",
+      "owner": "U9",
+      "note": "Publishing policy is U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_real_codex_prompts_before_publishing",
+      "status": "pending",
+      "owner": "U9",
+      "note": "Real-host verification is U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_real_codex_leaves_other_commands_alone",
+      "status": "pending",
+      "owner": "U9",
+      "note": "Real-host verification is U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_claude_runs_a_selected_test_only_under_tests",
+      "status": "pending",
+      "owner": "U9",
+      "note": "Host declarations, trust and publishing policy are U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_claude_enables_only_the_sanctioned_plugins",
+      "status": "pending",
+      "owner": "U9",
+      "note": "Host declarations, trust and publishing policy are U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_claude_declares_a_marketplace_for_every_enabled_plugin",
+      "status": "pending",
+      "owner": "U9",
+      "note": "Host declarations, trust and publishing policy are U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_claude_configuration_names_no_retired_plugins",
+      "status": "pending",
+      "owner": "U9",
+      "note": "Host declarations, trust and publishing policy are U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_setup_installs_every_declared_plugin_in_project_scope",
+      "status": "pending",
+      "owner": "U9",
+      "note": "Host declarations, trust and publishing policy are U9."
+    },
+    {
+      "sourceFile": "tests/test_agent_permissions.py",
+      "sourceTest": "test_claude_imports_shared_rules",
+      "status": "pending",
+      "owner": "U9",
+      "note": "Host declarations, trust and publishing policy are U9."
+    }
+  ]
+}

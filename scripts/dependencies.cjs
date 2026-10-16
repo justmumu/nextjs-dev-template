@@ -1,7 +1,5 @@
 // @ts-check
 "use strict";
-// Dependency commands: pnpm run deps:add | deps:remove | deps:upgrade (KTD11).
-// Only the requested dependency-map change and the lock may change; the transaction enforces it.
 const { existsSync } = require("node:fs");
 const nodePath = require("node:path");
 const { UsageError, parseArgs } = require("./core/args.cjs");

@@ -1,10 +1,5 @@
 import ts from "typescript";
 
-// A suppression is accepted only as `eslint-disable-next-line <rule>[, <rule>] -- <concrete reason>`.
-// File-wide, same-line and re-enabling directives, inline configuration comments, a missing rule and
-// a missing or token reason are errors. Whether a suppression is still needed is enforced separately
-// by `reportUnusedDisableDirectives`.
-//
 // This is a processor, not a rule: a rule can be switched off by `/* eslint <rule>: "off" */` or
 // hidden by `/* eslint-disable */` in the file it checks, but the messages a processor appends after
 // linting are out of reach of every inline comment. Comments are found by parsing the file, so words

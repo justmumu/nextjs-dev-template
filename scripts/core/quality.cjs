@@ -8,7 +8,10 @@ const nodePath = require("node:path");
 // Formatting covers code, data, styles and the public documents and workflows. The pnpm lock files
 // are written by pnpm, which owns their format, and are excluded in .prettierignore; so are the
 // private working directories, which are not part of the project's tracked content.
-const FORMAT_GLOBS = ["**/*.{js,cjs,mjs,ts,tsx,json,css,md,yml,yaml,html}"];
+const FORMAT_EXTENSIONS = ["js", "cjs", "mjs", "ts", "tsx", "json", "css", "md", "yml", "yaml", "html"];
+const FORMAT_GLOBS = [`**/*.{${FORMAT_EXTENSIONS.join(",")}}`];
+// What `eslint --fix` can rewrite: the linted source and configuration files.
+const LINT_FIX_EXTENSIONS = ["js", "cjs", "mjs", "ts", "tsx"];
 
 // Blocks that `next dev` manages inside agent instruction files. With agentRules disabled it removes
 // them silently, which would change a protected baseline file without review.
@@ -44,4 +47,4 @@ function managedAgentBlockErrors(root) {
   return errors;
 }
 
-module.exports = { FORMAT_GLOBS, managedAgentBlockErrors };
+module.exports = { FORMAT_EXTENSIONS, FORMAT_GLOBS, LINT_FIX_EXTENSIONS, managedAgentBlockErrors };

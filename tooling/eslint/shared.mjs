@@ -2,8 +2,6 @@ import globals from "globals";
 
 import suppressionPolicy from "./suppression-policy.mjs";
 
-// Rules every project role shares, so the generator and a generated application cannot drift.
-
 /** @typedef {import("eslint").Linter.Config} FlatConfig */
 
 /**

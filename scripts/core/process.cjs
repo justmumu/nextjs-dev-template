@@ -1,6 +1,5 @@
 // @ts-check
 "use strict";
-// Shell-disabled subprocesses with literal argv arrays, and output redaction.
 const { spawnSync } = require("node:child_process");
 
 /**

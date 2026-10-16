@@ -250,6 +250,17 @@ describe("what a snapshot records", () => {
     expect(snapshot.get("scripts")).toEqual({ type: "dir" });
   });
 
+  test("content below a protected directory is recorded even when a directory carries a build-output name", () => {
+    const snapshot = snapshotOf({
+      "/p/scripts/dist/new.cjs": "protected",
+      "/p/tooling/build/step.json": "{}",
+      "/p/dist/bundle.js": "generated",
+      "/p/src/coverage/report.html": "generated",
+      "/p/scripts/node_modules/x/index.js": "dependency",
+    });
+    expect([...snapshot.keys()].sort()).toEqual(["scripts", "scripts/dist", "scripts/dist/new.cjs", "tooling", "tooling/build", "tooling/build/step.json"]);
+  });
+
   test("the mode of a file is part of what is recorded", () => {
     expect(snapshotOf({ "/p/scripts/run.cjs": { content: "x", mode: 0o100755 } }).get("scripts/run.cjs")).toMatchObject({ mode: 0o755 });
   });

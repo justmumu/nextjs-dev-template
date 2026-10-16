@@ -8,7 +8,7 @@ const { UsageError, parseArgs } = require("./core/args.cjs");
 const { buildPermissions, manifestViolations, npmrcViolations, workspaceViolations } = require("./core/dependency-policy.cjs");
 const { capabilities, clearDirty, dirtyKind, dirtyReason, guardRefusal, recoveryCommand, removeInstallState } = require("./core/install-state.cjs");
 const { parseObject } = require("./core/json.cjs");
-const { redact, run } = require("./core/process.cjs");
+const { redact, run, runLogged } = require("./core/process.cjs");
 const { preflightErrors } = require("./core/toolchain.cjs");
 const { isProtectedFile, isShadowOverride } = require("./core/protected.cjs");
 const { checkLock, runTransaction } = require("./core/transaction.cjs");
@@ -23,6 +23,10 @@ const { checkLock, runTransaction } = require("./core/transaction.cjs");
  *   guardRefusal: (root: string) => string | null,
  *   hooksRegistered: (root: string) => boolean,
  *   installHooks: (root: string) => void,
+ *   guardActive: (root: string) => boolean,
+ *   bindNode: (root: string) => void,
+ *   guardDrift: (root: string) => string[],
+ *   acceptGuard: (root: string, io: Io) => number,
  *   checkLock: (root: string) => { ok: boolean, output: string },
  *   removeInstallState: (root: string) => void,
  *   clearDirty: (root: string) => void,
@@ -46,6 +50,21 @@ const HOST = {
     const loaded = require(nodePath.join(root, "scripts", "hooks", "install.cjs"));
     /** @type {{ install: (options: { root: string }) => void }} */ (loaded).install({ root });
   },
+  guardActive: (root) => capabilities(root).guard,
+  bindNode: (root) => {
+    /** @type {unknown} */
+    const loaded = require(nodePath.join(root, "scripts", "hooks", "state.cjs"));
+    /** @type {{ bindNode: (root: string, candidate: string) => string }} */ (loaded).bindNode(root, process.execPath);
+  },
+  guardDrift: (root) => {
+    /** @type {unknown} */
+    const loaded = require(nodePath.join(root, "scripts", "hooks", "guard.cjs"));
+    return /** @type {{ approvedDrift: (root: string) => string[] }} */ (loaded).approvedDrift(root);
+  },
+  // The launcher clears the NODE_* environment and starts the machine-bound Node, so acceptance
+  // never runs in this process or under a project-resolved interpreter.
+  acceptGuard: (root, io) =>
+    runLogged("sh", [nodePath.join(root, "scripts", "hooks", "launch.sh"), "--client", "claude", "--event", "accept"], { cwd: root, ...io }).status ?? 1,
   checkLock,
   removeInstallState,
   clearDirty,
@@ -74,6 +93,14 @@ function setup(root, io, host) {
   const dirty = host.dirtyReason(root);
   if (dirty) return fail(io, [`An incomplete install was left behind (${dirty}). Run: ${host.recoveryCommand(root)}`]);
   if (!transact(host, root, [["install", "--frozen-lockfile"]], { action: "none" }, io)) return 1;
+  if (host.guardActive(root)) {
+    try {
+      host.bindNode(root);
+    } catch (error) {
+      return fail(io, [`The guard could not bind the Node binary: ${/** @type {Error} */ (error).message}`]);
+    }
+    io.stdout("Node binary bound for the protected-files guard.\n");
+  }
   if (host.hooksRegistered(root)) {
     host.installHooks(root);
     io.stdout("Git hooks installed.\n");
@@ -118,6 +145,16 @@ function differingProtected(porcelain) {
 }
 
 /**
+ * The protected paths that differ from the guard's approved baseline. The lock is the relock's own
+ * output, so it is not judged; everything else, the manifest included, must already be approved.
+ * @param {string[]} drift what the guard reports as differing from its baseline
+ * @returns {string[]}
+ */
+function differingApproved(drift) {
+  return drift.filter((entry) => entry !== "pnpm-lock.yaml" && entry !== "pnpm-lock.yaml (staged)");
+}
+
+/**
  * What puts the manifest or the workspace outside the dependency-only boundary of an approved relock.
  * @param {{ head: string, manifest: string, workspace: string, npmrc: string | null }} files the committed manifest and the working copies
  * @returns {string[]}
@@ -144,18 +181,28 @@ function depsLock(root, io, host) {
   if (errors.length > 0) return fail(io, errors);
   const refusal = host.guardRefusal(root);
   if (refusal) return fail(io, [refusal]);
-  // Only a relock that was itself interrupted may be retried; any other incomplete install is repaired first.
   const dirty = host.dirtyReason(root);
   if (dirty && host.dirtyKind(root) !== "deps-lock") return fail(io, [`An incomplete install was left behind (${dirty}). Run: ${host.recoveryCommand(root)}`]);
   const head = git(host, root, ["show", "HEAD:package.json"]);
   if (head.status !== 0) return fail(io, ["deps-lock needs a committed baseline (HEAD:package.json); commit the approved state first."]);
-  const status = git(host, root, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]);
-  const differing = differingProtected(status.stdout);
-  if (status.status !== 0 || differing.length > 0) {
-    return fail(io, [
-      "Protected files differ from the committed baseline; deps-lock does not approve them:",
-      ...(status.status === 0 ? differing : ["git status failed"]),
-    ]);
+  if (host.guardActive(root)) {
+    /** @type {string[]} */
+    let differing;
+    try {
+      differing = differingApproved(host.guardDrift(root));
+    } catch (error) {
+      return fail(io, [`The guard baseline could not be compared (${/** @type {Error} */ (error).message}); deps-lock approves nothing.`]);
+    }
+    if (differing.length > 0) return fail(io, ["Protected files differ from the guard's approved baseline; deps-lock does not approve them:", ...differing]);
+  } else {
+    const status = git(host, root, ["status", "--porcelain=v1", "-z", "--untracked-files=all"]);
+    const differing = differingProtected(status.stdout);
+    if (status.status !== 0 || differing.length > 0) {
+      return fail(io, [
+        "Protected files differ from the committed baseline; deps-lock does not approve them:",
+        ...(status.status === 0 ? differing : ["git status failed"]),
+      ]);
+    }
   }
   const npmrc = nodePath.join(root, ".npmrc");
   const problems = boundaryProblems({
@@ -205,11 +252,14 @@ function main(argv, options = {}) {
   if (command === "setup") return setup(root, io, host);
   if (command === "repair") return repair(root, io, host);
   if (command === "deps-lock") return depsLock(root, io, host);
-  if (command === "guard-accept") return fail(io, ["guard-accept is not available yet: U6 implements the protected-files guard. Nothing was accepted."]);
+  if (command === "guard-accept") {
+    if (!host.guardActive(root)) return fail(io, ["The protected-files guard is not active in this project. Nothing was accepted."]);
+    return host.acceptGuard(root, io);
+  }
   io.stderr("usage: node scripts/bootstrap.cjs setup | repair | guard-accept | deps-lock\n");
   return 2;
 }
 
-module.exports = { boundaryProblems, differingProtected, main };
+module.exports = { boundaryProblems, differingApproved, differingProtected, main };
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2));

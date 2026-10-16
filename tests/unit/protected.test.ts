@@ -59,6 +59,8 @@ describe("protected files", () => {
   test("dependency trees and build output are never scanned", () => {
     for (const name of ["node_modules", ".git", ".next", "coverage", "playwright-report"]) expect(guarded.isSkippedDir(name)).toBe(true);
     for (const name of ["src", "tests", "scripts"]) expect(guarded.isSkippedDir(name)).toBe(false);
+    expect(guarded.isSkippedDir("dist", "scripts")).toBe(false);
+    expect(guarded.isSkippedDir("dist", "src")).toBe(true);
     expect(guarded.DIRS).toContain("tooling");
     expect(guarded.FILES).toContain("package.json");
   });

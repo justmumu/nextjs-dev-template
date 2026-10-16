@@ -104,6 +104,40 @@ describe("workspace policy", () => {
   });
 });
 
+describe("the reviewed compatible package replacement (VitePress 1.6.4 pins DocSearch 3.8.2, which cannot take React 19)", () => {
+  const BLOCK = 'overrides:\n  "vitepress@1.6.4>@docsearch/js": 3.9.0\n  "vitepress@1.6.4>@docsearch/css": 3.9.0\n';
+  const violations = (text: string) => policy.workspaceViolations(text, { reviewedBuilds: [] });
+
+  test("the exact block is accepted wherever it sits, with either quote style, and its absence stays valid", () => {
+    expect(violations(GOOD)).toEqual([]);
+    expect(violations(GOOD + BLOCK)).toEqual([]);
+    expect(violations(BLOCK + GOOD)).toEqual([]);
+    expect(violations(GOOD + BLOCK.replaceAll('"', "'"))).toEqual([]);
+    expect(violations(GOOD + 'overrides:\n  "vitepress@1.6.4>@docsearch/css": 3.9.0\n  "vitepress@1.6.4>@docsearch/js": 3.9.0\n')).toEqual([]);
+  });
+
+  test.each([
+    ["an unknown parent-scoped pair", BLOCK + '  "vitepress@1.6.4>@docsearch/other": 3.9.0\n'],
+    ["an unscoped override", BLOCK + "  left-pad: 1.3.0\n"],
+    ["an unrelated override alone", "overrides:\n  left-pad: 1.3.0\n"],
+    ["a widened version", BLOCK.replace('css": 3.9.0', 'css": 3.9.1')],
+    ["a range", BLOCK.replace('js": 3.9.0', 'js": ^3.9.0')],
+    ["another parent version", BLOCK.replaceAll("1.6.4", "1.6.5")],
+    ["a wildcard parent", BLOCK.replaceAll("vitepress@1.6.4", "vitepress")],
+    ["only one of the two pairs", 'overrides:\n  "vitepress@1.6.4>@docsearch/js": 3.9.0\n'],
+    ["an empty block", "overrides: {}\n"],
+    ["a flow map", 'overrides: { "vitepress@1.6.4>@docsearch/js": 3.9.0 }\n'],
+    ["a quoted version", BLOCK.replace('js": 3.9.0', 'js": "3.9.0"')],
+    ["a duplicated pair", BLOCK + '  "vitepress@1.6.4>@docsearch/js": 3.9.0\n'],
+    ["the block twice", BLOCK + BLOCK],
+    ["a package extension beside it", BLOCK + "packageExtensions: {}\n"],
+    ["an ignored peer rule beside it", BLOCK + "peerDependencyRules:\n  ignoreMissing: react\n"],
+    ["an allowed peer version beside it", BLOCK + "allowedVersions:\n  react: 18\n"],
+  ])("%s is refused", (_label, extra) => {
+    expect(violations(GOOD + extra).length).toBeGreaterThan(0);
+  });
+});
+
 describe("manifest delta", () => {
   const base = { name: "x", scripts: { check: "node a" }, dependencies: { a: "1.0.0" }, devDependencies: { b: "2.0.0" }, pnpm: {} };
   const add = { action: "add", group: "dev", name: "c" } as const;
@@ -190,5 +224,20 @@ describe("build review", () => {
     const output = "Error: ERR_PNPM_IGNORED_BUILDS\n  ╰─▶ Ignored build scripts: needs-build@file:pkgs/needs-build, other@1.2.3\n";
     expect(policy.buildReview(output)).toEqual(["needs-build@file:pkgs/needs-build", "other@1.2.3"]);
     expect(policy.buildReview("all fine")).toEqual([]);
+  });
+});
+
+describe("what a workspace file means, apart from its layout", () => {
+  const a = 'allowBuilds:\n  sharp: true\n  "esbuild": false\nstrictDepBuilds: true\n';
+  const b = "# note\n\nstrictDepBuilds: true\nallowBuilds:\n  esbuild: false\n  'sharp': true\n";
+
+  test("order, quoting, comments and blank lines do not change it; a value or a key does", () => {
+    expect(policy.workspaceMeaning(a)).toBe(policy.workspaceMeaning(b));
+    expect(policy.workspaceMeaning(a)).not.toBe(policy.workspaceMeaning(b.replace("sharp: true", "sharp: false").replace("'sharp': true", "'sharp': false")));
+    expect(policy.workspaceMeaning(a)).not.toBe(policy.workspaceMeaning(`${a}extra: true\n`));
+  });
+
+  test("a file outside the canonical subset has no comparable meaning", () => {
+    expect(policy.workspaceMeaning("allowBuilds:\n    sharp: true\n")).toBeNull();
   });
 });

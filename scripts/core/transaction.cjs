@@ -91,7 +91,7 @@ function walk(path, key, into, select, dirs, disk) {
     const here = new Map();
     let any = false;
     for (const child of disk.readdirSync(path).sort()) {
-      if (isSkippedDir(child)) continue;
+      if (isSkippedDir(child, key)) continue;
       any = walk(nodePath.join(path, child), `${key}/${child}`, here, select, dirs, disk) || any;
     }
     if (!any && !select(key)) return false;
