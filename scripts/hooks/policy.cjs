@@ -1,9 +1,5 @@
 // @ts-check
 "use strict";
-// Pure guard decisions: how a shell command is read, which narrow route (if any) it is, and whether
-// an observed change to a protected file is covered by what a finished call was allowed to do. No
-// filesystem, no Git, no process: every decision here is judged from its arguments. Only `node:`
-// modules and protected local .cjs files are loaded, so a broken dependency tree cannot disable it.
 const nodePath = require("node:path");
 const { parseArgs, UsageError } = require("../core/args.cjs");
 const { manifestViolations, same, workspaceMeaning } = require("../core/dependency-policy.cjs");
@@ -59,7 +55,6 @@ const SWITCH_OFF = [
   ],
   [new RegExp(STATE_DIR_NAME.replace(/-/g, "\\-")), "the guard's baseline belongs to the guard"],
 ];
-// `git [global options] commit`, but not `git commit-tree`.
 const GIT_COMMIT = /\bgit(?:\s+-\S+(?:\s+[^\s-]\S*)?)*\s+commit(?![\w-])/;
 // Goals the user approves each time; only their exact standalone form reaches the prompt.
 const USER_APPROVED_GOAL = /\b(?:bootstrap\.cjs\s+(guard-accept)|pnpm\s+(?:run\s+)?(release:(?:bump|tag)))\b/;

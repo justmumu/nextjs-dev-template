@@ -1,15 +1,5 @@
 // @ts-check
 "use strict";
-// The protected-files guard: a guardrail against mistakes, not a sandbox. Claude Code and Codex run
-// it around every tool call. It keeps a last-approved baseline of the protected files, the Git index
-// and hooks, and the dependency environment in the worktree's Git directory, restores any change no
-// approved route made, and says why. Approved routes are the narrow commands in tooling/policy.json,
-// a plain `git commit`, plain branch-changing Git commands, edits the user approved, and
-// `node scripts/bootstrap.cjs guard-accept`.
-//
-// It loads only `node:` modules and protected local .cjs files, so it works with no node_modules, no
-// pnpm and a broken project configuration. The decisions are written against the `Repo` interface in
-// repo.cjs, so they are judged in tests against memory and in integration against real Git.
 const { createHash } = require("node:crypto");
 const fs = require("node:fs");
 const nodePath = require("node:path");
@@ -543,7 +533,6 @@ function preCommit(context, err = (text) => process.stderr.write(text)) {
     if (baseline === null) return null;
     const running = Object.values(state.liveCalls(baseline));
     if (running.length === 0) return null;
-    // The version route commits its own approved output.
     if (running.some((entry) => entry.route === "release-bump")) return null;
     const paths = candidates(context, baseline);
     const staged = unapproved(context.repo.indexIds(paths), context.repo.treeIds(paths), baseline.approved);

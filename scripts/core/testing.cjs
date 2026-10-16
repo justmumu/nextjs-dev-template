@@ -1,8 +1,5 @@
 // @ts-check
 "use strict";
-// The one description of the unit-test suites and their coverage scopes. The Vitest configurations
-// under tooling/vitest and the focused-test command both read it, so a suite cannot be selected one
-// way and measured another. Dependency-free so the gates work before and without a healthy install.
 const nodePath = require("node:path");
 const { isObject } = require("./json.cjs");
 
@@ -14,8 +11,6 @@ const METRICS = /** @type {const} */ (["lines", "branches", "functions", "statem
 // A scope without a single branch (straight-line components) is legitimate; one without lines or statements measured nothing.
 const MEASURED = /** @type {const} */ (["lines", "statements"]);
 
-// What is never product code, whichever directory it sits in: tests, declarations and generated or
-// reported output. An explicit include would otherwise pull a test beside the source into the denominator.
 const NOT_PRODUCT = ["**/*.d.ts", "**/*.test.{ts,tsx}", "**/*.spec.{ts,tsx}", "**/__tests__/**", "**/.next/**", "**/coverage/**", "**/node_modules/**"];
 
 /**

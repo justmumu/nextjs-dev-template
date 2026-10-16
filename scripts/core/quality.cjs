@@ -10,7 +10,6 @@ const nodePath = require("node:path");
 // private working directories, which are not part of the project's tracked content.
 const FORMAT_EXTENSIONS = ["js", "cjs", "mjs", "ts", "tsx", "json", "css", "md", "yml", "yaml", "html"];
 const FORMAT_GLOBS = [`**/*.{${FORMAT_EXTENSIONS.join(",")}}`];
-// What `eslint --fix` can rewrite: the linted source and configuration files.
 const LINT_FIX_EXTENSIONS = ["js", "cjs", "mjs", "ts", "tsx"];
 
 // Blocks that `next dev` manages inside agent instruction files. With agentRules disabled it removes

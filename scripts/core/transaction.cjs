@@ -157,7 +157,7 @@ function removalsFor(before, now) {
   const removals = [];
   for (const path of changedPaths(before, now).reverse()) {
     const current = now.get(path);
-    if (!current || sameEntry(before.get(path), current)) continue;
+    if (!current) continue;
     if (current.type === "dir") {
       // A container the transaction created that now holds unrecorded content is kept; a directory
       // standing where the preimage had another kind of entry must go, or the restore is incomplete.

@@ -1,9 +1,5 @@
 // @ts-check
 "use strict";
-// The one inventory of files that define a project's rules and tooling, for both roles. It is
-// declared once, in tooling/policy.json: the dependency transaction snapshots exactly this surface
-// and the protected-files guard classifies paths with the same declaration. Dependency-free so
-// hooks can load it without an install.
 const nodePath = require("node:path");
 const { isObject, readObject } = require("./json.cjs");
 

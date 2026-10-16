@@ -1,10 +1,5 @@
 // @ts-check
 "use strict";
-// The guard's view of one real worktree: Git, the files, the Git hooks and the dependency
-// environment. Everything the guard decides about is read here and nothing else touches the disk, so
-// the decisions in guard.cjs can be judged against a memory implementation of the same interface.
-// Output and input are bounded, no environment is recorded, and a path is only ever written inside
-// the worktree it belongs to.
 const { createHash, randomBytes } = require("node:crypto");
 const fs = require("node:fs");
 const { spawnSync } = require("node:child_process");
@@ -294,12 +289,14 @@ function createRepo(host, inventory) {
       return Object.fromEntries(paths.map((path) => [path, listed.get(path) ?? null]));
     },
     treePaths: (revision) => new Set([...tree(revision).keys()].filter((path) => isCandidate(path))),
-    unmerged: (paths) =>
-      new Set(
+    unmerged(paths) {
+      const wanted = new Set(paths);
+      return new Set(
         index()
-          .filter((entry) => entry.stage > 0 && paths.includes(entry.path))
+          .filter((entry) => entry.stage > 0 && wanted.has(entry.path))
           .map((entry) => entry.path),
-      ),
+      );
+    },
     head,
     operationInProgress: () => operationInProgress(gitDir, disk),
     stagedNames: (filter) =>

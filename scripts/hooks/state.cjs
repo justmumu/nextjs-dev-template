@@ -3,9 +3,7 @@
 // The guard's durable state: one baseline per Git worktree, the reservations of calls that may still
 // change protected files, and the machine-local Node binding. Reservations are identity-bound and
 // never expire by age: a call is settled only by a result that carries its own identity, so a late or
-// foreign result cannot approve a change that is waiting. Completion evidence beyond a matching host
-// result (transcripts, yielded Codex sessions, offline lock recovery) is added on top of this
-// contract by U7; the reservation shape leaves room for it without any broader shortcut.
+// foreign result cannot approve a change that is waiting.
 const fs = require("node:fs");
 const { execFileSync } = require("node:child_process");
 const nodePath = require("node:path");
@@ -154,7 +152,7 @@ function withLock(dir, action, waitMs = LOCK_WAIT_MS, disk = fs) {
     try {
       if (disk.readFileSync(path, "utf8") === token) disk.unlinkSync(path);
     } catch {
-      // the lock was removed by offline recovery; there is nothing left to release
+      // releasing is best effort
     }
   }
 }
