@@ -29,3 +29,7 @@ separator and no extra flag is accepted.
 
 `pnpm` refuses to run when the manifest and lock disagree or `node_modules` is missing; use
 `node scripts/bootstrap.cjs repair`.
+
+The lock check runs frozen and read-only on a disposable copy. Registry metadata missing from the local
+cache may be fetched while it runs; a stale lock or unreachable metadata still fails, and the failure output
+says which.

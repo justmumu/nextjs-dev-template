@@ -10,7 +10,7 @@ const { clearDirty, markDirty } = require("./install-state.cjs");
 const { manifestViolations } = require("./dependency-policy.cjs");
 const { isProtectedFile, isShadowOverride, isSkippedDir, DIRS } = require("./protected.cjs");
 const { parseObject } = require("./json.cjs");
-const { run } = require("./process.cjs");
+const { redact, run } = require("./process.cjs");
 
 const MUTABLE = new Set(["package.json", "pnpm-lock.yaml"]);
 const LOCK_INPUTS = ["package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".npmrc", ".node-version"];
@@ -308,6 +308,19 @@ function violationsFor(before, after, manifestBefore, plan) {
   return violations;
 }
 
+const DETAIL_LINES = 12;
+
+/**
+ * The violation for a failed lock check. The check's own output (credentials masked, bounded) rides
+ * along, so a stale manifest and unreachable registry metadata can be told apart.
+ * @param {string} output
+ */
+function lockViolation(output) {
+  const detail = redact(output).trim().split("\n").slice(0, DETAIL_LINES).join("\n");
+  const base = "the lock could not be verified against package.json after the transaction (stale lock, or registry metadata unavailable)";
+  return detail ? `${base}:\n${detail}` : base;
+}
+
 /**
  * Runs pnpm steps, then accepts the result only if the manifest delta equals `plan` and no other
  * protected path changed. Otherwise protected files go back to the preimage and the environment is
@@ -343,8 +356,10 @@ function runTransaction({ root, steps, plan, runner = pnpmRunner(root), kind, lo
   }
   const after = system.snapshot(where);
   const violations = violationsFor(before, after, manifestBefore, plan);
-  if (after.has("pnpm-lock.yaml") && status === 0 && violations.length === 0 && !system.checkLock(root, lockCopy).ok)
-    violations.push("the lock does not match package.json after the transaction");
+  if (after.has("pnpm-lock.yaml") && status === 0 && violations.length === 0) {
+    const lock = system.checkLock(root, lockCopy);
+    if (!lock.ok) violations.push(lockViolation(lock.output));
+  }
   const ok = status === 0 && violations.length === 0;
   if (ok) system.clearDirty(root);
   else {
@@ -355,7 +370,9 @@ function runTransaction({ root, steps, plan, runner = pnpmRunner(root), kind, lo
 
 /**
  * Lock consistency without touching the active tree: pnpm sees only a disposable copy of the
- * metadata inputs, with the frozen, lock-only and offline modes combined (verified against pnpm 12.14).
+ * metadata inputs, with the frozen and lock-only modes combined (verified against pnpm 12.14). Cached
+ * metadata is preferred, but a cache miss may fetch it: a new lock hash needs supply-chain policy
+ * metadata even when the graph and tarballs are already known. Fetching never accepts a stale lock.
  * @param {string} root
  * @param {readonly string[]} [extra] further relative paths copied into the disposable copy
  * @returns {{ ok: boolean, output: string }}
@@ -368,7 +385,7 @@ function checkLock(root, extra = []) {
       if (fs.existsSync(source)) fs.writeFileSync(nodePath.join(copy, name), fs.readFileSync(source), { mode: 0o600 });
     }
     for (const name of extra) fs.cpSync(nodePath.join(root, name), nodePath.join(copy, name), { recursive: true });
-    const result = pnpmRunner(copy)(["install", "--frozen-lockfile", "--lockfile-only", "--offline"]);
+    const result = pnpmRunner(copy)(["install", "--frozen-lockfile", "--lockfile-only", "--prefer-offline"]);
     return { ok: result.status === 0, output: result.stdout + result.stderr };
   } finally {
     fs.rmSync(copy, { recursive: true, force: true });

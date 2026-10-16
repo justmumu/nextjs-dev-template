@@ -137,7 +137,10 @@ describe("a transaction judged without a disk", () => {
   type Recorded = { events: string[]; marks: { reason: string; kind: string | undefined }[] };
 
   /** A system whose snapshots are scripted; `restoreFails` makes the rollback itself fail. */
-  function fakeSystem(snapshots: Snapshot[], options: { lock?: boolean; restoreFails?: boolean } = {}): { system: System; recorded: Recorded } {
+  function fakeSystem(
+    snapshots: Snapshot[],
+    options: { lock?: boolean; lockOutput?: string; restoreFails?: boolean } = {},
+  ): { system: System; recorded: Recorded } {
     const recorded: Recorded = { events: [], marks: [] };
     const queue = [...snapshots];
     const where: Location = { root: "/p", git: null };
@@ -155,7 +158,7 @@ describe("a transaction judged without a disk", () => {
       clearDirty: () => recorded.events.push("clear"),
       checkLock: () => {
         recorded.events.push("lock");
-        return { ok: options.lock ?? true, output: "" };
+        return { ok: options.lock ?? true, output: options.lockOutput ?? "" };
       },
     };
     return { system, recorded };
@@ -204,7 +207,18 @@ describe("a transaction judged without a disk", () => {
 
   test("a lock that no longer matches the manifest is a violation of an otherwise clean result", () => {
     const { system } = fakeSystem([project(), project()], { lock: false });
-    expect(run(system, ok).violations).toEqual(["the lock does not match package.json after the transaction"]);
+    expect(run(system, ok).violations).toEqual([expect.stringMatching(/^the lock could not be verified against package\.json/)]);
+  });
+
+  test("the lock check's own output is carried into the violation, credentials masked and bounded", () => {
+    const { system } = fakeSystem([project(), project()], {
+      lock: false,
+      lockOutput: `ERR_PNPM_NO_OFFLINE_META //r.example/:_authToken=top-secret\n${"noise\n".repeat(50)}`,
+    });
+    const [violation = ""] = run(system, ok).violations;
+    expect(violation).toContain("ERR_PNPM_NO_OFFLINE_META //r.example/:_authToken=[redacted]");
+    expect(violation).not.toContain("top-secret");
+    expect(violation.split("\n").length).toBeLessThanOrEqual(13);
   });
 
   test("a manager that throws is rolled back, the incomplete install is recorded, and the error is not swallowed", () => {

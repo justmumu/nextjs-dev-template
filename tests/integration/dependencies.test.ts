@@ -40,7 +40,7 @@ const POLICY = "strictDepBuilds: true\nverifyDepsBeforeRun: error\nenablePrePost
 // A registry dependency for lock and repair scenarios: the disposable lock copy holds metadata only,
 // so it cannot resolve file: fixtures. Policy forbids file: dependencies in real projects anyway.
 const REGISTRY = { typescript: "6.0.3" };
-const ENV_KEYS = ["FIXTURE_PROJECT", "FIXTURE_MODE", "FIXTURE_FAIL", "pnpm_config_store_dir"];
+const ENV_KEYS = ["FIXTURE_PROJECT", "FIXTURE_MODE", "FIXTURE_FAIL", "pnpm_config_store_dir", "pnpm_config_cache_dir"];
 afterEach(() => {
   for (const key of ENV_KEYS) Reflect.deleteProperty(process.env, key);
 });
@@ -134,6 +134,20 @@ describe("lock consistency gate", () => {
     const nodeModules = readdirSync(join(dir, "node_modules")).sort();
     expect(transaction.checkLock(dir).ok).toBe(true);
     expect(tree(dir)).toEqual(before);
+    expect(readdirSync(join(dir, "node_modules")).sort()).toEqual(nodeModules);
+  });
+
+  test("a cold metadata cache is fetched on demand: a matching lock passes, input bytes and modes and the active tree stay put", () => {
+    const dir = makeProject({ deps: REGISTRY });
+    const before = tree(dir);
+    const modes = Object.fromEntries(Object.keys(before).map((path) => [path, statSync(join(dir, path)).mode]));
+    const nodeModules = readdirSync(join(dir, "node_modules")).sort();
+    // Only this child process sees the empty cache; no shared cache or pnpm setting is touched.
+    process.env.pnpm_config_cache_dir = join(scratch, `cold-cache-${counter++}`);
+    const result = transaction.checkLock(dir);
+    expect(result.ok, result.output).toBe(true);
+    expect(tree(dir)).toEqual(before);
+    expect(Object.fromEntries(Object.keys(before).map((path) => [path, statSync(join(dir, path)).mode]))).toEqual(modes);
     expect(readdirSync(join(dir, "node_modules")).sort()).toEqual(nodeModules);
   });
 
@@ -642,7 +656,7 @@ describe("late edits to the requested package are caught by the frozen lock", ()
       }),
     });
     expect(result.ok).toBe(false);
-    expect(result.violations.join("\n")).toMatch(/lock does not match package\.json/);
+    expect(result.violations.join("\n")).toMatch(/lock could not be verified against package\.json/);
     expect(tree(dir)).toEqual(before);
   });
 });
