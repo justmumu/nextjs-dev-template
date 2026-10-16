@@ -1,0 +1,29 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { afterAll, describe, expect, test } from "vitest";
+import { installRenderedApp, output, removeDir, run, scratchDir } from "../support/rendered-app.ts";
+
+const scratch = scratchDir("docs-dependencies-");
+afterAll(() => {
+  removeDir(scratch);
+});
+
+const REVIEWED_WORKSPACE = 'overrides:\n  "vitepress@1.6.4>@docsearch/js": 3.9.0\n  "vitepress@1.6.4>@docsearch/css": 3.9.0\n';
+const REVIEWED_LOCK = "overrides:\n  vitepress@1.6.4>@docsearch/js: 3.9.0\n  vitepress@1.6.4>@docsearch/css: 3.9.0\n";
+
+describe("reviewed documentation overrides in a rendered application", () => {
+  test("the canonical dependency add keeps the exact overrides in the workspace file and the lock", () => {
+    const app = installRenderedApp(scratch, "overrides-app");
+    const workspace = join(app, "pnpm-workspace.yaml");
+    const before = readFileSync(workspace, "utf8");
+    expect(before).toContain(REVIEWED_WORKSPACE);
+    expect(readFileSync(join(app, "pnpm-lock.yaml"), "utf8")).toContain(REVIEWED_LOCK);
+
+    const added = run(app, "pnpm", ["run", "deps:add", "--package=left-pad@1.3.0", "--group=dev"]);
+    expect(added.status, output(added)).toBe(0);
+
+    expect(readFileSync(workspace, "utf8")).toBe(before);
+    expect(readFileSync(join(app, "pnpm-lock.yaml"), "utf8")).toContain(REVIEWED_LOCK);
+    expect(readFileSync(join(app, "package.json"), "utf8")).toContain('"left-pad": "1.3.0"');
+  });
+});

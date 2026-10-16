@@ -88,13 +88,38 @@ describe("commit identity", () => {
   });
 });
 
+const REVIEWED_OVERRIDES = ["vitepress@1.6.4>@docsearch/js: 3.9.0", "vitepress@1.6.4>@docsearch/css: 3.9.0"];
+
+/** The indented entries of the top-level overrides block of a workspace file. */
+function overrideBlock(workspace: string): string[] {
+  const lines = workspace.split("\n");
+  const start = lines.indexOf("overrides:");
+  if (start < 0) return [];
+  const entries: string[] = [];
+  for (const line of lines.slice(start + 1)) {
+    if (!line.startsWith("  ")) break;
+    entries.push(line.trim().replace(/^"([^"]+)":/, "$1:"));
+  }
+  return entries;
+}
+
 describe("isolated dependency graphs", () => {
-  test("root graph is the generator only: no workspace members, links or parent overrides", () => {
+  test("root graph is the generator only: no workspace members, links or unreviewed overrides", () => {
     const lock = readFileSync(join(root, "pnpm-lock.yaml"), "utf8");
     expect(lock).not.toMatch(/workspace:|link:\.\./);
     const workspace = readFileSync(join(root, "pnpm-workspace.yaml"), "utf8");
     expect(workspace).not.toMatch(/^packages:/m);
-    expect(workspace).not.toMatch(/^overrides:/m);
+    expect(overrideBlock(workspace)).toEqual(REVIEWED_OVERRIDES);
     expect(parseJson<Manifest>(readFileSync(join(root, "package.json"), "utf8")).private).toBe(true);
+  });
+
+  test("the seed workspace carries exactly the reviewed overrides and both locks encode them", () => {
+    const seedWorkspace = readFileSync(join(root, "template/app/pnpm-workspace.yaml"), "utf8");
+    expect(overrideBlock(seedWorkspace)).toEqual(REVIEWED_OVERRIDES);
+    for (const lockFile of ["pnpm-lock.yaml", "template/app/pnpm-lock.yaml"]) {
+      const lock = readFileSync(join(root, lockFile), "utf8");
+      expect(overrideBlock(lock), lockFile).toEqual(REVIEWED_OVERRIDES);
+      expect(lock, lockFile).not.toMatch(/\/@docsearch\/(?:js|css)@3\.8\./);
+    }
   });
 });

@@ -19,8 +19,8 @@ export const removeDir = (dir: string) => {
 const { NODE_ENV: _vitestNodeEnv, ...inherited } = process.env;
 export const childEnv: NodeJS.ProcessEnv = { ...inherited, NEXT_TELEMETRY_DISABLED: "1", CI: "1" };
 
-export function run(cwd: string, command: string, args: string[], timeout = 170_000): SpawnSyncReturns<string> {
-  return spawnSync(command, args, { cwd, env: childEnv, encoding: "utf8", timeout });
+export function run(cwd: string, command: string, args: string[], timeout = 170_000, env: Record<string, string> = {}): SpawnSyncReturns<string> {
+  return spawnSync(command, args, { cwd, env: { ...childEnv, ...env }, encoding: "utf8", timeout });
 }
 
 export const output = (result: SpawnSyncReturns<string>) => `${result.stdout}${result.stderr}`;

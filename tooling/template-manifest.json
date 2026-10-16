@@ -441,6 +441,66 @@
       "base": "root",
       "source": "tests/contracts/suite-classification.test.ts",
       "destination": "tests/contracts/suite-classification.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/docs.cjs",
+      "destination": "scripts/docs.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "docs/.vitepress/config.ts",
+      "destination": "docs/.vitepress/config.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "docs/contributing/pr-checklist.md",
+      "destination": "docs/contributing/pr-checklist.md"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "docs/.vitepress/site.json",
+      "destination": "docs/.vitepress/site.json"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "docs/index.md",
+      "destination": "docs/index.md"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "docs/getting-started.md",
+      "destination": "docs/getting-started.md"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "docs/contributing/toolchain.md",
+      "destination": "docs/contributing/toolchain.md"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "docs/contributing/static-quality.md",
+      "destination": "docs/contributing/static-quality.md"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "docs/contributing/testing.md",
+      "destination": "docs/contributing/testing.md"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/docs-version.test.ts",
+      "destination": "tests/unit/docs-version.test.ts"
     }
   ]
 }

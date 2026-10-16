@@ -11,6 +11,7 @@ const { FORMAT_GLOBS, managedAgentBlockErrors } = require("./core/quality.cjs");
 const { isObject, readObject } = require("./core/json.cjs");
 const { checkLock } = require("./core/transaction.cjs");
 const testing = require("./core/testing.cjs");
+const docs = require("./docs.cjs");
 
 /**
  * @typedef {"generator" | "application"} Role
@@ -288,6 +289,14 @@ function check(args, context) {
   );
 }
 
+/** @type {Handler} */
+function docsBuild(args, context) {
+  noArgs(args);
+  const launch = (/** @type {string} */ pkg, /** @type {string} */ bin, /** @type {string[]} */ rest) =>
+    (context.tools ?? installedTools(context)).launch(pkg, bin, rest);
+  return docs.build(docs.realHost({ root: context.root, io: context.io, launch }));
+}
+
 /**
  * Generator-only commands live under scripts/template, which generated applications do not receive,
  * so the module is loaded by a computed path only when the command runs.
@@ -323,6 +332,7 @@ const COMMANDS = {
     script: "node scripts/development.cjs test:permissions",
     handlers: { generator: unavailable("U6", "test:permissions"), application: unavailable("U6", "test:permissions") },
   },
+  "docs:build": { script: "node scripts/development.cjs docs:build", handlers: { generator: docsBuild, application: docsBuild } },
   "deps:add": { script: "node scripts/dependencies.cjs add", handlers: {} },
   "deps:remove": { script: "node scripts/dependencies.cjs remove", handlers: {} },
   "deps:upgrade": { script: "node scripts/dependencies.cjs upgrade", handlers: {} },

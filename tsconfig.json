@@ -14,6 +14,6 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["tests", "vitest.*config.ts", "eslint.config.mjs", "scripts", "tooling/**/*.mjs", "tooling/**/*.ts"],
+  "include": ["tests", "vitest.*config.ts", "eslint.config.mjs", "scripts", "docs/.vitepress/*.ts", "tooling/**/*.mjs", "tooling/**/*.ts"],
   "exclude": ["tests/fixtures"]
 }

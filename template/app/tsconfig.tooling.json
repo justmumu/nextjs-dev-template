@@ -16,6 +16,7 @@
   },
   "include": [
     "scripts",
+    "docs/.vitepress/*.ts",
     "eslint.config.mjs",
     "tooling/**/*.mjs",
     "tooling/**/*.ts",

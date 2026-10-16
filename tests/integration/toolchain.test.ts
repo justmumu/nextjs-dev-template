@@ -143,6 +143,8 @@ describe("isolated seed dependency graph", () => {
     expect(install.status).toBe(0);
     const lock = readFileSync(join(dir, "pnpm-lock.yaml"), "utf8");
     expect(lock).not.toMatch(/workspace:|link:\.\./);
+    expect(lock).toContain("  vitepress@1.6.4>@docsearch/js: 3.9.0\n  vitepress@1.6.4>@docsearch/css: 3.9.0\n");
+    expect(lock).not.toMatch(/\/@docsearch\/(?:js|css)@3\.8\./);
     const listed = parseJson<Listed[]>(run(dir, ["list", "--depth", "-1", "--json"]).stdout);
     expect(listed).toHaveLength(1);
     expect(listed[0]?.path).toBe(dir);

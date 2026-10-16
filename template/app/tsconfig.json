@@ -19,5 +19,5 @@
     "plugins": [{ "name": "next" }]
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", ".next/dev/types/**/*.ts"],
-  "exclude": ["node_modules", "scripts", "tooling", "vitest.*config.ts", "tests/unit", "tests/contracts", "tests/integration", "tests/support"]
+  "exclude": ["node_modules", "docs", "scripts", "tooling", "vitest.*config.ts", "tests/unit", "tests/contracts", "tests/integration", "tests/support"]
 }

@@ -10,6 +10,7 @@
     "deps:add": "node scripts/dependencies.cjs add",
     "deps:remove": "node scripts/dependencies.cjs remove",
     "deps:upgrade": "node scripts/dependencies.cjs upgrade",
+    "docs:build": "node scripts/development.cjs docs:build",
     "format": "node scripts/development.cjs format",
     "format:check": "node scripts/development.cjs format:check",
     "lint": "node scripts/development.cjs lint",
@@ -36,10 +37,12 @@
     "eslint": "9.39.5",
     "eslint-config-next": "16.4.1",
     "globals": "16.4.0",
+    "hyperlink": "5.0.4",
     "jsdom": "30.1.2",
     "prettier": "3.9.10",
     "typescript": "6.0.3",
     "typescript-eslint": "8.71.2",
+    "vitepress": "1.6.4",
     "vitest": "5.0.5"
   }
 }

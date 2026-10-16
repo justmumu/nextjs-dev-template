@@ -6,4 +6,10 @@ verifyDepsBeforeRun: error
 enablePrePostScripts: false
 skills:
   dirs: []
-allowBuilds: {}
+allowBuilds:
+  core-js: false
+  esbuild: false
+# Reviewed graph rewrite: VitePress 1.6.4 pins DocSearch 3.8.2 (React <=18 peers); 3.9.0 adds React 19 support.
+overrides:
+  "vitepress@1.6.4>@docsearch/js": 3.9.0
+  "vitepress@1.6.4>@docsearch/css": 3.9.0

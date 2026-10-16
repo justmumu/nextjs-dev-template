@@ -16,6 +16,7 @@ Python-based pre-commit or Commitizen.
 | Vitest / Playwright                      | 5.0.5 / 1.64.1           | `tooling/versions.json`            |
 | typescript-eslint / @eslint/js / globals | 8.71.2 / 9.39.5 / 16.4.0 | `tooling/versions.json`            |
 | Prettier                                 | 3.9.10                   | `tooling/versions.json`            |
+| VitePress / hyperlink                    | 1.6.4 / 5.0.4            | `tooling/versions.json`            |
 
 `tooling/versions.json` is the reviewed source. The root `package.json` projects
 its `root` section; a test fails when they drift. Node and pnpm are host-owned
@@ -36,6 +37,11 @@ Chosen from registry engines/peers and proven with a real Next.js fixture
   TypeScript 6.0.3 and ESLint 9; `@eslint/js` follows ESLint, and `globals` 16.4.0 is the version
   `eslint-config-next@16.4.1` uses.
 - `@types/node` 24.x matches the Node 24 runtime.
+- VitePress 1.6.4 is the newest stable release (2.x is alpha only); hyperlink 5.0.4 is the newest
+  release. Both go through the same exact-pin and frozen-lock rules. Their dependencies bring two
+  build scripts that are denied (`allowBuilds`): `esbuild` (its prebuilt platform binary is used) and
+  `core-js` (its script only prints a banner). hyperlink pulls in the deprecated `request`; it only
+  reads local files here (`--internal`), and the audit report names it.
 - `unrs-resolver` build scripts are denied (`allowBuilds`); its prebuilt native
   binary is used. A dependency that needs a source build fails the install.
 
@@ -75,6 +81,7 @@ generator and application `package.json` files; a test fails on drift.
 | `pnpm run test:integration [--scenario=<id>]`                                                                        | The integration suite: real pnpm, Git, process and filesystem scenarios.                                                                                                                            |
 | `pnpm run deps:add --package=<name[@version]> --group=<prod\|dev>`, `deps:remove`, `deps:upgrade [--package=<name>]` | Dependency transactions.                                                                                                                                                                            |
 | `pnpm run template:create --name=<name> --owner=<login> --dest=<path>`, `template:seed:refresh`                      | Generator only.                                                                                                                                                                                     |
+| `pnpm run docs:build`                                                                                                | VitePress build, then hyperlink over every emitted HTML file (offline, internal only); see [Getting started](../getting-started).                                                                   |
 | `pnpm run test:permissions`                                                                                          | Not available yet; it fails with the owning unit named.                                                                                                                                             |
 
 pnpm keeps `verifyDepsBeforeRun: error`. After a dependency-manifest edit, or with
