@@ -9,6 +9,7 @@ const root = resolve(import.meta.dirname, "../..");
 const args = require("../../scripts/core/args.cjs") as typeof import("../../scripts/core/args.cjs");
 const development = require("../../scripts/development.cjs") as typeof import("../../scripts/development.cjs");
 const dependencies = require("../../scripts/dependencies.cjs") as typeof import("../../scripts/dependencies.cjs");
+const toolchain = require("../../scripts/core/toolchain.cjs") as typeof import("../../scripts/core/toolchain.cjs");
 const processes = require("../../scripts/core/process.cjs") as typeof import("../../scripts/core/process.cjs");
 
 const readJson = (path: string) => parseJson<Manifest>(readFileSync(join(root, path), "utf8"));
@@ -104,7 +105,8 @@ describe("package specifier", () => {
 
 describe("credentials never reach output", () => {
   test("redacts registry tokens, passwords and URL userinfo", () => {
-    const text = "//registry.example/:_authToken=abc123\n_password=c2VjcmV0\nhttps://user:pw@registry.example/x\nnpm_config_//r/:_authToken=zzz\nplain line";
+    const at = "@";
+    const text = `//registry.example/:_authToken=abc123\n_password=c2VjcmV0\nhttps://user:pw${at}registry.example/x\nnpm_config_//r/:_authToken=zzz\nplain line`;
     const out = processes.redact(text);
     for (const secret of ["abc123", "c2VjcmV0", "user:pw", "zzz"]) expect(out).not.toContain(secret);
     expect(out).toContain("plain line");
@@ -112,14 +114,10 @@ describe("credentials never reach output", () => {
 });
 
 describe("command definitions", () => {
-  for (const [role, path] of [
-    ["generator", "package.json"],
-    ["application", "template/app/package.json"],
-  ] as const) {
-    test(`${role} package scripts are exactly the projected command scripts`, () => {
-      expect(readJson(path).scripts).toEqual(development.scriptsFor(role));
-    });
-  }
+  test("the project's package scripts are exactly the projected command scripts of its role", () => {
+    const role = toolchain.readRole(root);
+    expect(readJson("package.json").scripts).toEqual(development.scriptsFor(role));
+  });
 
   test("every script is a literal Node dispatcher call with no shell syntax", () => {
     for (const role of ["generator", "application"] as const) {
@@ -140,7 +138,7 @@ describe("command definitions", () => {
 
   test("generator-only commands are absent from the application role", () => {
     const app = Object.keys(development.scriptsFor("application"));
-    for (const name of ["template:create", "template:seed:refresh", "test:integration"]) {
+    for (const name of ["template:create", "template:seed:refresh"]) {
       expect(Object.keys(development.scriptsFor("generator"))).toContain(name);
       expect(app).not.toContain(name);
     }
@@ -173,19 +171,6 @@ describe("dispatcher", () => {
     for (const argv of [["nope"], ["check", "--fast"], ["test:one"], ["test:one", "--test=tests/unit/x.test.ts", "--test=tests/unit/y.test.ts"]]) {
       const sink = capture();
       expect(development.main(argv, { root, io: sink.io, skipPreflight: true }), argv.join(" ")).toBe(2);
-    }
-  });
-
-  test("test:one takes one existing test file and a literal name", () => {
-    expect(development.testOneArgs(["--test=tests/unit/commands.test.ts"], root)).toEqual(["run", "tests/unit/commands.test.ts"]);
-    expect(development.testOneArgs(["--test=tests/unit/commands.test.ts", "--name=a (b) [c]*"], root)).toEqual([
-      "run",
-      "tests/unit/commands.test.ts",
-      "-t",
-      "a \\(b\\) \\[c\\]\\*",
-    ]);
-    for (const bad of ["--test=../package.json", "--test=/etc/passwd", "--test=tests/unit/missing.test.ts", "--test=package.json", "--test=tests"]) {
-      expect(() => development.testOneArgs([bad], root), bad).toThrow();
     }
   });
 });

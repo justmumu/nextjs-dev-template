@@ -219,6 +219,228 @@
       "base": "root",
       "source": "tooling/eslint/suppression-policy.mjs",
       "destination": "tooling/eslint/suppression-policy.mjs"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "vitest.config.ts",
+      "destination": "vitest.config.ts"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "vitest.app.config.ts",
+      "destination": "vitest.app.config.ts"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tests/setup/app.ts",
+      "destination": "tests/setup/app.ts"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tests/app/error.test.tsx",
+      "destination": "tests/app/error.test.tsx"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tests/app/home.test.tsx",
+      "destination": "tests/app/home.test.tsx"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tests/app/layout.test.tsx",
+      "destination": "tests/app/layout.test.tsx"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tests/app/not-found.test.tsx",
+      "destination": "tests/app/not-found.test.tsx"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/testing.cjs",
+      "destination": "scripts/core/testing.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/focused-run.cjs",
+      "destination": "scripts/core/focused-run.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "vitest.infrastructure.config.ts",
+      "destination": "vitest.infrastructure.config.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "vitest.integration.config.ts",
+      "destination": "vitest.integration.config.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tooling/vitest/suite.ts",
+      "destination": "tooling/vitest/suite.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/support/json.ts",
+      "destination": "tests/support/json.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/support/project.ts",
+      "destination": "tests/support/project.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/bootstrap.test.ts",
+      "destination": "tests/integration/bootstrap.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/commands.test.ts",
+      "destination": "tests/unit/commands.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/dependencies-cli.test.ts",
+      "destination": "tests/integration/dependencies-cli.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/dependency-policy.test.ts",
+      "destination": "tests/unit/dependency-policy.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/development-gates.test.ts",
+      "destination": "tests/integration/development-gates.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/executable-lookup.test.ts",
+      "destination": "tests/integration/executable-lookup.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/install-state.test.ts",
+      "destination": "tests/integration/install-state.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/process.test.ts",
+      "destination": "tests/integration/process.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/protected.test.ts",
+      "destination": "tests/unit/protected.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/quality.test.ts",
+      "destination": "tests/unit/quality.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/suppression-policy.test.ts",
+      "destination": "tests/unit/suppression-policy.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/testing.test.ts",
+      "destination": "tests/unit/testing.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/toolchain.test.ts",
+      "destination": "tests/unit/toolchain.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/transaction.test.ts",
+      "destination": "tests/integration/transaction.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/transaction.test.ts",
+      "destination": "tests/unit/transaction.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/process.test.ts",
+      "destination": "tests/unit/process.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/install-state.test.ts",
+      "destination": "tests/unit/install-state.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/gates.test.ts",
+      "destination": "tests/unit/gates.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/dependencies.test.ts",
+      "destination": "tests/unit/dependencies.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/bootstrap.test.ts",
+      "destination": "tests/unit/bootstrap.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/support/memory-disk.ts",
+      "destination": "tests/support/memory-disk.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/contracts/coverage-policy.test.ts",
+      "destination": "tests/contracts/coverage-policy.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/contracts/suite-classification.test.ts",
+      "destination": "tests/contracts/suite-classification.test.ts"
     }
   ]
 }

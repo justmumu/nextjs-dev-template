@@ -32,7 +32,7 @@ const CONFIG_NAMES = [
   /^\.eslintrc(?:\..+)?$/,
   /^\.prettierrc(?:\..+)?$/,
   /^prettier\.config\.[cm]?[jt]s$/,
-  /^vitest\.(?:config|workspace)\.[cm]?[jt]s$/,
+  /^vitest\.(?:[a-z]+\.)?(?:config|workspace)\.[cm]?[jt]s$/,
   /^playwright\.config\.[cm]?[jt]s$/,
   /^postcss\.config\.[cm]?[jt]s$/,
 ];
@@ -59,7 +59,7 @@ const SHADOW_NAMES = [
   /^\.eslintrc(?:\..+)?$/,
   /^\.prettierrc(?:\..+)?$/,
   /^prettier\.config\.[cm]?[jt]s$/,
-  /^vitest\.(?:config|workspace)\.[cm]?[jt]s$/,
+  /^vitest\.(?:[a-z]+\.)?(?:config|workspace)\.[cm]?[jt]s$/,
   /^playwright\.config\.[cm]?[jt]s$/,
 ];
 

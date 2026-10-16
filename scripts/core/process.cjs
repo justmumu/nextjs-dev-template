@@ -32,9 +32,10 @@ function run(command, args, options) {
  * @param {string} command
  * @param {readonly string[]} args
  * @param {{ cwd: string, env?: NodeJS.ProcessEnv, stdout: (text: string) => unknown, stderr: (text: string) => unknown }} options
+ * @param {typeof run} [start] how the command is started
  */
-function runLogged(command, args, options) {
-  const result = run(command, args, options);
+function runLogged(command, args, options, start = run) {
+  const result = start(command, args, options);
   if (result.stdout) options.stdout(redact(result.stdout));
   if (result.stderr) options.stderr(redact(result.stderr));
   return result;

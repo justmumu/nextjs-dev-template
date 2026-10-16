@@ -12,7 +12,8 @@ const { redact } = require("./core/process.cjs");
 const { gateErrors, readRole } = require("./core/toolchain.cjs");
 const { runTransaction } = require("./core/transaction.cjs");
 
-const NAME = /^(?:@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
+// An unscoped name never starts with a hyphen, so a value can never be read by pnpm as an option (`--global`).
+const NAME = /^(?:@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9~][a-z0-9-._~]*$/;
 const SELECTOR = /^(?:\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?|[a-z][a-z0-9-]*)$/;
 const GROUP_FLAGS = { prod: "--save-prod", dev: "--save-dev" };
 
@@ -96,8 +97,11 @@ function planFor(request, pinned = {}) {
  */
 function reviewedPins(root) {
   const file = nodePath.join(root, "tooling", "versions.json");
-  if (!existsSync(file) || readRole(root) !== "generator") return {};
-  const versions = readObject(file);
+  return !existsSync(file) || readRole(root) !== "generator" ? {} : rootPins(readObject(file));
+}
+
+/** @param {import("./core/json.cjs").JsonObject} versions the parsed tooling/versions.json @returns {Record<string, string>} the pins of the generator's own dependencies */
+function rootPins(versions) {
   const pins = isObject(versions.root) ? versions.root : {};
   return { ...stringMap(pins.dependencies), ...stringMap(pins.devDependencies) };
 }
@@ -109,33 +113,72 @@ function stringMap(value) {
     : {};
 }
 
-/**
- * An all-dependency upgrade is the whole set or nothing: reviewed tool pins change only through a
- * reviewed tooling change, so while any of them is a dependency the request is refused instead of
- * quietly upgrading a subset.
- * @param {string} root @param {Record<string, string>} pins
- * @returns {string[]} the pinned names that are dependencies of the project
- */
-function pinnedDependencies(root, pins) {
-  const manifest = readObject(nodePath.join(root, "package.json"));
+/** @param {import("./core/json.cjs").JsonObject} manifest @returns {string[]} the names in its dependencies and devDependencies */
+function namesOf(manifest) {
   return [
     ...new Set([
       ...Object.keys(isObject(manifest.dependencies) ? manifest.dependencies : {}),
       ...Object.keys(isObject(manifest.devDependencies) ? manifest.devDependencies : {}),
     ]),
-  ]
-    .filter((name) => Object.hasOwn(pins, name))
-    .sort();
+  ];
+}
+
+/** @param {string} root @returns {string[]} the names of the dependencies and devDependencies of the project */
+function dependencyNames(root) {
+  return namesOf(readObject(nodePath.join(root, "package.json")));
 }
 
 /**
+ * Reviewed tool pins change only through a reviewed tooling change. A named pin is refused, and an
+ * all-dependency upgrade is the whole set or nothing: while any pin is a dependency the request is
+ * refused instead of quietly upgrading a subset.
+ * @param {Request} request @param {Record<string, string>} pins @param {readonly string[]} dependencies the names the project depends on
+ * @returns {string | null} why the request cannot run, or null
+ */
+function pinRefusal(request, pins, dependencies) {
+  if (request.action !== "upgrade" && Object.hasOwn(pins, request.name)) {
+    return `${request.name} is a reviewed tool pin (${pins[request.name] ?? ""}); changing it is a reviewed tooling change, not a dependency change. Nothing was changed.`;
+  }
+  if (request.action === "upgrade" && request.name !== null && Object.hasOwn(pins, request.name)) {
+    return `${request.name} is a reviewed tool pin (${pins[request.name] ?? ""}); upgrading it is a reviewed tooling change, not a dependency change. Nothing was changed.`;
+  }
+  if (request.action === "upgrade" && request.name === null) {
+    const pinned = dependencies.filter((name) => Object.hasOwn(pins, name)).sort();
+    if (pinned.length > 0) {
+      return `An all-dependency upgrade cannot run: these are reviewed tool pins (${pinned.map((name) => `${name}@${pins[name] ?? ""}`).join(", ")}) and change only through a reviewed tooling change (tooling/versions.json, then the matching manifest edit and node scripts/bootstrap.cjs deps-lock). Upgrade other dependencies one at a time with deps:upgrade --package=<name>. Nothing was changed.`;
+    }
+  }
+  return null;
+}
+
+/**
+ * @typedef {{
+ *   gateErrors: (root: string) => string[],
+ *   guardRefusal: (root: string) => string | null,
+ *   pins: (root: string) => Record<string, string>,
+ *   dependencies: (root: string) => string[],
+ *   transact: (options: Parameters<typeof runTransaction>[0]) => ReturnType<typeof runTransaction>,
+ * }} Host what the command needs from the project and the package manager
+ */
+
+/** @type {Host} */
+const HOST = {
+  gateErrors,
+  guardRefusal,
+  pins: reviewedPins,
+  dependencies: dependencyNames,
+  transact: runTransaction,
+};
+
+/**
  * @param {readonly string[]} argv `[action, ...flags]`
- * @param {{ root?: string, io?: { stdout: (text: string) => unknown, stderr: (text: string) => unknown }, runner?: import("./core/transaction.cjs").Runner }} [options]
+ * @param {{ root?: string, io?: { stdout: (text: string) => unknown, stderr: (text: string) => unknown }, runner?: import("./core/transaction.cjs").Runner, host?: Host }} [options]
  * @returns {number}
  */
 function main(argv, options = {}) {
   const root = options.root ?? nodePath.resolve(__dirname, "..");
   const io = options.io ?? { stdout: (text) => process.stdout.write(text), stderr: (text) => process.stderr.write(text) };
+  const host = options.host ?? HOST;
   let request;
   try {
     request = requestFromArgv(argv[0] ?? "", argv.slice(1));
@@ -146,34 +189,18 @@ function main(argv, options = {}) {
     );
     return 2;
   }
-  const refusals = [...gateErrors(root), ...[guardRefusal(root)].filter((message) => message !== null)];
+  const refusals = [...host.gateErrors(root), ...[host.guardRefusal(root)].filter((message) => message !== null)];
   if (refusals.length > 0) {
     io.stderr(`${refusals.join("\n")}\n`);
     return 1;
   }
-  const pins = reviewedPins(root);
-  if (request.action !== "upgrade" && Object.hasOwn(pins, request.name)) {
-    io.stderr(
-      `${request.name} is a reviewed tool pin (${pins[request.name] ?? ""}); changing it is a reviewed tooling change, not a dependency change. Nothing was changed.\n`,
-    );
+  const pins = host.pins(root);
+  const refusal = pinRefusal(request, pins, request.action === "upgrade" && request.name === null ? host.dependencies(root) : []);
+  if (refusal !== null) {
+    io.stderr(`${refusal}\n`);
     return 1;
   }
-  if (request.action === "upgrade" && request.name !== null && Object.hasOwn(pins, request.name)) {
-    io.stderr(
-      `${request.name} is a reviewed tool pin (${pins[request.name] ?? ""}); upgrading it is a reviewed tooling change, not a dependency change. Nothing was changed.\n`,
-    );
-    return 1;
-  }
-  if (request.action === "upgrade" && request.name === null) {
-    const pinned = pinnedDependencies(root, pins);
-    if (pinned.length > 0) {
-      io.stderr(
-        `An all-dependency upgrade cannot run: these are reviewed tool pins (${pinned.map((name) => `${name}@${pins[name] ?? ""}`).join(", ")}) and change only through a reviewed tooling change (tooling/versions.json, then the matching manifest edit and node scripts/bootstrap.cjs deps-lock). Upgrade other dependencies one at a time with deps:upgrade --package=<name>. Nothing was changed.\n`,
-      );
-      return 1;
-    }
-  }
-  const result = runTransaction({ root, steps: [pnpmArgsFor(request)], plan: planFor(request, pins), runner: options.runner });
+  const result = host.transact({ root, steps: [pnpmArgsFor(request)], plan: planFor(request, pins), runner: options.runner });
   io.stdout(redact(result.output));
   if (!result.ok) {
     const review = buildReview(result.output);
@@ -188,6 +215,6 @@ function main(argv, options = {}) {
   return 0;
 }
 
-module.exports = { main, parseSpec, planFor, pnpmArgsFor, requestFromArgv, reviewedPins };
+module.exports = { main, namesOf, parseSpec, pinRefusal, planFor, pnpmArgsFor, requestFromArgv, reviewedPins, rootPins };
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2), { root: nodePath.join(__dirname, "..") });

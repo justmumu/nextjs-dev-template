@@ -2,21 +2,17 @@ import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { describe, expect, test } from "vitest";
-import { parseJson, type Versions } from "../support/json.ts";
 
 const require = createRequire(import.meta.url);
 const root = resolve(import.meta.dirname, "../..");
 const policy = require("../../scripts/core/dependency-policy.cjs") as typeof import("../../scripts/core/dependency-policy.cjs");
 
 const read = (path: string) => readFileSync(join(root, path), "utf8");
-const versions = parseJson<Versions>(read("tooling/versions.json"));
 const GOOD = "strictDepBuilds: true\nverifyDepsBeforeRun: error\nenablePrePostScripts: false\nskills:\n  dirs: []\nallowBuilds:\n  unrs-resolver: false\n";
 
 describe("workspace policy", () => {
-  test("the generator and the seed workspace files satisfy the policy", () => {
+  test("the project's own workspace file satisfies the policy", () => {
     expect(policy.workspaceViolations(read("pnpm-workspace.yaml"), { reviewedBuilds: [] })).toEqual([]);
-    expect(policy.workspaceViolations(read("template/app/pnpm-workspace.yaml"), { reviewedBuilds: [] })).toEqual([]);
-    for (const name of versions.seed.deniedBuilds) expect(read("template/app/pnpm-workspace.yaml")).toContain(`${name}: false`);
   });
 
   test.each([

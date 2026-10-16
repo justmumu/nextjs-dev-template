@@ -68,3 +68,11 @@ export function runGate(dir: string, command: string): SpawnSyncReturns<string> 
 /** Runs a canonical command in either a generator fixture or a rendered application. */
 export const gate = (dir: string, command: string, kind: "generator" | "application"): SpawnSyncReturns<string> =>
   kind === "generator" ? runGate(dir, command) : run(dir, "pnpm", ["run", command]);
+
+/** Runs the unit gate (every coverage-measured suite, each on its own) of a project without the other `check` gates. */
+export function runUnitGate(dir: string): SpawnSyncReturns<string> {
+  const entry =
+    "const { unit } = require('./scripts/development.cjs');" +
+    "process.exitCode = unit([], { root: process.cwd(), cwd: process.cwd(), io: { stdout: (t) => process.stdout.write(t), stderr: (t) => process.stderr.write(t) } });";
+  return run(dir, process.execPath, ["-e", entry]);
+}

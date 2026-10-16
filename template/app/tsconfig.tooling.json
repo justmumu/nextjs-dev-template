@@ -9,9 +9,20 @@
     "noImplicitOverride": true,
     "noEmit": true,
     "allowJs": true,
+    "allowImportingTsExtensions": true,
     "checkJs": true,
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["scripts", "eslint.config.mjs", "tooling/**/*.mjs"]
+  "include": [
+    "scripts",
+    "eslint.config.mjs",
+    "tooling/**/*.mjs",
+    "tooling/**/*.ts",
+    "vitest.*config.ts",
+    "tests/unit",
+    "tests/contracts",
+    "tests/integration",
+    "tests/support"
+  ]
 }

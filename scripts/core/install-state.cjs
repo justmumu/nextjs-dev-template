@@ -11,38 +11,58 @@ const MARKER = ".template-environment-dirty";
 /** @param {string} root */
 const markerPath = (root) => nodePath.join(root, "node_modules", MARKER);
 
-/** @param {string} root @returns {string | null} the reason, or null when the environment is not marked dirty */
-function dirtyReason(root) {
+/** @param {string} root @returns {string | null} the text of the marker, or null when there is none */
+function readMarker(root) {
   try {
-    return fs.readFileSync(markerPath(root), "utf8").trim() || "unknown";
+    return fs.readFileSync(markerPath(root), "utf8");
   } catch {
     return null;
   }
 }
 
+/**
+ * @param {string | null} text the content of the marker file, if any
+ * @returns {{ reason: string, kind: string | null } | null} null when the environment is not marked dirty; an empty marker is still dirty
+ */
+function parseMarker(text) {
+  if (text === null) return null;
+  return { reason: text.trim() || "unknown", kind: /^kind=(.+)$/m.exec(text)?.[1] ?? null };
+}
+
+/** @param {string} reason @param {string} [kind] @returns {string} the content of the marker file */
+function markerText(reason, kind) {
+  return `${reason}\n${kind ? `kind=${kind}\n` : ""}`;
+}
+
+/** @param {string} root @returns {string | null} the reason, or null when the environment is not marked dirty */
+function dirtyReason(root) {
+  return parseMarker(readMarker(root))?.reason ?? null;
+}
+
 /** @param {string} root @returns {string | null} which command's failure left the marker (for example "deps-lock"), if any */
 function dirtyKind(root) {
-  try {
-    return /^kind=(.+)$/m.exec(fs.readFileSync(markerPath(root), "utf8"))?.[1] ?? null;
-  } catch {
-    return null;
-  }
+  return parseMarker(readMarker(root))?.kind ?? null;
 }
 
 /** @param {string} root @param {string} reason @param {string} [kind] */
 function markDirty(root, reason, kind) {
   fs.mkdirSync(nodePath.join(root, "node_modules"), { recursive: true });
-  fs.writeFileSync(markerPath(root), `${reason}\n${kind ? `kind=${kind}\n` : ""}`);
+  fs.writeFileSync(markerPath(root), markerText(reason, kind));
 }
 
 /**
- * The one command that can make progress from the current incomplete install. A failed relock
+ * The one command that can make progress from an incomplete install of this kind. A failed relock
  * leaves the manifest edited and the lock stale, so only the same approved relock can proceed;
  * every other drift is rebuilt from the frozen lock.
- * @param {string} root
+ * @param {string | null} kind
  */
+function recoveryFor(kind) {
+  return kind === "deps-lock" ? "node scripts/bootstrap.cjs deps-lock" : "node scripts/bootstrap.cjs repair";
+}
+
+/** @param {string} root */
 function recoveryCommand(root) {
-  return dirtyKind(root) === "deps-lock" ? "node scripts/bootstrap.cjs deps-lock" : "node scripts/bootstrap.cjs repair";
+  return recoveryFor(dirtyKind(root));
 }
 
 /** @param {string} root */
@@ -94,9 +114,31 @@ function guardRefusal(root) {
   } catch (error) {
     return `the guard state could not be read (${/** @type {Error} */ (error).message}); resolve it before changing dependencies`;
   }
-  if (!isObject(state) || state.clean !== true)
-    return `the guard reports an unresolved protected state (${isObject(state) && typeof state.reason === "string" ? state.reason : "unknown"}); resolve it before changing dependencies`;
-  return null;
+  return guardVerdict(state);
 }
 
-module.exports = { MARKER, capabilities, clearDirty, dirtyKind, dirtyReason, guardRefusal, markDirty, recoveryCommand, removeInstallState };
+/**
+ * Only an explicit clean answer lets the operation proceed.
+ * @param {unknown} state what `status(root)` answered
+ * @returns {string | null} a refusal message, or null
+ */
+function guardVerdict(state) {
+  if (isObject(state) && state.clean === true) return null;
+  return `the guard reports an unresolved protected state (${isObject(state) && typeof state.reason === "string" ? state.reason : "unknown"}); resolve it before changing dependencies`;
+}
+
+module.exports = {
+  MARKER,
+  capabilities,
+  clearDirty,
+  dirtyKind,
+  dirtyReason,
+  guardRefusal,
+  guardVerdict,
+  markDirty,
+  markerText,
+  parseMarker,
+  recoveryCommand,
+  recoveryFor,
+  removeInstallState,
+};

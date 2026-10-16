@@ -45,6 +45,18 @@ describe("single source of pins", () => {
   });
 });
 
+describe("workspace policy of both graphs", () => {
+  const policy = createRequire(import.meta.url)("../../scripts/core/dependency-policy.cjs") as typeof import("../../scripts/core/dependency-policy.cjs");
+  const read = (path: string) => readFileSync(join(root, path), "utf8");
+
+  test("the generator and the seed workspace files satisfy the policy and the seed denies the reviewed builds", () => {
+    expect(policy.workspaceViolations(read("pnpm-workspace.yaml"), { reviewedBuilds: [] })).toEqual([]);
+    expect(policy.workspaceViolations(read("template/app/pnpm-workspace.yaml"), { reviewedBuilds: [] })).toEqual([]);
+    const versions = parseJson<Versions>(read("tooling/versions.json"));
+    for (const name of versions.seed.deniedBuilds) expect(read("template/app/pnpm-workspace.yaml")).toContain(`${name}: false`);
+  });
+});
+
 describe("commit identity", () => {
   const pattern = toolchain.readPolicy(root).commitIdentity.emailPattern;
 

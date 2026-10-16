@@ -151,15 +151,14 @@ describe("lock consistency gate", () => {
     expect(existsSync(join(dir, "pnpm-lock.yaml"))).toBe(false);
   });
 
-  test("the generator's own check passes the lock, format, lint and typecheck and fails only the unowned unit gate, touching nothing tracked", () => {
+  test("the generator's own check passes every gate, including the unit suites and their coverage, touching nothing tracked", () => {
     const before = transaction.snapshot(root);
     const out = sink();
-    expect(development.main(["check"], { root, io: out.io })).toBe(1);
+    expect(development.main(["check"], { root, io: out.io }), out.err.join("")).toBe(0);
     expect(transaction.changedPaths(before, transaction.snapshot(root))).toEqual([]);
     expect(out.out.join("")).toContain("lock: ok");
-    for (const gate of ["lock", "format", "lint", "typecheck"]) expect(out.out.join("")).toContain(`${gate}: ok`);
-    expect(out.err.join("")).toMatch(/unit tests with coverage is not available yet/);
-    expect(out.err.join("")).toMatch(/check failed: unit\n$/);
+    for (const gate of ["lock", "format", "lint", "typecheck", "unit"]) expect(out.out.join("")).toContain(`${gate}: ok`);
+    expect(out.err.join("")).not.toMatch(/check failed|not available yet/);
   });
 });
 
