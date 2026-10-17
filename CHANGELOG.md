@@ -2,6 +2,16 @@
 
 All notable changes of this repository are recorded here by `pnpm run release:bump`.
 
+## v0.0.2 (2026-10-17)
+
+### Bug Fixes
+
+- **agents:** ship Codex plugin defaults to generated projects 67e67ef
+- **deps:** allow independent manifest and lock updates 6b4700c
+- **docs:** keep the update guide link valid in generated projects 12aba1f
+- **testing:** preserve PNPM_HOME for offline fixtures (U1) 5fcefd3
+- **tooling:** satisfy ESLint 10 assignment checks ef0fd55
+
 ## v0.0.1 (2026-10-17)
 
 ### Features

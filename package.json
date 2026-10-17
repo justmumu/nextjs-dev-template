@@ -1,6 +1,6 @@
 {
   "name": "nextjs-dev-template",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "private": true,
   "type": "module",
   "description": "Generator for the JavaScript-only Next.js development template",
