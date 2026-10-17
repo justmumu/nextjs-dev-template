@@ -214,7 +214,7 @@ plugin choices and skills installed independently are outside this default. Thes
 require a trusted checkout and a fresh Codex session; an already-running session's skill list does
 not verify a configuration change. Check the effective settings and loaded plugins in your client.
 
-Existing projects receive these settings by [updating from a published template ref](../updating#codex-plugin-defaults).
+Existing projects receive these settings by [updating from a published template ref](../updating).
 
 Compound Engineering is optional. Its shipped `.compound-engineering/config.yaml` sends plans and
 brainstorm approaches to Opus, implementation units to a Sonnet worker with a Codex fallback, and
