@@ -29,6 +29,13 @@ describe("real seed render", () => {
       ".compound-engineering/config.example.yaml",
       ".compound-engineering/config.yaml",
       ".env.example",
+      ".github/dependabot.yml",
+      ".github/pull_request_template.md",
+      ".github/workflows/ci.yml",
+      ".github/workflows/dependency-audit.yml",
+      ".github/workflows/release.yml",
+      ".github/workflows/template-ci.yml",
+      ".github/workflows/template-initialize.yml",
       ".gitignore",
       ".node-version",
       ".prettierignore",
@@ -38,6 +45,7 @@ describe("real seed render", () => {
       "compound-packs/README.md",
       "docs/.vitepress/config.ts",
       "docs/.vitepress/site.json",
+      "docs/contributing/ci.md",
       "docs/contributing/git-hooks.md",
       "docs/contributing/pr-checklist.md",
       "docs/contributing/production-tests.md",
@@ -55,7 +63,9 @@ describe("real seed render", () => {
       "pnpm-lock.yaml",
       "pnpm-workspace.yaml",
       "public/favicon.svg",
+      "scripts/audit.cjs",
       "scripts/bootstrap.cjs",
+      "scripts/ci/context.cjs",
       "scripts/core/args.cjs",
       "scripts/core/dependency-policy.cjs",
       "scripts/core/focused-run.cjs",
@@ -131,7 +141,9 @@ describe("real seed render", () => {
       "tests/fixtures/render/template/run.sh",
       "tests/integration/artifact-compose.test.ts",
       "tests/integration/artifact-run.test.ts",
+      "tests/integration/audit.test.ts",
       "tests/integration/bootstrap.test.ts",
+      "tests/integration/ci-context.test.ts",
       "tests/integration/dependencies-cli.test.ts",
       "tests/integration/development-gates.test.ts",
       "tests/integration/executable-lookup.test.ts",
@@ -155,7 +167,9 @@ describe("real seed render", () => {
       "tests/support/release-fixture.ts",
       "tests/support/rollout.ts",
       "tests/support/update-model.ts",
+      "tests/unit/audit.test.ts",
       "tests/unit/bootstrap.test.ts",
+      "tests/unit/ci-context.test.ts",
       "tests/unit/commands.test.ts",
       "tests/unit/dependencies.test.ts",
       "tests/unit/dependency-policy.test.ts",
@@ -196,6 +210,7 @@ describe("real seed render", () => {
       "tests/unit/testing.test.ts",
       "tests/unit/toolchain.test.ts",
       "tests/unit/transaction.test.ts",
+      "tooling/audit-policy.json",
       "tooling/capabilities.json",
       "tooling/eslint/shared.mjs",
       "tooling/eslint/suppression-policy.mjs",
@@ -215,9 +230,9 @@ describe("real seed render", () => {
     for (const forbidden of [
       /template-manifest/,
       /^scripts\/template\/(?!(?:git|inputs|journal|manifest|preview|pristine|provenance|recovery|render|state|update)\.cjs$)/,
-      /^tests\/(?:fixtures\/(?!render\/)|generator\/)|^tests\/integration\/(?!(?:artifact-compose|artifact-run|bootstrap|dependencies-cli|development-gates|executable-lookup|install-state|interruption|owned-process|permissions|process|production-scratch|release|transaction)\.test\.ts$)/,
+      /^tests\/(?:fixtures\/(?!render\/)|generator\/)|^tests\/integration\/(?!(?:artifact-compose|artifact-run|audit|bootstrap|ci-context|dependencies-cli|development-gates|executable-lookup|install-state|interruption|owned-process|permissions|process|production-scratch|release|transaction)\.test\.ts$)/,
       /^tests\/(?:unit\/generator-commands|contracts\/(?:rendered-output|toolchain|command-parity|agent-staging)|support\/rendered-app)/,
-      /^tooling\/(?!project-role\.json$|policy\.json$|capabilities\.json$|eslint\/(?:shared|suppression-policy)\.mjs$|hooks\/(?:staged|commit-message)\.mjs$|vitest\/suite\.ts$)/,
+      /^tooling\/(?!project-role\.json$|policy\.json$|audit-policy\.json$|capabilities\.json$|eslint\/(?:shared|suppression-policy)\.mjs$|hooks\/(?:staged|commit-message)\.mjs$|vitest\/suite\.ts$)/,
       /\.py$/,
       /pyproject|Makefile|copier|uv\.lock/i,
       /auth|prisma|drizzle|database|db\//i,
@@ -287,7 +302,9 @@ describe("real seed render", () => {
   test("workspace file makes the app its own root and denies the reviewed builds only", () => {
     const workspace = byPath(a, "pnpm-workspace.yaml");
     expect(workspace).not.toMatch(/^packages:/m);
-    expect(workspace).toContain('overrides:\n  "vitepress@1.6.4>@docsearch/js": 3.9.0\n  "vitepress@1.6.4>@docsearch/css": 3.9.0\n');
+    expect(workspace).toContain(
+      'overrides:\n  "vitepress@1.6.4>@docsearch/js": 3.9.0\n  "vitepress@1.6.4>@docsearch/css": 3.9.0\n  "form-data@<2.5.0": 2.5.6\n  "qs@<6.6.0": 6.16.1\n',
+    );
     expect(workspace.match(/^overrides:/gm)).toHaveLength(1);
     expect(workspace.match(/^ {2}\S.*>.*$/gm)).toHaveLength(2);
     for (const name of versions.seed.deniedBuilds) expect(workspace).toContain(`${name}: false`);

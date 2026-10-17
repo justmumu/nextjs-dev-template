@@ -1131,6 +1131,96 @@
       "base": "root",
       "source": "docs/contributing/release-process.md",
       "destination": "docs/contributing/release-process.md"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": ".github/workflows/ci.yml",
+      "destination": ".github/workflows/ci.yml"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": ".github/workflows/template-ci.yml",
+      "destination": ".github/workflows/template-ci.yml"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": ".github/workflows/template-initialize.yml",
+      "destination": ".github/workflows/template-initialize.yml"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": ".github/workflows/release.yml",
+      "destination": ".github/workflows/release.yml"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": ".github/workflows/dependency-audit.yml",
+      "destination": ".github/workflows/dependency-audit.yml"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": ".github/pull_request_template.md",
+      "destination": ".github/pull_request_template.md"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": ".github/dependabot.yml",
+      "destination": ".github/dependabot.yml"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/audit.cjs",
+      "destination": "scripts/audit.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/ci/context.cjs",
+      "destination": "scripts/ci/context.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tooling/audit-policy.json",
+      "destination": "tooling/audit-policy.json"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/audit.test.ts",
+      "destination": "tests/unit/audit.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/ci-context.test.ts",
+      "destination": "tests/unit/ci-context.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/audit.test.ts",
+      "destination": "tests/integration/audit.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/ci-context.test.ts",
+      "destination": "tests/integration/ci-context.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "docs/contributing/ci.md",
+      "destination": "docs/contributing/ci.md"
     }
   ]
 }

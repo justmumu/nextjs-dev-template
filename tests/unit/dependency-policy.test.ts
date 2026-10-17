@@ -105,7 +105,8 @@ describe("workspace policy", () => {
 });
 
 describe("the reviewed compatible package replacement (VitePress 1.6.4 pins DocSearch 3.8.2, which cannot take React 19)", () => {
-  const BLOCK = 'overrides:\n  "vitepress@1.6.4>@docsearch/js": 3.9.0\n  "vitepress@1.6.4>@docsearch/css": 3.9.0\n';
+  const BLOCK =
+    'overrides:\n  "vitepress@1.6.4>@docsearch/js": 3.9.0\n  "vitepress@1.6.4>@docsearch/css": 3.9.0\n  "form-data@<2.5.0": 2.5.6\n  "qs@<6.6.0": 6.16.1\n';
   const violations = (text: string) => policy.workspaceViolations(text, { reviewedBuilds: [] });
 
   test("the exact block is accepted wherever it sits, with either quote style, and its absence stays valid", () => {
@@ -113,7 +114,12 @@ describe("the reviewed compatible package replacement (VitePress 1.6.4 pins DocS
     expect(violations(GOOD + BLOCK)).toEqual([]);
     expect(violations(BLOCK + GOOD)).toEqual([]);
     expect(violations(GOOD + BLOCK.replaceAll('"', "'"))).toEqual([]);
-    expect(violations(GOOD + 'overrides:\n  "vitepress@1.6.4>@docsearch/css": 3.9.0\n  "vitepress@1.6.4>@docsearch/js": 3.9.0\n')).toEqual([]);
+    expect(
+      violations(
+        GOOD +
+          'overrides:\n  "qs@<6.6.0": 6.16.1\n  "form-data@<2.5.0": 2.5.6\n  "vitepress@1.6.4>@docsearch/css": 3.9.0\n  "vitepress@1.6.4>@docsearch/js": 3.9.0\n',
+      ),
+    ).toEqual([]);
   });
 
   test.each([
@@ -123,8 +129,12 @@ describe("the reviewed compatible package replacement (VitePress 1.6.4 pins DocS
     ["a widened version", BLOCK.replace('css": 3.9.0', 'css": 3.9.1')],
     ["a range", BLOCK.replace('js": 3.9.0', 'js": ^3.9.0')],
     ["another parent version", BLOCK.replaceAll("1.6.4", "1.6.5")],
+    ["a widened form-data selector", BLOCK.replace("form-data@<2.5.0", "form-data@<2.6.0")],
+    ["a lower qs replacement", BLOCK.replace("6.16.1", "6.16.0")],
+    ["a form-data replacement that is not the patched one", BLOCK.replace("2.5.6", "2.5.5")],
     ["a wildcard parent", BLOCK.replaceAll("vitepress@1.6.4", "vitepress")],
-    ["only one of the two pairs", 'overrides:\n  "vitepress@1.6.4>@docsearch/js": 3.9.0\n'],
+    ["only the DocSearch pair", 'overrides:\n  "vitepress@1.6.4>@docsearch/js": 3.9.0\n  "vitepress@1.6.4>@docsearch/css": 3.9.0\n'],
+    ["only one of the pairs", 'overrides:\n  "vitepress@1.6.4>@docsearch/js": 3.9.0\n'],
     ["an empty block", "overrides: {}\n"],
     ["a flow map", 'overrides: { "vitepress@1.6.4>@docsearch/js": 3.9.0 }\n'],
     ["a quoted version", BLOCK.replace('js": 3.9.0', 'js": "3.9.0"')],

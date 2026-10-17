@@ -43,6 +43,10 @@
           "link": "/contributing/git-hooks"
         },
         {
+          "text": "CI and supply chain",
+          "link": "/contributing/ci"
+        },
+        {
           "text": "Release process",
           "link": "/contributing/release-process"
         },

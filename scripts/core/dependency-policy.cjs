@@ -25,14 +25,19 @@ const FORBIDDEN_WORKSPACE_KEYS = [
   "neverBuiltDependencies",
   "ignoredBuiltDependencies",
 ];
-// The one reviewed graph rewrite. VitePress 1.6.4 pins DocSearch 3.8.2, whose peers stop at React 18;
+// The reviewed graph rewrites. VitePress 1.6.4 pins DocSearch 3.8.2, whose peers stop at React 18;
 // DocSearch 3.9.0 adds React 19 support (https://github.com/algolia/docsearch/releases/tag/v3.9.0).
 // This is a compatible package replacement scoped to that parent, not a peer-dependency suppression.
-// Roots and generated projects share this declaration; a workspace file may carry exactly this block
-// or none, and dependency commands never add, remove or change it.
+// The last two lift the old form-data (2.1.x/2.3.x, GHSA-fjxv-7rqg-78g4, GHSA-hmw2-7cc7-3qxx) and qs (6.5.x,
+// GHSA-6rw7-vpxm-498p, GHSA-4mjr-xmp4-gh2g) that hyperlink's request/teepee chains request to the patched
+// versions of the same major lines; the selectors match only those old requested ranges. Roots and
+// generated projects share this declaration; a workspace file may carry exactly this block or none,
+// and dependency commands never add, remove or change it.
 const REVIEWED_OVERRIDES = Object.freeze({
   "vitepress@1.6.4>@docsearch/js": "3.9.0",
   "vitepress@1.6.4>@docsearch/css": "3.9.0",
+  "form-data@<2.5.0": "2.5.6",
+  "qs@<6.6.0": "6.16.1",
 });
 const REQUIRED_SCALARS = /** @type {const} */ ({ strictDepBuilds: "true", verifyDepsBeforeRun: "error", enablePrePostScripts: "false" });
 const FORBIDDEN_NPMRC = /^\s*(script-shell|shell-emulator|pnpmfile|global-pnpmfile)\s*=/im;

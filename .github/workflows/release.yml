@@ -1,0 +1,84 @@
+# Release validation and publication. Pushing a release tag validates it, read-only, with the code of the
+# reviewed main branch, never the code of the tag. Creating the GitHub Release is a separate act: it runs
+# only when someone starts this workflow by hand from the default branch and names the tag.
+name: Release
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "The release tag to publish, for example v1.2.3"
+        required: true
+        type: string
+
+permissions: {}
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate the release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+    steps:
+      - name: Check out the trusted main branch with its tags
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          fetch-depth: 0
+          fetch-tags: true
+          persist-credentials: false
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Set up Node.js and the pnpm store cache
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            template/app/pnpm-lock.yaml
+      - name: Record the toolchain of this job
+        run: node scripts/ci/context.cjs toolchain --lane=24
+      - name: Install dependencies from the frozen lock
+        run: pnpm install --frozen-lockfile
+      - name: Validate the tag against origin/main
+        run: pnpm run release:validate --tag="$RELEASE_TAG" --notes="$RUNNER_TEMP/release-notes.md"
+      - name: Audit the author and committer identities of the release
+        run: node scripts/ci/context.cjs identities --tag="$RELEASE_TAG"
+      - name: Keep the notes as data for publication
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-notes
+          path: ${{ runner.temp }}/release-notes.md
+          if-no-files-found: error
+          retention-days: 1
+
+  publish:
+    name: Publish the GitHub Release
+    needs: validate
+    if: github.event_name == 'workflow_dispatch' && github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      RELEASE_TAG: ${{ inputs.tag }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Fetch the validated notes
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-notes
+          path: ${{ runner.temp }}/notes
+      - name: Create the release from the validated tag and notes
+        run: gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --verify-tag --title "$RELEASE_TAG" --notes-file "$RUNNER_TEMP/notes/release-notes.md"

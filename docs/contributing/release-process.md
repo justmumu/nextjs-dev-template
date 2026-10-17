@@ -104,9 +104,10 @@ the merge even when their trees match. A valid release stays valid after `main` 
 
 ## What is not here
 
-- No npm publication, GitHub Release creation or deployment: the commands only prepare, tag and validate.
-  A publishing workflow has to treat the notes as data and run the validator code from the trusted
-  `main`, not from the tag it validates.
+- No npm publication or deployment: the commands only prepare, tag and validate. `release.yml` validates a
+  pushed tag with the validator code of the trusted `main`, audits the commit identities and keeps the
+  notes as data; its `publish` job creates the GitHub Release only when started by hand (see
+  [CI and supply chain](ci)).
 - No standalone changelog command and no way to choose another changelog boundary: the bump owns both.
 - No rewriting of installation URLs in the documentation, which the Python template's release script did
   for its own package; this template has no installable package.

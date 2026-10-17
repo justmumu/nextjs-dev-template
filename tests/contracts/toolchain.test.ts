@@ -88,7 +88,7 @@ describe("commit identity", () => {
   });
 });
 
-const REVIEWED_OVERRIDES = ["vitepress@1.6.4>@docsearch/js: 3.9.0", "vitepress@1.6.4>@docsearch/css: 3.9.0"];
+const REVIEWED_OVERRIDES = ["vitepress@1.6.4>@docsearch/js: 3.9.0", "vitepress@1.6.4>@docsearch/css: 3.9.0", "form-data@<2.5.0: 2.5.6", "qs@<6.6.0: 6.16.1"];
 
 /** The indented entries of the top-level overrides block of a workspace file. */
 function overrideBlock(workspace: string): string[] {

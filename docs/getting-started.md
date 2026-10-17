@@ -62,7 +62,8 @@ meanwhile, nothing is removed, and the message says so.
 
 A repository GitHub makes from the template has one commit, the _copied commit_, that exists nowhere
 else. `node scripts/template/initialize.cjs --name=<name> --owner=<login>` converts that copy in
-place; the workflow that runs it belongs to the release work. Before anything is staged it refuses a
+place; the workflow `template-initialize.yml` runs it on the first push (see
+[CI and supply chain](contributing/ci)). Before anything is staged it refuses a
 copy that is not an uninitialized template copy (it needs `tooling/template-sentinel.json`), has
 uncommitted or staged changes, tracked files hidden with `assume-unchanged` or `skip-worktree`,
 an ignored path the application would write onto, a tracked symlink or submodule on a path it

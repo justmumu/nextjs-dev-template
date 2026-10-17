@@ -167,11 +167,11 @@ describe("a copy that cannot be converted is refused before staging, untouched",
       "a workflow the render would not keep",
       (c, env) => {
         mkdirSync(join(c.dir, ".github/workflows"), { recursive: true });
-        writeFileSync(join(c.dir, ".github/workflows/ci.yml"), "on: push\n");
+        writeFileSync(join(c.dir, ".github/workflows/legacy.yml"), "on: push\n");
         git(c.dir, ["add", "-A"], env);
         git(c.dir, ["commit", "-q", "-m", "ci: workflow"], env);
       },
-      /\.github\/workflows\/ci\.yml would be removed/,
+      /\.github\/workflows\/legacy\.yml would be removed/,
     ],
     [
       "a template's own origin",

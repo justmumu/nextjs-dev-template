@@ -310,7 +310,8 @@ describe("boundary of an approved relock", () => {
 
   test("the reviewed override block is inside the boundary and any other form of it is outside", () => {
     const canonical = "strictDepBuilds: true\nverifyDepsBeforeRun: error\nenablePrePostScripts: false\nskills:\n  dirs: []\nallowBuilds: {}\n";
-    const block = 'overrides:\n  "vitepress@1.6.4>@docsearch/js": 3.9.0\n  "vitepress@1.6.4>@docsearch/css": 3.9.0\n';
+    const block =
+      'overrides:\n  "vitepress@1.6.4>@docsearch/js": 3.9.0\n  "vitepress@1.6.4>@docsearch/css": 3.9.0\n  "form-data@<2.5.0": 2.5.6\n  "qs@<6.6.0": 6.16.1\n';
     expect(bootstrap.boundaryProblems({ ...files, workspace: `${canonical}${block}` })).toEqual([]);
     expect(bootstrap.boundaryProblems({ ...files, workspace: `${canonical}${block.replace('js": 3.9.0', 'js": 3.9.1')}` }).join("\n")).toMatch(/overrides/);
     expect(bootstrap.boundaryProblems({ ...files, workspace: `${canonical}overrides:\n  left: 1.0.0\n` }).join("\n")).toMatch(/overrides/);

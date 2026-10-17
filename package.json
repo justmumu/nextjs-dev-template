@@ -9,6 +9,7 @@
     "node": "24.21.0"
   },
   "scripts": {
+    "audit:dependencies": "node scripts/development.cjs audit:dependencies",
     "check": "node scripts/development.cjs check",
     "deps:add": "node scripts/dependencies.cjs add",
     "deps:remove": "node scripts/dependencies.cjs remove",

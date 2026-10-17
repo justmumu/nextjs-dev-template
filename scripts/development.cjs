@@ -382,6 +382,11 @@ function generatorCommand(name) {
   };
 }
 
+/** @type {SyncHandler} */
+function auditDependencies(args, context) {
+  return require("./audit.cjs").auditCommand(args, { root: context.root, io: context.io });
+}
+
 /** @type {Handler} */
 function templatePreview(args, context) {
   /** @type {unknown} */
@@ -416,6 +421,10 @@ function releaseCommand(name) {
  * @type {Record<string, { script: string, handlers: Partial<Record<Role, Handler>> }>}
  */
 const COMMANDS = {
+  "audit:dependencies": {
+    script: "node scripts/development.cjs audit:dependencies",
+    handlers: { generator: auditDependencies, application: auditDependencies },
+  },
   check: { script: "node scripts/development.cjs check", handlers: { generator: check, application: check } },
   typecheck: { script: "node scripts/development.cjs typecheck", handlers: { generator: typecheckGenerator, application: typecheckApplication } },
   format: { script: "node scripts/development.cjs format", handlers: { generator: format, application: format } },
