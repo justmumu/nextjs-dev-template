@@ -93,7 +93,7 @@ function verifyLineage({ git, root }) {
     throw new Refusal("not-enrolled", `HEAD has no committed ${STATE_FILE}; this project is not enrolled in template updates`);
   }
   /** @type {unknown} */
-  let raw = null;
+  let raw;
   try {
     raw = JSON.parse(stateText);
   } catch {
