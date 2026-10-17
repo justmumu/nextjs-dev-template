@@ -771,6 +771,174 @@
       "base": "root",
       "source": "tests/integration/permissions.test.ts",
       "destination": "tests/integration/permissions.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "playwright.config.ts",
+      "destination": "playwright.config.ts"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tests/e2e/support.ts",
+      "destination": "tests/e2e/support.ts"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tests/e2e/pages.spec.ts",
+      "destination": "tests/e2e/pages.spec.ts"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tests/e2e/boundaries.spec.ts",
+      "destination": "tests/e2e/boundaries.spec.ts"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tests/e2e/environment.spec.ts",
+      "destination": "tests/e2e/environment.spec.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/testing/owned.cjs",
+      "destination": "scripts/testing/owned.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/testing/environment.cjs",
+      "destination": "scripts/testing/environment.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/testing/network.cjs",
+      "destination": "scripts/testing/network.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/testing/fixtures.cjs",
+      "destination": "scripts/testing/fixtures.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/testing/stage.cjs",
+      "destination": "scripts/testing/stage.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/testing/harness.cjs",
+      "destination": "scripts/testing/harness.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/testing/production.cjs",
+      "destination": "scripts/testing/production.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/testing/artifact.cjs",
+      "destination": "scripts/testing/artifact.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "docs/contributing/production-tests.md",
+      "destination": "docs/contributing/production-tests.md"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/production/owned.test.ts",
+      "destination": "tests/unit/production/owned.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/production/environment.test.ts",
+      "destination": "tests/unit/production/environment.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/production/network.test.ts",
+      "destination": "tests/unit/production/network.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/production/fixtures.test.ts",
+      "destination": "tests/unit/production/fixtures.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/production/harness.test.ts",
+      "destination": "tests/unit/production/harness.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/production/production.test.ts",
+      "destination": "tests/unit/production/production.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/production/artifact.test.ts",
+      "destination": "tests/unit/production/artifact.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/support/production-host.ts",
+      "destination": "tests/support/production-host.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/support/owned-processes.ts",
+      "destination": "tests/support/owned-processes.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/owned-process.test.ts",
+      "destination": "tests/integration/owned-process.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/artifact-compose.test.ts",
+      "destination": "tests/integration/artifact-compose.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/artifact-run.test.ts",
+      "destination": "tests/integration/artifact-run.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/interruption.test.ts",
+      "destination": "tests/integration/interruption.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/production-scratch.test.ts",
+      "destination": "tests/integration/production-scratch.test.ts"
     }
   ]
 }

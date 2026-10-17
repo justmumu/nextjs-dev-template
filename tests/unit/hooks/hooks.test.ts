@@ -109,7 +109,7 @@ describe("pre-commit on the machine", () => {
     expect(machine.run).toBe(processes.run);
     expect(machine.runLogged).toBe(processes.runLogged);
     expect(machine.checkLock).toBe(transaction.checkLock);
-    expect(machine.dispatch).toBe(development.main);
+    expect(machine.dispatch).toBe(development.mainSync);
     expect(typeof machine.launch).toBe("function");
   });
 

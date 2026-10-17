@@ -27,6 +27,19 @@ function run(command, args, options) {
 }
 
 /**
+ * A command attached to the terminal: its output is not captured, so a server or a long run is seen
+ * as it happens.
+ * @param {string} command
+ * @param {readonly string[]} args
+ * @param {{ cwd: string, env?: NodeJS.ProcessEnv }} options
+ * @returns {{ status: number | null }}
+ */
+function runInherited(command, args, options) {
+  const { status } = spawnSync(command, args, { cwd: options.cwd, env: options.env ?? process.env, shell: false, stdio: "inherit" });
+  return { status };
+}
+
+/**
  * Same as run, but asynchronous, so the process can receive signals while the command runs, and
  * stoppable: aborting the signal terminates the command, and the answer is its final result.
  * @param {string} command
@@ -77,4 +90,4 @@ function runLogged(command, args, options, start = run) {
 /** The process's own output streams, for commands that run as a program. */
 const stdio = { stdout: (/** @type {string} */ text) => process.stdout.write(text), stderr: (/** @type {string} */ text) => process.stderr.write(text) };
 
-module.exports = { redact, run, runLogged, runStoppable, stdio };
+module.exports = { redact, run, runInherited, runLogged, runStoppable, stdio };

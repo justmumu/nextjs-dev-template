@@ -6,15 +6,20 @@
     "node": "24.21.0"
   },
   "scripts": {
+    "build": "node scripts/development.cjs build",
     "check": "node scripts/development.cjs check",
     "deps:add": "node scripts/dependencies.cjs add",
     "deps:remove": "node scripts/dependencies.cjs remove",
     "deps:upgrade": "node scripts/dependencies.cjs upgrade",
+    "dev": "node scripts/development.cjs dev",
     "docs:build": "node scripts/development.cjs docs:build",
     "format": "node scripts/development.cjs format",
     "format:check": "node scripts/development.cjs format:check",
     "lint": "node scripts/development.cjs lint",
     "lint:fix": "node scripts/development.cjs lint:fix",
+    "start": "node scripts/development.cjs start",
+    "test:artifact": "node scripts/development.cjs test:artifact",
+    "test:e2e": "node scripts/development.cjs test:e2e",
     "test:integration": "node scripts/development.cjs test:integration",
     "test:one": "node scripts/development.cjs test:one",
     "test:permissions": "node scripts/development.cjs test:permissions",
@@ -26,6 +31,7 @@
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@commitlint/cli": "21.2.3",
     "@commitlint/config-conventional": "21.2.3",
     "@eslint/js": "9.39.5",

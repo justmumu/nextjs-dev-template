@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { describe, expect, test } from "vitest";
 import { parseJson, type Manifest } from "../support/json.ts";
+import { capture as captureOutput, scratchArea } from "../support/project.ts";
 
 const require = createRequire(import.meta.url);
 const root = resolve(import.meta.dirname, "../..");
@@ -122,7 +123,7 @@ describe("command definitions", () => {
   test("every script is a literal Node dispatcher call with no shell syntax", () => {
     for (const role of ["generator", "application"] as const) {
       for (const [name, script] of Object.entries(development.scriptsFor(role))) {
-        expect(script, name).toMatch(/^node scripts\/(development|dependencies)\.cjs [a-z:-]+$/);
+        expect(script, name).toMatch(/^node scripts\/(development|dependencies)\.cjs [a-z0-9:-]+$/);
       }
     }
   });
@@ -149,6 +150,82 @@ describe("command definitions", () => {
     for (const role of ["generator", "application"] as const) {
       expect(Object.keys(development.scriptsFor(role))).toEqual(expect.arrayContaining(["format", "format:check", "lint", "lint:fix", "typecheck"]));
     }
+  });
+});
+
+describe("application run paths and production proofs", () => {
+  const scratch = scratchArea("commands-run-");
+  const clean = () => scratch.project({ "AGENTS.md": "# Rules\n" });
+  const streams = () => {
+    const streamed: [string, string, string[]][] = [];
+    const scripts: [string, string[]][] = [];
+    return {
+      streamed,
+      scripts,
+      tools: {
+        launch: () => 0,
+        focus: () => 0,
+        stream: (pkg: string, bin: string, args: string[]) => {
+          streamed.push([pkg, bin, args]);
+          return 7;
+        },
+        script: (script: string, args: string[]) => {
+          scripts.push([script, args]);
+          return 9;
+        },
+      },
+    };
+  };
+
+  test.each(["dev", "build", "start"])("%s starts Next.js attached to the terminal and nothing else, and takes no arguments", (name) => {
+    const handler = development.COMMANDS[name]?.handlers.application;
+    const { streamed, tools } = streams();
+    const dir = clean();
+    expect(handler?.([], { root: dir, cwd: dir, io: captureOutput().io, tools })).toBe(7);
+    expect(streamed).toEqual([["next", "next", [name]]]);
+    expect(() => handler?.(["--port=1"], { root: dir, cwd: dir, io: captureOutput().io, tools })).toThrow(/unknown flag/);
+    expect(streamed).toHaveLength(1);
+  });
+
+  test.each(["dev", "build", "start"])("%s refuses a managed agent-rules block before Next.js can rewrite it", (name) => {
+    const dir = scratch.project({ "AGENTS.md": "<!-- BEGIN:nextjs-agent-rules -->\nmanaged\n<!-- END:nextjs-agent-rules -->\n" });
+    const { streamed, tools } = streams();
+    const out = captureOutput();
+    expect(development.COMMANDS[name]?.handlers.application?.([], { root: dir, cwd: dir, io: out.io, tools })).toBe(1);
+    expect(streamed).toEqual([]);
+    expect(out.err()).toMatch(/AGENTS\.md contains the Next\.js agent rules block/);
+  });
+
+  test("only applications run, build and start Next.js", () => {
+    for (const name of ["dev", "build", "start"]) {
+      expect(development.COMMANDS[name]?.handlers.generator, name).toBeUndefined();
+      expect(Object.keys(development.scriptsFor("application"))).toContain(name);
+      expect(Object.keys(development.scriptsFor("generator"))).not.toContain(name);
+    }
+  });
+
+  test.each([
+    ["test:e2e", "scripts/testing/production.cjs"],
+    ["test:artifact", "scripts/testing/artifact.cjs"],
+  ])("%s hands the whole run to its own Node process and takes no arguments", (name, script) => {
+    const { scripts, tools } = streams();
+    const dir = clean();
+    const handler = development.COMMANDS[name]?.handlers.application;
+    expect(handler?.([], { root: dir, cwd: dir, io: captureOutput().io, tools })).toBe(9);
+    expect(scripts).toEqual([[script, []]]);
+    expect(() => handler?.(["--headed=1"], { root: dir, cwd: dir, io: captureOutput().io, tools })).toThrow(/unknown flag/);
+    expect(development.COMMANDS[name]?.handlers.generator).toBeTypeOf("function");
+    for (const role of ["generator", "application"] as const) expect(Object.keys(development.scriptsFor(role))).toContain(name);
+  });
+
+  test("tools a caller does not supply are the installed ones", () => {
+    const context = { root: root, cwd: root, io: captureOutput().io };
+    const own = development.toolsOf(context);
+    for (const tool of [own.launch, own.focus, own.stream, own.script]) expect(tool).toBeTypeOf("function");
+    const launch = () => 3;
+    const mixed = development.toolsOf({ ...context, tools: { launch, focus: () => 0 } });
+    expect(mixed.launch).toBe(launch);
+    expect(mixed.stream).toBeTypeOf("function");
   });
 });
 

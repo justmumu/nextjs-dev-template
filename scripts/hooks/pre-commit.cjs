@@ -36,7 +36,7 @@ const realMachine = (root, io) => ({
   runLogged,
   launch: development.installedTools({ root, cwd: root, io }).launch,
   checkLock,
-  dispatch: development.main,
+  dispatch: development.mainSync,
 });
 
 /** @param {string} root @param {Io} io @param {Machine} [machine] @returns {Host} */

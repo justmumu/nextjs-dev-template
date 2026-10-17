@@ -108,6 +108,7 @@ describe("the generator's own and a generated application's documentation", () =
     expect(readdirSync(join(built, "contributing")).sort()).toEqual([
       "git-hooks.html",
       "pr-checklist.html",
+      "production-tests.html",
       "static-quality.html",
       "testing.html",
       "toolchain.html",

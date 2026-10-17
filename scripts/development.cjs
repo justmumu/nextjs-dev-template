@@ -5,20 +5,27 @@
 const { existsSync, readFileSync, readdirSync, rmSync } = require("node:fs");
 const nodePath = require("node:path");
 const { UsageError, parseArgs } = require("./core/args.cjs");
-const { runLogged } = require("./core/process.cjs");
+const { runInherited, runLogged } = require("./core/process.cjs");
 const { gateErrors, readRole, resolveOnPath } = require("./core/toolchain.cjs");
 const { FORMAT_GLOBS, managedAgentBlockErrors } = require("./core/quality.cjs");
 const { isObject, readObject } = require("./core/json.cjs");
 const { checkLock } = require("./core/transaction.cjs");
 const testing = require("./core/testing.cjs");
 const docs = require("./docs.cjs");
+const harness = require("./testing/harness.cjs");
 
 /**
  * @typedef {"generator" | "application"} Role
  * @typedef {{ stdout: (text: string) => unknown, stderr: (text: string) => unknown }} Io
- * @typedef {{ launch: (pkg: string, bin: string, args: string[]) => number, focus: (focus: Focus) => number }} Tools how the installed packages are started: an executable with its output passed on, or the one focused test file
+ * @typedef {{
+ *   launch: (pkg: string, bin: string, args: string[]) => number,
+ *   focus: (focus: Focus) => number,
+ *   stream?: (pkg: string, bin: string, args: string[]) => number,
+ *   script?: (script: string, args: string[]) => number | Promise<number>,
+ * }} Tools how the installed packages are started: an executable with its output passed on, the one focused test file, an executable attached to the terminal (a server), or a project script that owns its own asynchronous work
  * @typedef {{ root: string, cwd: string, io: Io, tools?: Tools, exists?: (path: string) => boolean }} Context the project, its output, and (for tests) how the packages are started and whether a project file exists
- * @typedef {(args: readonly string[], context: Context) => number} Handler
+ * @typedef {(args: readonly string[], context: Context) => number} SyncHandler
+ * @typedef {(args: readonly string[], context: Context) => number | Promise<number>} Handler a command that owns asynchronous work answers with a promise; its arguments are still checked before it returns
  */
 
 /** @param {readonly string[]} args */
@@ -45,12 +52,20 @@ function packageBin(root, pkg, bin) {
   return nodePath.join(dir, binOf(readObject(nodePath.join(dir, "package.json")), pkg, bin));
 }
 
-/** @param {Context} context @returns {Tools} the executables of the packages installed under the project root, run with Node and no shell */
+/** @param {Context} context @returns {Required<Tools>} the executables of the packages installed under the project root, run with Node and no shell */
 function installedTools({ root, io }) {
   return {
     launch: (pkg, bin, args) => {
       const result = runLogged(process.execPath, [packageBin(root, pkg, bin), ...args], { cwd: root, stdout: io.stdout, stderr: io.stderr });
       return result.status ?? 1;
+    },
+    stream: (pkg, bin, args) => runInherited(process.execPath, [packageBin(root, pkg, bin), ...args], { cwd: root }).status ?? 1,
+    // The project script runs in this process, so this process is the one owner of the interrupts of its servers and browsers.
+    script: (script, args) => {
+      if (args.length > 0) throw new UsageError(`${script} takes no arguments`);
+      /** @type {unknown} */
+      const loaded = require(nodePath.join(root, script));
+      return harness.execute(/** @type {{ programOf: (root: string) => Parameters<typeof harness.execute>[0] }} */ (loaded).programOf(root));
     },
     focus: ({ suite, file, name }) => {
       const result = runLogged(process.execPath, [nodePath.join(__dirname, "core", "focused-run.cjs"), suite, file, ...(name === null ? [] : [name])], {
@@ -63,9 +78,21 @@ function installedTools({ root, io }) {
   };
 }
 
+/** @param {Context} context @returns {Required<Tools>} */
+function toolsOf(context) {
+  const installed = installedTools(context);
+  const given = context.tools;
+  return {
+    launch: given?.launch ?? installed.launch,
+    focus: given?.focus ?? installed.focus,
+    stream: given?.stream ?? installed.stream,
+    script: given?.script ?? installed.script,
+  };
+}
+
 /** @param {Context} context @param {string} pkg @param {string} bin @param {string[]} args */
 function runNodeTool(context, pkg, bin, args) {
-  return (context.tools ?? installedTools(context)).launch(pkg, bin, args);
+  return toolsOf(context).launch(pkg, bin, args);
 }
 
 /**
@@ -92,10 +119,10 @@ function focusOf(args, role, root, exists) {
   return { suite, file, name: flags.name ?? null };
 }
 
-/** @type {Handler} */
+/** @type {SyncHandler} */
 function testOne(args, context) {
   const focus = focusOf(args, readRole(context.root), context.root, (file) => existsSync(nodePath.join(context.root, file)));
-  return (context.tools ?? installedTools(context)).focus(focus);
+  return toolsOf(context).focus(focus);
 }
 
 /** @returns {string[]} the scenario names: the integration test files a project carries */
@@ -109,7 +136,7 @@ function scenariosOf(/** @type {string} */ root) {
     : [];
 }
 
-/** @type {Handler} */
+/** @type {SyncHandler} */
 function testIntegration(args, context) {
   const { scenario } = parseArgs(args, { scenario: { values: scenariosOf(context.root) } });
   return runNodeTool(context, "vitest", "vitest", [
@@ -164,7 +191,7 @@ function unitGate(suites, host) {
   return failed ? 1 : 0;
 }
 
-/** @type {Handler} */
+/** @type {SyncHandler} */
 function unit(args, context) {
   noArgs(args);
   const report = (/** @type {string} */ suite) => nodePath.join(context.root, testing.reportDirectory(suite));
@@ -199,7 +226,7 @@ function readSummary(report) {
 const PERMISSION_POLICY_TESTS = "tests/contracts/agent-permissions.test.ts";
 const PERMISSION_CODEX_TESTS = "tests/integration/permissions.test.ts";
 
-/** The declared host policy, then the real Codex execpolicy when a Codex CLI is installed; without one the real part is reported as unavailable, not as passed. @type {Handler} */
+/** The declared host policy, then the real Codex execpolicy when a Codex CLI is installed; without one the real part is reported as unavailable, not as passed. @type {SyncHandler} */
 function testPermissions(args, context) {
   noArgs(args);
   const missing = [PERMISSION_POLICY_TESTS, PERMISSION_CODEX_TESTS].filter((file) => !(context.exists ?? existsSync)(nodePath.join(context.root, file)));
@@ -219,13 +246,13 @@ function testPermissions(args, context) {
   ]);
 }
 
-/** @type {Handler} */
+/** @type {SyncHandler} */
 function typecheckGenerator(args, context) {
   noArgs(args);
   return runSteps(context, [["typescript", "tsc", ["--noEmit", "-p", "tsconfig.json"]]]);
 }
 
-/** @type {Handler} */
+/** @type {SyncHandler} */
 function typecheckApplication(args, context) {
   noArgs(args);
   const blocks = managedAgentBlockErrors(context.root);
@@ -241,25 +268,56 @@ function typecheckApplication(args, context) {
   ]);
 }
 
-/** @type {Handler} */
+/**
+ * The application's own run paths. They refuse a managed agent-rules block before Next.js can
+ * rewrite it (`next dev` removes one when `agentRules` is false), and start no other tool.
+ * @param {"dev" | "build" | "start"} command
+ * @returns {SyncHandler}
+ */
+function nextCommand(command) {
+  return (args, context) => {
+    noArgs(args);
+    const blocks = managedAgentBlockErrors(context.root);
+    if (blocks.length > 0) {
+      context.io.stderr(`${blocks.join("\n")}\n`);
+      return 1;
+    }
+    return toolsOf(context).stream("next", "next", [command]);
+  };
+}
+
+/**
+ * The production browser and standalone proofs own asynchronous servers and browsers, so each runs
+ * as its own Node process and reports one exit status.
+ * @param {string} script
+ * @returns {Handler}
+ */
+function productionProof(script) {
+  return (args, context) => {
+    noArgs(args);
+    return toolsOf(context).script(script, []);
+  };
+}
+
+/** @type {SyncHandler} */
 function format(args, context) {
   noArgs(args);
   return runSteps(context, [["prettier", "prettier", ["--write", "--log-level=warn", ...FORMAT_GLOBS]]]);
 }
 
-/** @type {Handler} */
+/** @type {SyncHandler} */
 function formatCheck(args, context) {
   noArgs(args);
   return runSteps(context, [["prettier", "prettier", ["--check", "--log-level=warn", ...FORMAT_GLOBS]]]);
 }
 
-/** @type {Handler} */
+/** @type {SyncHandler} */
 function lint(args, context) {
   noArgs(args);
   return runSteps(context, [["eslint", "eslint", ["--max-warnings=0", "."]]]);
 }
 
-/** @type {Handler} */
+/** @type {SyncHandler} */
 function lintFix(args, context) {
   noArgs(args);
   return runSteps(context, [["eslint", "eslint", ["--max-warnings=0", "--fix", "."]]]);
@@ -287,10 +345,10 @@ function runGates(lock, gates, io) {
   return failures.length > 0 ? 1 : 0;
 }
 
-/** @type {Handler} */
+/** @type {SyncHandler} */
 function check(args, context) {
   noArgs(args);
-  /** @type {[string, Handler][]} */
+  /** @type {[string, SyncHandler][]} */
   const gates = [
     ["format", formatCheck],
     ["lint", lint],
@@ -304,7 +362,7 @@ function check(args, context) {
   );
 }
 
-/** @type {Handler} */
+/** @type {SyncHandler} */
 function docsBuild(args, context) {
   noArgs(args);
   const launch = (/** @type {string} */ pkg, /** @type {string} */ bin, /** @type {string[]} */ rest) => runNodeTool(context, pkg, bin, rest);
@@ -314,7 +372,7 @@ function docsBuild(args, context) {
 /**
  * Generator-only commands live under scripts/template, which generated applications do not receive,
  * so the module is loaded by a computed path only when the command runs.
- * @param {"templateCreate" | "seedRefresh"} name
+ * @param {"templateCreate" | "seedRefresh" | "testE2e" | "testArtifact"} name
  * @returns {Handler}
  */
 function generatorCommand(name) {
@@ -350,6 +408,17 @@ const COMMANDS = {
   "deps:add": { script: "node scripts/dependencies.cjs add", handlers: {} },
   "deps:remove": { script: "node scripts/dependencies.cjs remove", handlers: {} },
   "deps:upgrade": { script: "node scripts/dependencies.cjs upgrade", handlers: {} },
+  dev: { script: "node scripts/development.cjs dev", handlers: { application: nextCommand("dev") } },
+  build: { script: "node scripts/development.cjs build", handlers: { application: nextCommand("build") } },
+  start: { script: "node scripts/development.cjs start", handlers: { application: nextCommand("start") } },
+  "test:e2e": {
+    script: "node scripts/development.cjs test:e2e",
+    handlers: { generator: generatorCommand("testE2e"), application: productionProof("scripts/testing/production.cjs") },
+  },
+  "test:artifact": {
+    script: "node scripts/development.cjs test:artifact",
+    handlers: { generator: generatorCommand("testArtifact"), application: productionProof("scripts/testing/artifact.cjs") },
+  },
   "template:create": { script: "node scripts/development.cjs template:create", handlers: { generator: generatorCommand("templateCreate") } },
   "template:seed:refresh": { script: "node scripts/development.cjs template:seed:refresh", handlers: { generator: generatorCommand("seedRefresh") } },
 };
@@ -371,7 +440,7 @@ function scriptsFor(role) {
 /**
  * @param {readonly string[]} argv
  * @param {{ root?: string, io?: Io, skipPreflight?: boolean }} [options]
- * @returns {number}
+ * @returns {number | Promise<number>} the exit status, as a promise for a command that owns asynchronous work
  */
 function main(argv, options = {}) {
   const root = options.root ?? nodePath.resolve(__dirname, "..");
@@ -388,6 +457,14 @@ function main(argv, options = {}) {
     io.stderr(`${name ?? ""} is not part of ${role} projects\n`);
     return 2;
   }
+  /** @param {unknown} error @returns {number} */
+  const reported = (error) => {
+    if (error instanceof UsageError || /** @type {Error} */ (error).name === "RenderError") {
+      io.stderr(`${/** @type {Error} */ (error).message}\n`);
+      return 2;
+    }
+    throw error;
+  };
   try {
     if (!options.skipPreflight) {
       const errors = gateErrors(root);
@@ -396,16 +473,29 @@ function main(argv, options = {}) {
         return 1;
       }
     }
-    return handler(args, { root, cwd: process.env.INIT_CWD ?? root, io });
+    const status = handler(args, { root, cwd: process.env.INIT_CWD ?? root, io });
+    return typeof status === "number" ? status : status.catch(reported);
   } catch (error) {
-    if (error instanceof UsageError || /** @type {Error} */ (error).name === "RenderError") {
-      io.stderr(`${/** @type {Error} */ (error).message}\n`);
-      return 2;
-    }
-    throw error;
+    return reported(error);
   }
 }
 
-module.exports = { COMMANDS, binOf, focusOf, installedTools, testPermissions, main, parseSummary, runGates, scriptsFor, unit, unitGate };
+/**
+ * For callers that run only synchronous commands (the Git gates).
+ * @param {readonly string[]} argv
+ * @param {{ root?: string, io?: Io, skipPreflight?: boolean }} [options]
+ * @returns {number}
+ */
+function mainSync(argv, options) {
+  const status = main(argv, options);
+  if (typeof status !== "number") throw new Error(`${argv.join(" ")} owns asynchronous work and cannot run as a synchronous gate`);
+  return status;
+}
 
-if (require.main === module) process.exitCode = main(process.argv.slice(2));
+module.exports = { COMMANDS, binOf, focusOf, installedTools, testPermissions, main, mainSync, parseSummary, runGates, scriptsFor, toolsOf, unit, unitGate };
+
+if (require.main === module) {
+  void Promise.resolve(main(process.argv.slice(2))).then((status) => {
+    process.exitCode = status;
+  });
+}

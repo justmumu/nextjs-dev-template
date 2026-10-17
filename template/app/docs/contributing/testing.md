@@ -63,6 +63,8 @@ make; it is not a mocking framework and gets no behavior beyond those calls.
 
 `tests/app/` tests the real components with Testing Library's semantic queries (roles, names and
 landmarks): the home page, the root layout's skip link and `main` landmark, the not-found page's way
-back, and the error boundary, which announces the failure as an alert, calls `reset` when asked to
-retry and never prints the error message, digest or details. Asynchronous server components and
-production behavior are proved by real build and browser tests, not by calling them as functions.
+back, and the error boundary, which announces the failure as an alert, calls `retry` (which fetches and
+renders the failed segment again; `reset` would only clear the error and show the failed result again)
+when asked to try again and never prints the error message, digest or details. Asynchronous server components and
+production behavior are proved by real build and browser tests, not by calling them as functions:
+see [Production browser and standalone tests](production-tests).

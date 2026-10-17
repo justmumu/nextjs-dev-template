@@ -75,7 +75,7 @@ describe("the unmodified application", () => {
       expect(result.status, `${file}\n${output(result)}`).toBe(0);
       expect(output(result)).toMatch(/Test Files\s+1 passed \(1\)/);
     }
-    const named = pnpm("test:one", "--test=tests/app/error.test.tsx", "--suite=app", "--name=tries again exactly once per click through the reset callback");
+    const named = pnpm("test:one", "--test=tests/app/error.test.tsx", "--suite=app", "--name=tries again exactly once per click through the retry callback");
     expect(output(named)).toMatch(/Tests\s+1 passed \| 2 skipped/);
   }, 120_000);
 

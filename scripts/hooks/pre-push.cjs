@@ -9,13 +9,13 @@ const GATES = ["check", "docs:build"];
 /**
  * Runs each routine gate once, in order, and stops at the first failure.
  * @param {readonly string[]} _argv
- * @param {{ root?: string, io?: { stdout: (text: string) => unknown, stderr: (text: string) => unknown }, dispatch?: typeof development.main }} [options]
+ * @param {{ root?: string, io?: { stdout: (text: string) => unknown, stderr: (text: string) => unknown }, dispatch?: typeof development.mainSync }} [options]
  * @returns {number}
  */
 function main(_argv, options = {}) {
   const root = options.root ?? nodePath.resolve(__dirname, "..", "..");
   const io = options.io ?? stdio;
-  const dispatch = options.dispatch ?? development.main;
+  const dispatch = options.dispatch ?? development.mainSync;
   for (const name of GATES) {
     io.stdout(`pre-push: ${name}\n`);
     const status = dispatch([name], { root, io });

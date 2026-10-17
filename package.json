@@ -20,6 +20,8 @@
     "lint:fix": "node scripts/development.cjs lint:fix",
     "template:create": "node scripts/development.cjs template:create",
     "template:seed:refresh": "node scripts/development.cjs template:seed:refresh",
+    "test:artifact": "node scripts/development.cjs test:artifact",
+    "test:e2e": "node scripts/development.cjs test:e2e",
     "test:integration": "node scripts/development.cjs test:integration",
     "test:one": "node scripts/development.cjs test:one",
     "test:permissions": "node scripts/development.cjs test:permissions",
