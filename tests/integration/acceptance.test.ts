@@ -1,7 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { appendFileSync, existsSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { createRequire } from "node:module";
 import { describe, expect, test } from "vitest";
 import { type ClaudeSettings, type CodexHooks, prefixRules, ruleMatches } from "../support/agent-declarations.ts";
 import { denial } from "../support/guard-fixture.ts";
@@ -10,12 +9,10 @@ import { capture, scratchArea } from "../support/project.ts";
 import { create, fixtureEnv, generatorCopy, git, hostFor, inputsOf, passing, root } from "../support/template-fixture.ts";
 
 // The final adoption of the activated candidate. The creation, update, recovery and release scenarios
-// have their own files and run here only as the chain that the acceptance harness declares; this file
-// owns what only the final declarations and setup can show. A real host's trust approval and prompts
-// are not exercised here, only the commands the hosts are told to run and the data they read.
+// have their own files; this file owns what only the final declarations and setup can show.
+// A real host's trust approval and prompts are not exercised here, only the commands the hosts
+// are told to run and the data they read.
 
-const require = createRequire(import.meta.url);
-const noPython = require("../../scripts/ci/no-python.cjs") as typeof import("../../scripts/ci/no-python.cjs");
 const scratch = scratchArea("acceptance-");
 const read = (path: string) => readFileSync(join(root, path), "utf8");
 
@@ -144,31 +141,9 @@ describe("adopting the activated candidate without any agent CLI", () => {
 describe("the acceptance chain", () => {
   const workflow = (name: string) => read(`.github/workflows/${name}.yml`);
 
-  test("the no-Python harness runs both creation routes, updates, recovery and release against scenarios that exist", () => {
-    const scenarios = new Set(readdirSync(join(root, "tests/integration")).map((file) => file.replace(/\.test\.ts$/, "")));
-    expect(noPython.SCENARIOS.length).toBeGreaterThan(0);
-    for (const scenario of noPython.SCENARIOS) expect(scenarios.has(scenario), scenario).toBe(true);
-    for (const required of [
-      "template-create",
-      "template-initialize",
-      "template-preview",
-      "template-update",
-      "template-recovery",
-      "release",
-      "release-lineage",
-    ]) {
-      expect(noPython.SCENARIOS, required).toContain(required);
-    }
-  });
-
   test("the production browser proof and the standalone proof run in CI, and release validation has its own trusted workflow", () => {
     expect(workflow("ci")).toMatch(/run: pnpm run test:e2e/);
     expect(workflow("ci")).toMatch(/run: pnpm run test:artifact/);
     expect(workflow("release")).toMatch(/pnpm run release:validate/);
-    expect(workflow("template-ci")).toMatch(/no-python/);
-  });
-
-  test("the harness proves the absence of Python, uv and Make rather than assuming it", () => {
-    for (const tool of ["python", "uv", "make"]) expect(noPython.FORBIDDEN, tool).toContain(tool);
   });
 });

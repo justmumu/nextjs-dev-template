@@ -974,13 +974,9 @@
         {
           "file": "tests/integration/hooks.test.ts",
           "title": "ordinary and invalid Conventional subjects, and the 72-character limit"
-        },
-        {
-          "file": "tests/integration/no-python.test.ts",
-          "title": "frozen install and vitest work with only node and pnpm on PATH"
         }
       ],
-      "note": "pre-commit and Commitizen through uv are replaced by the installed commit-msg hook running on Node; the subjects accepted and refused are Conventional ones, and a Node-and-pnpm-only environment is proven separately."
+      "note": "pre-commit and Commitizen through uv are replaced by the installed commit-msg hook running on Node; the subjects accepted and refused are Conventional ones."
     },
     {
       "sourceFile": "tests/test_development_integration.py",

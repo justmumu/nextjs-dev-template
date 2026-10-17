@@ -21,13 +21,13 @@ command the CI workflow shows.
 
 ## Supported platforms
 
-| Platform                                           | Status                                                                                                             |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| Linux x64                                          | Covered by CI (Ubuntu 24.04) and by the no-Python acceptance image                                                 |
-| Linux ARM64                                        | Exercised by maintainers locally, including the no-Python acceptance image; not covered by CI                      |
-| macOS on Apple silicon                             | Infrastructure scenarios only in CI: launcher, hooks, paths, mutex and repair; no browsers                         |
-| WSL2, on the distribution's Linux filesystem       | Supported by contract; a WSL2 smoke receipt is required before a release, and a hosted Linux run is not a WSL test |
-| Native Windows, NFS and other network file systems | Not supported                                                                                                      |
+| Platform                                           | Status                                                                        |
+| -------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Linux x64                                          | Covered by CI (Ubuntu 24.04)                                                  |
+| Linux ARM64                                        | Exercised by maintainers locally; not covered by CI                           |
+| macOS on Apple silicon                             | Not covered by CI                                                             |
+| WSL2, on the distribution's Linux filesystem       | Supported on the Linux filesystem; no separate release acceptance requirement |
+| Native Windows, NFS and other network file systems | Not supported                                                                 |
 
 Chromium (desktop and mobile viewport) and a WebKit smoke are the browsers; no other browser or
 architecture is supported. A result on one platform is not evidence for another.

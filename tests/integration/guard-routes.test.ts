@@ -762,7 +762,8 @@ describe("a template update's merge, for real (R8, R17)", () => {
     fixture.git("switch", "-q", "main");
     fixture.write("src/notes.txt", "mine\n");
     fixture.git("commit", "-q", "-am", "my notes");
-    expect(spawnSync("git", ["-C", fixture.root, "merge", "--no-ff", "--no-commit", "pristine"]).status).toBe(1);
+    const merge = spawnSync("git", ["-C", fixture.root, "merge", "--no-ff", "--no-commit", "pristine"], { env: fixture.env, encoding: "utf8" });
+    expect(merge.status, merge.stderr + merge.stdout).toBe(1);
     expect(fixture.git("ls-files", "-u")).toMatch(/src\/notes\.txt/);
     expect(fixture.accept()).toBe(1);
     expect(readFileSync(join(fixture.root, "src/notes.txt"), "utf8")).toMatch(/<<<<<<</);

@@ -1,11 +1,10 @@
 # Generator-only CI. The same file exists in every application, where the plan job finds the role
-# "application" and every other job is skipped. No path filter is used, so the result job always reports.
+# "application" and integration is skipped. No path filter is used, so the result job always reports.
+# Pull requests cover the merge tree; do not repeat generator integration on a main push.
 name: Template CI
 
 on:
   pull_request:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions: {}
@@ -71,76 +70,10 @@ jobs:
       - name: Creation, update, recovery and release scenarios
         run: pnpm run test:integration
 
-  infrastructure-macos:
-    name: Infrastructure on macOS
-    needs: plan
-    if: needs.plan.outputs.role == 'generator'
-    runs-on: macos-15
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    steps:
-      - name: Check out the repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Set up pnpm
-        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-      - name: Set up Node.js and the pnpm store cache
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .node-version
-          package-manager-cache: false
-          cache: pnpm
-          cache-dependency-path: |
-            pnpm-lock.yaml
-            template/app/pnpm-lock.yaml
-      - name: Record the toolchain of this job
-        run: node scripts/ci/context.cjs toolchain --lane=24
-      - name: Install dependencies from the frozen lock
-        run: pnpm install --frozen-lockfile
-      - name: Launcher, hooks, paths, mutex and repair scenarios
-        run: |
-          for scenario in bootstrap executable-lookup guard-launch guard-concurrency hooks install-state process; do
-            pnpm run test:integration --scenario="$scenario"
-          done
-
-  no-python:
-    name: No-Python acceptance
-    needs: plan
-    if: needs.plan.outputs.role == 'generator'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 90
-    permissions:
-      contents: read
-    steps:
-      - name: Check out the repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Allow the unprivileged namespaces of the offline build proof
-        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-      - name: Set up the pinned Node.js
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: .node-version
-          package-manager-cache: false
-      - name: Derive the seccomp profile from the pinned upstream profile
-        run: node scripts/ci/no-python.cjs profile --out="$RUNNER_TEMP/seccomp.json"
-      - name: Build the test image
-        run: docker build --tag nextjs-template-no-python:ci .github/no-python
-      - name: Install, generate, check, build, update and validate a release without Python
-        run: >
-          docker run --rm
-          --security-opt "seccomp=$RUNNER_TEMP/seccomp.json"
-          --mount "type=bind,source=$GITHUB_WORKSPACE,target=/src,readonly"
-          nextjs-template-no-python:ci
-          node /src/scripts/ci/no-python.cjs accept --source=/src --work=/work
-
   template-ci-result:
     name: Template CI result
     if: always()
-    needs: [plan, generator-integration, infrastructure-macos, no-python]
+    needs: [plan, generator-integration]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions: {}

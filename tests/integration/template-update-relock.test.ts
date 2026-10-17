@@ -1,11 +1,12 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, statSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { expect, test } from "vitest";
 import { capture, scratchArea } from "../support/project.ts";
 import { create, fixtureEnv, git, hostFor, inputsOf } from "../support/template-fixture.ts";
 import { accept, commitAll, lineage, runIn } from "../support/template-lineage.ts";
 import { parseJson } from "../support/json.ts";
+import { agentFreePath } from "../support/installed-tools.ts";
 
 const scratch = scratchArea("template-update-relock-");
 const { source, previewFile, applyPreview } = lineage(scratch.area);
@@ -16,7 +17,7 @@ const savePackage = (dir: string, value: Package) => {
 };
 
 test("a fresh clone resolves divergent dependencies, relocks its accepted template merge, and commits through installed hooks", async () => {
-  const env = { ...fixtureEnv(scratch.area), PATH: `${dirname(process.execPath)}:/usr/bin:/bin`, NEXT_TELEMETRY_DISABLED: "1" };
+  const env = { ...fixtureEnv(scratch.area), PATH: agentFreePath(scratch.area), NEXT_TELEMETRY_DISABLED: "1" };
   const command = (cwd: string, executable: string, args: string[]) => {
     const result = spawnSync(executable, args, { cwd, env, encoding: "utf8", timeout: 300_000, maxBuffer: 16 * 1024 * 1024 });
     return { status: result.status, output: `${result.stdout}${result.stderr}` };

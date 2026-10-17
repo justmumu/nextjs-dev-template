@@ -141,7 +141,10 @@ describe("a cancelled public command", () => {
     "$project $command: $signal to the $delivery.to stops the resistant tool and its descendant, removes the scratch, starts nothing later and fails",
     async (options) => {
       const outcome = await cancel(options);
-      expect(outcome.result.code, outcome.log).toBe(status[options.signal]);
+      if (options.delivery.to === "group" && options.delivery.through === "pnpm" && outcome.result.code === null) {
+        // Native pnpm re-raises the signal; a Corepack wrapper reports its conventional numeric status.
+        expect(outcome.result.signal, outcome.log).toBe(options.signal);
+      } else expect(outcome.result.code, outcome.log).toBe(status[options.signal]);
       expect(outcome.gone, outcome.log).toBe(true);
       expect(outcome.scratchLeft, outcome.log).toEqual([]);
       // Only the one install ever ran: no later phase started once the run was interrupted.

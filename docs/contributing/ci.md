@@ -1,9 +1,9 @@
 # Continuous integration and supply chain
 
 CI proves the contracts that local checks cannot: the production build in real browsers, the
-generator's creation, update and recovery flows, behavior on machines without Python, and a reviewed
-audit of the dependencies. Every job has a timeout, least-privilege permissions and a concurrency
-group. Nothing in CI pushes to a branch, merges, deploys or publishes a release by itself, except the
+generator's creation, update and recovery flows, and a reviewed audit of the dependencies. Every job
+has a timeout, least-privilege permissions and a concurrency group. Nothing in CI pushes to a branch,
+merges, deploys or publishes a release by itself, except the
 two documented, narrowly permitted workflows below.
 
 ## Workflows
@@ -11,7 +11,7 @@ two documented, narrowly permitted workflows below.
 | File                                        | Runs on                              | Purpose                                                                                                       |
 | ------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------- |
 | `.github/workflows/ci.yml`                  | pull request, push to `main`, manual | Static gates, unit tests and coverage, documentation, production build, browsers and application integration. |
-| `.github/workflows/template-ci.yml`         | pull request, push to `main`, manual | Generator integration, macOS infrastructure compatibility, no-Python acceptance.                              |
+| `.github/workflows/template-ci.yml`         | pull request, manual                 | Generator integration.                                                                                        |
 | `.github/workflows/template-initialize.yml` | push to the default branch, manual   | First run of a repository created from the template: convert it, prove it, publish once.                      |
 | `.github/workflows/release.yml`             | release tag push, manual             | Validate a release tag read-only; publish the GitHub Release only on a manual start.                          |
 | `.github/workflows/dependency-audit.yml`    | weekly schedule, manual              | Report known advisories of the runtime, development and tool graphs.                                          |
@@ -20,7 +20,8 @@ The workflows are the same files, byte for byte and in file mode, in this genera
 application. A first job (`plan`) runs `node scripts/ci/context.cjs plan`, which reads
 `tooling/project-role.json` and the template sentinel; the jobs that belong to one role are skipped
 in the other. This is also why GitHub's initialization of a copy never has to change a workflow
-file (see below).
+file (see below). Template CI runs on pull requests and manual dispatch; it does not repeat
+generator integration after the pull request is merged into `main`.
 
 ## Required checks
 
@@ -37,8 +38,6 @@ required check never goes missing because a job was skipped.
 | Production              | Linux x64, Node 24.21.0      | `pnpm run test:e2e` (one build; Chromium desktop and mobile viewport, WebKit smoke) and `pnpm run test:artifact`. |
 | Application integration | Linux x64, Node 24.21.0      | `pnpm run test:integration` in applications: dependencies, hooks, repair and release scenarios.                   |
 | Generator integration   | Linux x64, Node 24.21.0      | `pnpm run test:integration`: create, update, fresh-clone, recovery, release and infrastructure.                   |
-| Infrastructure on macOS | macOS (arm64), Node 24.21.0  | Launcher, hooks, path handling, mutex and repair scenarios only; no browsers.                                     |
-| No-Python acceptance    | Linux x64, container         | Install, creation, check, docs, build, update and release validation with Python, uv and Make absent.             |
 | Dependency audit        | Linux x64, weekly and manual | `pnpm run audit:dependencies`.                                                                                    |
 
 There is no Node 22 lane and no operating system × Node × browser matrix: the template supports the
@@ -51,6 +50,10 @@ Network-requiring steps (dependency and browser installation) are separate from 
 network-independent build proof, which runs offline in an unprivileged network namespace. On
 GitHub-hosted Ubuntu 24.04 that needs one documented step first:
 `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`.
+
+The production job also runs the generator's `test:integration --suite=browser-integration`
+after browser installation. Those scenarios are excluded from the separate non-browser integration
+job, so a fresh runner never inherits an assumption about another job's browser cache.
 
 ## Failure reports
 
@@ -159,24 +162,8 @@ audit then fails until the advisory is fixed or reviewed again.
 
 ## Supported platforms
 
-CI covers Linux x64 (GitHub-hosted Ubuntu 24.04) and macOS on Apple silicon for the infrastructure
-scenarios. Linux ARM64 is exercised locally by maintainers, not by CI. WSL2 is supported on the
-Linux filesystem of the distribution, and a WSL2 smoke receipt is required before a release; a hosted
-Linux run is not a WSL test. Native Windows, other browsers and other architectures are not supported. `pnpm run docs:build` needs the operating
-system's `file` command (its link checker identifies extensionless pages with it); minimal container images do not
-always have it.
-
-## The no-Python image
-
-The no-Python lane builds `.github/no-python/Dockerfile` (Node 24.21.0 on Debian bookworm, pinned by
-digest, pnpm 12.14.0, Git, iproute2, certificates and `file`, no Python, uv or Make) and runs
-`scripts/ci/no-python.cjs accept` in it. The harness asserts the absence of the forbidden tools
-before and after the run. The container needs the unprivileged user and network namespaces of the offline
-build proof, so it runs with the upstream Moby default seccomp profile (pinned revision and digest,
-Apache-2.0, downloaded at run time and not copied here) plus exactly one rule:
-`unshare` with the flags `CLONE_NEWUSER | CLONE_NEWNET`. It is not privileged and gets no added
-capability. The image and the profile are a maintainer test harness; they are not part of any application.
-
-The production job also runs the generator's `test:integration --suite=browser-integration`
-after browser installation. Those scenarios are excluded from the separate non-browser integration
-job, so a fresh runner never inherits an assumption about another job's browser cache.
+CI covers Linux x64 (GitHub-hosted Ubuntu 24.04). Linux ARM64 is exercised locally by maintainers;
+Linux ARM64 and macOS have no CI coverage. WSL2 is supported on the distribution's Linux filesystem,
+without a separate release acceptance requirement. Native Windows, other browsers and other
+architectures are not supported. `pnpm run docs:build` needs the operating system's `file` command
+(its link checker identifies extensionless pages with it); minimal container images do not always have it.

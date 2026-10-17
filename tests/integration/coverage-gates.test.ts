@@ -84,7 +84,7 @@ describe("the unmodified application", () => {
       ["--test=tests/app/home.test.tsx", "--suite=infrastructure"],
       ["--test=tests/unit/commands.test.ts", "--suite=app"],
       ["--test=tests/app/missing.test.tsx"],
-      ["--test=tests/integration/no-python.test.ts"],
+      ["--test=tests/integration/template-create.test.ts"],
       ["--test=tests/setup/app.ts"],
     ]) {
       const result = pnpm("test:one", ...args);
@@ -195,8 +195,11 @@ describe("an empty coverage scope", () => {
     try {
       const result = runUnitGate(app);
       const text = output(result);
-      expect(text).toMatch(/Statements\s+: Unknown%/);
+      const empty = summary("app");
+      expect(Object.keys(empty)).toEqual(["total"]);
+      for (const metric of METRICS) expect((empty["total"] as Record<string, { total: number }>)[metric]?.total).toBe(0);
       expect(result.status).toBe(1);
+      // This diagnostic is emitted only after Vitest exits successfully and the gate checks its JSON report.
       expect(text).toMatch(/unit: app: the coverage scope matched no source files/);
     } finally {
       writeProjectFile(app, "scripts/core/testing.cjs", original);

@@ -3,6 +3,7 @@ import { copyFileSync, cpSync, mkdirSync, mkdtempSync, realpathSync, rmSync, sym
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createRequire } from "node:module";
+import { stripVTControlCharacters } from "node:util";
 
 export const root = resolve(import.meta.dirname, "../..");
 const render = createRequire(import.meta.url)("../../scripts/template/render.cjs") as typeof import("../../scripts/template/render.cjs");
@@ -23,7 +24,7 @@ export function run(cwd: string, command: string, args: string[], timeout = 170_
   return spawnSync(command, args, { cwd, env: { ...childEnv, ...env }, encoding: "utf8", timeout });
 }
 
-export const output = (result: SpawnSyncReturns<string>) => `${result.stdout}${result.stderr}`;
+export const output = (result: SpawnSyncReturns<string>) => stripVTControlCharacters(`${result.stdout}${result.stderr}`);
 
 /** Renders the real application seed into `scratch/name` and installs it from its frozen lock. */
 export function installRenderedApp(scratch: string, name: string): string {

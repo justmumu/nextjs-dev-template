@@ -90,8 +90,8 @@ describe("focused test command on the generator", () => {
   });
 
   test("an integration file is run through its own suite", () => {
-    expect(testing.suiteOf("generator", "tests/integration/no-python.test.ts")).toBe("integration");
-    const result = pnpm("--test=tests/integration/no-python.test.ts", "--suite=integration");
+    expect(testing.suiteOf("generator", "tests/integration/ci-context.test.ts")).toBe("integration");
+    const result = pnpm("--test=tests/integration/ci-context.test.ts", "--suite=integration");
     expect(result.status, output(result)).toBe(0);
     expect(output(result)).toMatch(/Test Files\s+1 passed \(1\)/);
   });

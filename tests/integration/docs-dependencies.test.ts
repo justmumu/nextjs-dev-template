@@ -1,10 +1,11 @@
 import { readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { afterAll, describe, expect, test } from "vitest";
 import { installRenderedApp, output, removeDir, run, scratchDir } from "../support/rendered-app.ts";
 
 import { fixtureEnv, git } from "../support/template-fixture.ts";
 import { accept } from "../support/template-lineage.ts";
+import { agentFreePath } from "../support/installed-tools.ts";
 
 const scratch = scratchDir("docs-dependencies-");
 afterAll(() => {
@@ -21,7 +22,7 @@ describe("reviewed documentation overrides in a rendered application", () => {
     git(app, ["init", "-b", "codex/fixture"], env);
     git(app, ["add", "."], env);
     git(app, ["commit", "-m", "chore: initialize fixture"], env);
-    const setup = run(app, process.execPath, ["scripts/bootstrap.cjs", "setup"], 170_000, { PATH: dirname(process.execPath) + ":/usr/bin:/bin" });
+    const setup = run(app, process.execPath, ["scripts/bootstrap.cjs", "setup"], 170_000, { PATH: agentFreePath(scratch) });
     expect(setup.status, output(setup)).toBe(0);
     expect(accept(app).status).toBe(0);
     const workspace = join(app, "pnpm-workspace.yaml");

@@ -41,6 +41,15 @@ describe("the workflow set", () => {
     expect(readdirSync(join(root, ".github/workflows")).sort()).toEqual(NAMES.map((name) => `${name}.yml`));
   });
 
+  test("template integration runs on pull requests and manual dispatch, while shared CI also runs on main pushes", () => {
+    const triggers =
+      code(text["template-ci"] as string)
+        .split("\non:\n")[1]
+        ?.split("\npermissions:")[0] ?? "";
+    expect([...triggers.matchAll(/^ {2}([a-z_]+):/gm)].map((match) => match[1])).toEqual(["pull_request", "workflow_dispatch"]);
+    expect(code(text["ci"] as string)).toMatch(/\n {2}push:\n {4}branches: \[main\]/);
+  });
+
   test("workflow files are regular, non-executable files rendered byte for byte into applications", () => {
     const { manifest, bases } = render.defaultInputs();
     const { files } = render.renderTree({ manifest, bases, answers: { name: "rendered-app", owner: "someone" } });
@@ -61,8 +70,6 @@ describe("the workflow set", () => {
     expect(read(".github/dependabot.yml")).toContain("directory: /template/app");
     expect(byPath.get(".github/dependabot.yml")).not.toContain("/template/app");
     expect(byPath.get(".github/dependabot.yml")).toBe(read("template/app/.github/dependabot.yml"));
-    expect([...byPath.keys()].filter((path) => path.startsWith(".github/no-python"))).toEqual([]);
-    expect(byPath.has("scripts/ci/no-python.cjs")).toBe(false);
   });
 });
 
@@ -144,13 +151,11 @@ describe("required checks and lane ownership", () => {
     expect(jobValue(job("ci", "static"), "needs")).toBe("plan");
     expect(jobValue(job("ci", "static"), "if")).toBeNull();
     expect(jobValue(job("ci", "production"), "if")).toBeNull();
-    for (const id of ["generator-integration", "infrastructure-macos", "no-python"]) {
-      expect(jobValue(job("template-ci", id), "if"), id).toBe("needs.plan.outputs.role == 'generator'");
-    }
+    expect(jobValue(job("template-ci", "generator-integration"), "if")).toBe("needs.plan.outputs.role == 'generator'");
     expect(job("ci", "plan").steps.some((step) => step.run === "node scripts/ci/context.cjs plan")).toBe(true);
   });
 
-  test("the static gates run once; browsers and the production proof run in one lane; macOS runs no browsers", () => {
+  test("the static gates run once; browsers and the production proof run in one lane", () => {
     const runs = allJobs.flatMap(({ workflow, job: target }) => stepRuns(target).map((run) => ({ workflow, id: target.id, run })));
     const count = (command: string) => runs.filter(({ run }) => run.split("\n").some((line) => line.trim() === command));
     expect(count("pnpm run check").map(({ id }) => id)).toEqual(["static"]);
@@ -159,15 +164,13 @@ describe("required checks and lane ownership", () => {
     expect(count("pnpm run test:artifact").map(({ workflow, id }) => `${workflow}/${id}`)).toEqual(["ci/production", "template-initialize/initialize"]);
     expect(count("pnpm run audit:dependencies").map(({ id }) => id)).toEqual(["audit"]);
     expect(count("pnpm run build")).toEqual([]);
-    expect(job("template-ci", "infrastructure-macos").text).not.toMatch(/playwright|test:e2e|test:artifact|docs:build/);
     expect(everything.match(/install --with-deps chromium webkit/g)).toHaveLength(2);
     expect(everything).not.toMatch(/firefox|msedge|\bchrome\b/i);
   });
 
-  test("runners are the declared ones: Ubuntu 24.04 everywhere, macOS only for the infrastructure lane", () => {
+  test("runners use Ubuntu 24.04", () => {
     for (const { workflow, job: target } of allJobs) {
-      const expected = target.id === "infrastructure-macos" ? "macos-15" : "ubuntu-24.04";
-      expect(jobValue(target, "runs-on"), `${workflow}/${target.id}`).toBe(expected);
+      expect(jobValue(target, "runs-on"), `${workflow}/${target.id}`).toBe("ubuntu-24.04");
     }
   });
 
@@ -182,12 +185,8 @@ describe("required checks and lane ownership", () => {
       expect(stepRuns(target).join("\n")).not.toContain("--suite=browser-integration");
   });
 
-  test("the generator integration lane runs the non-browser integration suite, and macOS only the scenarios that exist", () => {
+  test("the generator integration lane runs the non-browser integration suite", () => {
     expect(stepRuns(job("template-ci", "generator-integration"))).toContain("pnpm run test:integration");
-    const loop = /for scenario in ([\w -]+); do/.exec(job("template-ci", "infrastructure-macos").text)?.[1]?.split(" ") ?? [];
-    const scenarios = new Set(readdirSync(join(root, "tests/integration")).map((file) => file.replace(/\.test\.ts$/, "")));
-    expect(loop.length).toBeGreaterThan(0);
-    for (const scenario of loop) expect(scenarios.has(scenario), scenario).toBe(true);
   });
 
   test("applications retain an integration lane for their hooks, dependencies and releases", () => {
@@ -366,25 +365,5 @@ describe("the dependency audit workflow and Dependabot", () => {
     expect(dependabot.match(/directory: (\S+)/g)).toEqual(["directory: /", "directory: /", "directory: /template/app"]);
     expect(dependabot.match(/groups:/g)).toHaveLength(3);
     expect(code(dependabot)).not.toMatch(/merge|auto/i);
-  });
-});
-
-describe("the no-Python image", () => {
-  const dockerfile = read(".github/no-python/Dockerfile");
-
-  test("pins the declared Node on a digest, the declared pnpm and nothing that brings Python or Make", () => {
-    const node = read(".node-version").trim();
-    expect(dockerfile).toMatch(new RegExp(`^FROM node:${node.replaceAll(".", "\\.")}-bookworm-slim@sha256:[0-9a-f]{64}$`, "m"));
-    const manifest = parseJson<Manifest>(read("package.json"));
-    expect(dockerfile).toContain(`npm install --global --ignore-scripts ${manifest.packageManager}`);
-    expect(dockerfile).toContain("git iproute2 ca-certificates file");
-    expect(code(dockerfile)).not.toMatch(/python|\bpip\b|\buv\b|make|build-essential|\bgcc\b/i);
-  });
-
-  test("runs with the derived profile alone: no privilege, no added capability, no unconfined profile", () => {
-    const lane = job("template-ci", "no-python").text;
-    expect(lane).toContain('--security-opt "seccomp=$RUNNER_TEMP/seccomp.json"');
-    expect(lane).toContain("readonly");
-    expect(lane).not.toMatch(/--privileged|--cap-add|unconfined|--pid=host|--net(?:work)?[ =]host/);
   });
 });
