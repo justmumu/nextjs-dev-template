@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "ES2024",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "allowJs": true,
+    "checkJs": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": ["tests", "vitest.*config.ts", "eslint.config.mjs", "scripts", "docs/.vitepress/*.ts", "tooling/**/*.mjs", "tooling/**/*.ts"],
+  "exclude": ["tests/fixtures"]
+}

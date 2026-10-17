@@ -1,0 +1,69 @@
+{
+  "source": {
+    "repository": "https://github.com/justmumu/python-dev-template",
+    "revision": "7f8da69c6f9f69e4fc4d1547c712fb8ef1f1d0b7",
+    "file": "tests/test_copier_update.py",
+    "role": "behavior reference only; never executed, never shipped"
+  },
+  "entries": [
+    {
+      "sourceTest": "test_update_distributes_guard_completion_and_preserves_state",
+      "status": "adapted",
+      "note": "Copier is replaced by the JavaScript lineage protocol: a guard-side file arrives in the update, the machine-local guard baseline is not changed by the update itself, and the person's guard-accept names the accepted guard change before the ordinary merge commit.",
+      "jsTests": [
+        {
+          "file": "tests/integration/template-update.test.ts",
+          "title": "the merge waits uncommitted, the guard accepts it only after the person"
+        },
+        {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a clean merge no-commit the journal vouches for is accepted"
+        }
+      ]
+    },
+    {
+      "sourceTest": "test_github_copy_updates_from_its_own_history_without_setup_credentials",
+      "status": "adapted",
+      "note": "A copy updates from its own first commit and an ordinary full clone with no upstream tags; the fixture source is a local repository behind the same explicit transport boundary, and the chosen upstream revision is recorded apart from the copy's own first commit.",
+      "jsTests": [
+        {
+          "file": "tests/integration/template-update.test.ts",
+          "title": "keeps its own first commit as the copy's, names the chosen upstream revision apart from it"
+        },
+        {
+          "file": "tests/integration/template-update.test.ts",
+          "title": "keep the version, dependency and custom files, and stop on a real package and lock conflict"
+        }
+      ]
+    },
+    {
+      "sourceTest": "test_update_preserves_changes_or_reports_real_conflict",
+      "status": "carried",
+      "jsTests": [
+        {
+          "file": "tests/integration/template-update.test.ts",
+          "title": "keep the version, dependency and custom files, and stop on a real package and lock conflict"
+        },
+        {
+          "file": "tests/integration/hooks.test.ts",
+          "title": "a real text conflict staged with its markers still in it is rejected"
+        }
+      ]
+    },
+    {
+      "sourceTest": "test_template_updates_preserve_initial_and_released_versions",
+      "status": "adapted",
+      "note": "The initial 0.0.0 and a released 2.4.1 are preserved through updates. The source's legacy Python 0.1.0 migration is not a requirement of the JavaScript template and is not carried.",
+      "jsTests": [
+        {
+          "file": "tests/integration/template-update.test.ts",
+          "title": "an application that was never bumped keeps its initial 0.0.0 through an update"
+        },
+        {
+          "file": "tests/integration/template-update.test.ts",
+          "title": "the merge waits uncommitted, the guard accepts it only after the person"
+        }
+      ]
+    }
+  ]
+}

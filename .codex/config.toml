@@ -1,8 +1,13 @@
-# Planning bootstrap. No protected-files guard is installed yet.
-# Review project settings before trusting this checkout.
+# Trust this project and review its hooks in /hooks before starting a development session; review
+# them again whenever .codex/hooks.json changes. Codex runs without an OS sandbox: the protected-files
+# guard restores changes to the rules and tooling that no approved route made, and every escalation
+# still reaches you.
 sandbox_mode = "danger-full-access"
 approval_policy = "on-request"
 approvals_reviewer = "user"
+
+[features]
+remote_plugin = false
 
 [marketplaces.compound-engineering-plugin]
 source_type = "git"

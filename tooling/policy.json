@@ -1,0 +1,88 @@
+{
+  "forbiddenTools": ["python", "python3", "uv", "copier", "mkdocs", "pre-commit", "commitizen", "make"],
+  "install": {
+    "frozenLockfile": true,
+    "dependencyBuildScripts": "denied"
+  },
+  "commitIdentity": {
+    "emailPattern": "^([0-9]+\\+)?[A-Za-z0-9-]+(\\[bot\\])?@users\\.noreply\\.github\\.com$"
+  },
+  "protected": {
+    "files": [
+      "package.json",
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml",
+      ".npmrc",
+      ".node-version",
+      ".nvmrc",
+      ".template-state.json",
+      ".gitignore",
+      ".gitattributes",
+      ".editorconfig",
+      ".prettierignore",
+      ".eslintignore",
+      ".npmignore",
+      "AGENTS.md",
+      "CLAUDE.md"
+    ],
+    "configNames": [
+      "^\\.pnpmfile\\..+$",
+      "^tsconfig(?:\\..+)?\\.json$",
+      "^next\\.config\\.[cm]?[jt]s$",
+      "^eslint\\.config\\.[cm]?[jt]s$",
+      "^\\.eslintrc(?:\\..+)?$",
+      "^\\.prettierrc(?:\\..+)?$",
+      "^prettier\\.config\\.[cm]?[jt]s$",
+      "^vitest\\.(?:[a-z]+\\.)?(?:config|workspace)\\.[cm]?[jt]s$",
+      "^playwright\\.config\\.[cm]?[jt]s$",
+      "^postcss\\.config\\.[cm]?[jt]s$",
+      "^lint-staged\\.config\\.[cm]?[jt]s$",
+      "^\\.lintstagedrc(?:\\..+)?$",
+      "^commitlint\\.config\\.[cm]?[jt]s$",
+      "^\\.commitlintrc(?:\\..+)?$"
+    ],
+    "docsConfig": "^[^/]+\\.config\\.(?:[cm]?[jt]s|json)$",
+    "vitepressConfig": "^\\.vitepress/(?:config\\.[cm]?[jt]s|config/.+)$",
+    "seedPrefix": "template/app/",
+    "dirs": ["scripts", "tooling", ".claude", ".codex", ".githooks", ".husky"],
+    "shadowNames": [
+      "^\\.npmrc$",
+      "^pnpm-workspace\\.yaml$",
+      "^\\.pnpmfile\\..+$",
+      "^eslint\\.config\\.[cm]?[jt]s$",
+      "^\\.eslintrc(?:\\..+)?$",
+      "^\\.prettierrc(?:\\..+)?$",
+      "^prettier\\.config\\.[cm]?[jt]s$",
+      "^vitest\\.(?:[a-z]+\\.)?(?:config|workspace)\\.[cm]?[jt]s$",
+      "^playwright\\.config\\.[cm]?[jt]s$",
+      "^lint-staged\\.config\\.[cm]?[jt]s$",
+      "^\\.lintstagedrc(?:\\..+)?$",
+      "^commitlint\\.config\\.[cm]?[jt]s$",
+      "^\\.commitlintrc(?:\\..+)?$"
+    ],
+    "shadowExemptPrefixes": ["template/", "tests/fixtures/"],
+    "skippedAnywhere": ["node_modules", ".git", ".pnpm-store"],
+    "generatedDirs": [".next", "out", "dist", "build", "coverage", "site", "test-results", "playwright-report", ".turbo", ".cache"]
+  },
+  "guard": {
+    "commands": [
+      { "id": "format", "argv": ["pnpm", "run", "format"], "allowance": "format" },
+      { "id": "lint-fix", "argv": ["pnpm", "run", "lint:fix"], "allowance": "lint-fix" },
+      { "id": "deps-add", "argv": ["pnpm", "run", "deps:add"], "flags": { "package": "spec", "group": "group" }, "allowance": "dependencies" },
+      { "id": "deps-remove", "argv": ["pnpm", "run", "deps:remove"], "flags": { "package": "name", "group": "group" }, "allowance": "dependencies" },
+      { "id": "deps-upgrade", "argv": ["pnpm", "run", "deps:upgrade"], "flags": { "package": "name?" }, "allowance": "dependencies" },
+      { "id": "deps-lock", "argv": ["node", "scripts/bootstrap.cjs", "deps-lock"], "allowance": "dependencies" },
+      { "id": "setup", "argv": ["node", "scripts/bootstrap.cjs", "setup"], "allowance": "setup" },
+      { "id": "repair", "argv": ["node", "scripts/bootstrap.cjs", "repair"], "allowance": "repair" },
+      { "id": "guard-accept", "argv": ["node", "scripts/bootstrap.cjs", "guard-accept"], "allowance": "accept", "userApproved": true },
+      {
+        "id": "release-bump",
+        "argv": ["pnpm", "run", "release:bump"],
+        "positional": ["patch", "minor", "major"],
+        "allowance": "version",
+        "userApproved": true
+      },
+      { "id": "release-tag", "argv": ["pnpm", "run", "release:tag"], "allowance": "none", "userApproved": true }
+    ]
+  }
+}

@@ -1,0 +1,290 @@
+import { readFileSync } from "node:fs";
+import { join, resolve } from "node:path";
+import { createRequire } from "node:module";
+import { describe, expect, test } from "vitest";
+import { parseJson, type Manifest } from "../support/json.ts";
+import { capture as captureOutput, scratchArea } from "../support/project.ts";
+
+const require = createRequire(import.meta.url);
+const root = resolve(import.meta.dirname, "../..");
+const args = require("../../scripts/core/args.cjs") as typeof import("../../scripts/core/args.cjs");
+const development = require("../../scripts/development.cjs") as typeof import("../../scripts/development.cjs");
+const dependencies = require("../../scripts/dependencies.cjs") as typeof import("../../scripts/dependencies.cjs");
+const toolchain = require("../../scripts/core/toolchain.cjs") as typeof import("../../scripts/core/toolchain.cjs");
+const processes = require("../../scripts/core/process.cjs") as typeof import("../../scripts/core/process.cjs");
+
+const readJson = (path: string) => parseJson<Manifest>(readFileSync(join(root, path), "utf8"));
+
+describe("argument grammar", () => {
+  const schema = { package: { required: true, pattern: /^[a-z]+$/ }, group: { required: true, values: ["prod", "dev"] } };
+
+  test("accepts each flag once as --name=value", () => {
+    expect(args.parseArgs(["--package=abc", "--group=dev"], schema)).toEqual({ package: "abc", group: "dev" });
+  });
+
+  test.each([
+    [["--package=abc", "--package=abd", "--group=dev"], /duplicate/],
+    [["--package=abc", "--group=dev", "--force=1"], /unknown/],
+    [["--package=abc", "--group=dev", "extra"], /unexpected/],
+    [["--", "--package=abc", "--group=dev"], /unexpected|unknown/],
+    [["--package", "abc", "--group=dev"], /unknown|unexpected/],
+    [["--package=abc"], /--group is required/],
+    [["--package=a$b", "--group=dev"], /--package/],
+    [["--package=abc", "--group=admin"], /--group must be one of/],
+    [["--package=", "--group=dev"], /empty/],
+  ])("rejects %j", (argv, message) => {
+    expect(() => args.parseArgs(argv, schema)).toThrow(message);
+  });
+});
+
+describe("package specifier", () => {
+  test.each([
+    ["left-pad", { name: "left-pad", selector: null }],
+    ["@scope/pkg", { name: "@scope/pkg", selector: null }],
+    ["@scope/pkg@1.2.3", { name: "@scope/pkg", selector: "1.2.3" }],
+    ["next@16.4.1", { name: "next", selector: "16.4.1" }],
+    ["react@canary", { name: "react", selector: "canary" }],
+  ])("%s is one literal name and selector", (spec, expected) => {
+    expect(dependencies.parseSpec(spec)).toEqual(expected);
+  });
+
+  test.each([
+    "",
+    "-D",
+    "left pad",
+    "pkg@^1.0.0",
+    "pkg@npm:other@1",
+    "https://example.com/x.tgz",
+    "file:../x",
+    "git+ssh://x/y",
+    "github:a/b",
+    "workspace:*",
+    "$(id)",
+    "a;b",
+    "a|b",
+    "`id`",
+    "pkg@1.2.3@4",
+    "@scope",
+    "../x",
+    "UPPER",
+    "pkg@",
+  ])("rejects %j", (spec) => {
+    expect(() => dependencies.parseSpec(spec)).toThrow();
+  });
+
+  test("builds the pnpm argv for add, remove and upgrade without a shell", () => {
+    expect(dependencies.pnpmArgsFor({ action: "add", group: "dev", name: "@scope/pkg", spec: "@scope/pkg@1.2.3" })).toEqual([
+      "add",
+      "--save-dev",
+      "--save-exact",
+      "@scope/pkg@1.2.3",
+    ]);
+    expect(dependencies.pnpmArgsFor({ action: "add", group: "prod", name: "left-pad", spec: "left-pad" })).toEqual([
+      "add",
+      "--save-prod",
+      "--save-exact",
+      "left-pad",
+    ]);
+    expect(dependencies.pnpmArgsFor({ action: "remove", group: "dev", name: "left-pad" })).toEqual(["remove", "--save-dev", "left-pad"]);
+    expect(dependencies.pnpmArgsFor({ action: "upgrade", name: "left-pad" })).toEqual(["update", "--latest", "--save-exact", "left-pad"]);
+    expect(dependencies.pnpmArgsFor({ action: "upgrade", name: null })).toEqual(["update", "--latest", "--save-exact"]);
+  });
+
+  test("the CLI grammar maps one validated request to one plan", () => {
+    expect(dependencies.requestFromArgv("add", ["--package=@scope/pkg@1.2.3", "--group=dev"])).toMatchObject({
+      action: "add",
+      group: "dev",
+      name: "@scope/pkg",
+      spec: "@scope/pkg@1.2.3",
+    });
+    expect(() => dependencies.requestFromArgv("add", ["--package=a", "--group=dev", "--group=prod"])).toThrow(/duplicate/);
+    expect(() => dependencies.requestFromArgv("remove", ["--package=pkg@1.0.0", "--group=dev"])).toThrow();
+    expect(() => dependencies.requestFromArgv("upgrade", ["--group=dev"])).toThrow(/unknown/);
+    expect(() => dependencies.requestFromArgv("install", [])).toThrow(/unknown dependency command/);
+  });
+});
+
+describe("credentials never reach output", () => {
+  test("redacts registry tokens, passwords and URL userinfo", () => {
+    const at = "@";
+    const text = `//registry.example/:_authToken=abc123\n_password=c2VjcmV0\nhttps://user:pw${at}registry.example/x\nnpm_config_//r/:_authToken=zzz\nplain line`;
+    const out = processes.redact(text);
+    for (const secret of ["abc123", "c2VjcmV0", "user:pw", "zzz"]) expect(out).not.toContain(secret);
+    expect(out).toContain("plain line");
+  });
+});
+
+describe("command definitions", () => {
+  test("the project's package scripts are exactly the projected command scripts of its role", () => {
+    const role = toolchain.readRole(root);
+    expect(readJson("package.json").scripts).toEqual(development.scriptsFor(role));
+  });
+
+  test("every script is a literal Node dispatcher call with no shell syntax", () => {
+    for (const role of ["generator", "application"] as const) {
+      for (const [name, script] of Object.entries(development.scriptsFor(role))) {
+        expect(script, name).toMatch(/^node scripts\/(development|dependencies)\.cjs [a-z0-9:-]+$/);
+      }
+    }
+  });
+
+  test("no pre/post hooks, no latest/npx/dlx, no Python or Make in any projected script", () => {
+    for (const role of ["generator", "application"] as const) {
+      for (const [name, script] of Object.entries(development.scriptsFor(role))) {
+        expect(name).not.toMatch(/^(pre|post)/);
+        expect(script).not.toMatch(/npx|dlx|latest|python|make/);
+      }
+    }
+  });
+
+  test("generator-only commands are absent from the application role", () => {
+    const app = Object.keys(development.scriptsFor("application"));
+    for (const name of ["template:create", "template:seed:refresh"]) {
+      expect(Object.keys(development.scriptsFor("generator"))).toContain(name);
+      expect(app).not.toContain(name);
+    }
+    for (const name of ["deps:add", "deps:remove", "deps:upgrade", "check", "test:one"]) expect(app).toContain(name);
+  });
+
+  test("both roles expose the static-quality commands", () => {
+    for (const role of ["generator", "application"] as const) {
+      expect(Object.keys(development.scriptsFor(role))).toEqual(expect.arrayContaining(["format", "format:check", "lint", "lint:fix", "typecheck"]));
+    }
+  });
+});
+
+describe("application run paths and production proofs", () => {
+  const scratch = scratchArea("commands-run-");
+  const clean = () => scratch.project({ "AGENTS.md": "# Rules\n" });
+  const streams = () => {
+    const streamed: [string, string, string[]][] = [];
+    const scripts: [string, string[]][] = [];
+    return {
+      streamed,
+      scripts,
+      tools: {
+        launch: () => 0,
+        focus: () => 0,
+        stream: (pkg: string, bin: string, args: string[]) => {
+          streamed.push([pkg, bin, args]);
+          return 7;
+        },
+        script: (script: string, args: string[]) => {
+          scripts.push([script, args]);
+          return 9;
+        },
+      },
+    };
+  };
+
+  test.each(["dev", "build", "start"])("%s starts Next.js attached to the terminal and nothing else, and takes no arguments", (name) => {
+    const handler = development.COMMANDS[name]?.handlers.application;
+    const { streamed, tools } = streams();
+    const dir = clean();
+    expect(handler?.([], { root: dir, cwd: dir, io: captureOutput().io, tools })).toBe(7);
+    expect(streamed).toEqual([["next", "next", [name]]]);
+    expect(() => handler?.(["--port=1"], { root: dir, cwd: dir, io: captureOutput().io, tools })).toThrow(/unknown flag/);
+    expect(streamed).toHaveLength(1);
+  });
+
+  test.each(["dev", "build", "start"])("%s refuses a managed agent-rules block before Next.js can rewrite it", (name) => {
+    const dir = scratch.project({ "AGENTS.md": "<!-- BEGIN:nextjs-agent-rules -->\nmanaged\n<!-- END:nextjs-agent-rules -->\n" });
+    const { streamed, tools } = streams();
+    const out = captureOutput();
+    expect(development.COMMANDS[name]?.handlers.application?.([], { root: dir, cwd: dir, io: out.io, tools })).toBe(1);
+    expect(streamed).toEqual([]);
+    expect(out.err()).toMatch(/AGENTS\.md contains the Next\.js agent rules block/);
+  });
+
+  test("only applications run, build and start Next.js", () => {
+    for (const name of ["dev", "build", "start"]) {
+      expect(development.COMMANDS[name]?.handlers.generator, name).toBeUndefined();
+      expect(Object.keys(development.scriptsFor("application"))).toContain(name);
+      expect(Object.keys(development.scriptsFor("generator"))).not.toContain(name);
+    }
+  });
+
+  test.each([
+    ["test:e2e", "scripts/testing/production.cjs"],
+    ["test:artifact", "scripts/testing/artifact.cjs"],
+  ])("%s hands the whole run to its own Node process and takes no arguments", (name, script) => {
+    const { scripts, tools } = streams();
+    const dir = clean();
+    const handler = development.COMMANDS[name]?.handlers.application;
+    expect(handler?.([], { root: dir, cwd: dir, io: captureOutput().io, tools })).toBe(9);
+    expect(scripts).toEqual([[script, []]]);
+    expect(() => handler?.(["--headed=1"], { root: dir, cwd: dir, io: captureOutput().io, tools })).toThrow(/unknown flag/);
+    expect(development.COMMANDS[name]?.handlers.generator).toBeTypeOf("function");
+    for (const role of ["generator", "application"] as const) expect(Object.keys(development.scriptsFor(role))).toContain(name);
+  });
+
+  test("tools a caller does not supply are the installed ones", () => {
+    const context = { root: root, cwd: root, io: captureOutput().io };
+    const own = development.toolsOf(context);
+    for (const tool of [own.launch, own.focus, own.stream, own.script]) expect(tool).toBeTypeOf("function");
+    const launch = () => 3;
+    const mixed = development.toolsOf({ ...context, tools: { launch, focus: () => 0 } });
+    expect(mixed.launch).toBe(launch);
+    expect(mixed.stream).toBeTypeOf("function");
+  });
+});
+
+describe("dispatcher", () => {
+  function capture() {
+    const out: string[] = [];
+    const err: string[] = [];
+    return { io: { stdout: (text: string) => out.push(text), stderr: (text: string) => err.push(text) }, out, err };
+  }
+
+  describe("test:permissions", () => {
+    const handler = development.COMMANDS["test:permissions"]?.handlers.generator;
+    const launcher = (status: number) => {
+      const launched: string[][] = [];
+      return {
+        launched,
+        tools: {
+          launch: (_pkg: string, _bin: string, args: string[]) => {
+            launched.push(args);
+            return status;
+          },
+          focus: () => 0,
+        },
+      };
+    };
+
+    test("runs the declared policy tests, then the real Codex checks, and says whether a Codex CLI was found", () => {
+      const sink = capture();
+      const { launched, tools } = launcher(0);
+      expect(handler?.([], { root, cwd: root, io: sink.io, tools, exists: () => true })).toBe(0);
+      expect(launched).toEqual([
+        ["run", "--project", "infrastructure", "tests/contracts/agent-permissions.test.ts"],
+        ["run", "--project", "integration", "tests/integration/permissions.test.ts"],
+      ]);
+      expect(sink.out.join("")).toMatch(
+        /Codex CLI (found: .+; the real execpolicy checks run|unavailable: the real execpolicy checks are skipped and are not a pass)\./,
+      );
+    });
+
+    test("stops at a failing policy test and takes no extra arguments", () => {
+      const { launched, tools } = launcher(1);
+      expect(handler?.([], { root, cwd: root, io: capture().io, tools, exists: () => true })).toBe(1);
+      expect(launched).toHaveLength(1);
+      expect(() => handler?.(["--coverage"], { root, cwd: root, io: capture().io, tools, exists: () => true })).toThrow(/unexpected|unknown/);
+    });
+
+    test("a project without the permission tests fails instead of passing", () => {
+      const sink = capture();
+      const { launched, tools } = launcher(0);
+      expect(handler?.([], { root: "/project", cwd: root, io: sink.io, tools, exists: (path) => !path.endsWith("permissions.test.ts") })).toBe(1);
+      expect(sink.err.join("")).toMatch(/test:permissions is not available: .*agent-permissions\.test\.ts.*This is a failure, not a pass/);
+      expect(launched).toEqual([]);
+    });
+  });
+
+  test("unknown commands, extra arguments and wrong-role commands are refused", () => {
+    for (const argv of [["nope"], ["check", "--fast"], ["test:one"], ["test:one", "--test=tests/unit/x.test.ts", "--test=tests/unit/y.test.ts"]]) {
+      const sink = capture();
+      expect(development.main(argv, { root, io: sink.io, skipPreflight: true }), argv.join(" ")).toBe(2);
+    }
+  });
+});

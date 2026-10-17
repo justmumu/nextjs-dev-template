@@ -1,0 +1,107 @@
+# First run of a repository created from the template (F2). It converts the copy in place with the
+# ordinary token: no workflow file changes, so the push is allowed. A push made with GITHUB_TOKEN does not
+# start other workflows, so this workflow finishes the production proof itself before it publishes, and
+# publishes once. Without the sentinel (any application, and every later run) it does nothing.
+name: Template initialization
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: template-initialize
+  cancel-in-progress: false
+
+jobs:
+  plan:
+    name: Plan
+    if: github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      role: ${{ steps.plan.outputs.role }}
+      initialize: ${{ steps.plan.outputs.initialize }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up the pinned Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Read the role of this repository
+        id: plan
+        run: node scripts/ci/context.cjs plan
+
+  initialize:
+    name: Initialize
+    needs: plan
+    if: needs.plan.outputs.initialize == 'true' && github.ref_name == github.event.repository.default_branch
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    steps:
+      - name: Check out the full history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Set up Node.js and the pnpm store cache
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            template/app/pnpm-lock.yaml
+      - name: Record the toolchain of this job
+        run: node scripts/ci/context.cjs toolchain --lane=24
+      - name: Install the dependencies of the copy without hooks or guard
+        run: pnpm install --frozen-lockfile
+      - name: Set the bot identity of the new history
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Convert the copy and validate the application in staging
+        env:
+          REPOSITORY_NAME: ${{ github.event.repository.name }}
+          REPOSITORY_OWNER: ${{ github.repository_owner }}
+          REPOSITORY_DESCRIPTION: ${{ github.event.repository.description }}
+        run: |
+          args=(--name="${REPOSITORY_NAME,,}" --owner="$REPOSITORY_OWNER")
+          if [ -n "$REPOSITORY_DESCRIPTION" ]; then args+=(--description="$REPOSITORY_DESCRIPTION"); fi
+          node scripts/template/initialize.cjs "${args[@]}"
+      - name: Install the dependencies of the application
+        run: |
+          rm -rf node_modules
+          pnpm install --frozen-lockfile
+      - name: Install the pinned browsers
+        run: node node_modules/@playwright/test/cli.js install --with-deps chromium webkit
+      - name: Allow the unprivileged namespaces of the offline build proof
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Production build and the Chromium and WebKit lanes
+        run: pnpm run test:e2e
+      - name: Standalone portability
+        run: pnpm run test:artifact
+      - name: Keep the failure reports of the browser lanes
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: initialize-failure-reports
+          path: test-results
+          if-no-files-found: ignore
+          retention-days: 7
+      - name: Publish the converted history once, without force
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: git push origin "HEAD:refs/heads/$DEFAULT_BRANCH"

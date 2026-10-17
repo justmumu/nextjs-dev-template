@@ -1,0 +1,36 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$(git rev-parse --show-toplevel)/scripts/hooks/launch.sh\"; [ -f \"$f\" ] || { echo \"Protected-files guard launcher is missing: $f\" >&2; exit 2; }; exec sh \"$f\" --client codex --event pre"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|apply_patch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$(git rev-parse --show-toplevel)/scripts/hooks/launch.sh\"; [ -f \"$f\" ] || { echo \"Protected-files guard launcher is missing: $f\" >&2; exit 2; }; exec sh \"$f\" --client codex --event post"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$(git rev-parse --show-toplevel)/scripts/hooks/launch.sh\"; [ -f \"$f\" ] || { echo \"Protected-files guard launcher is missing: $f\" >&2; exit 1; }; exec sh \"$f\" --client codex --event stop"
+          }
+        ]
+      }
+    ]
+  }
+}

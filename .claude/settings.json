@@ -1,4 +1,61 @@
 {
+  "syncClaudeAiPlugins": false,
+  "disableClaudeAiConnectors": true,
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|Monitor|PowerShell|Edit|Write|MultiEdit|NotebookEdit|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$CLAUDE_PROJECT_DIR/scripts/hooks/launch.sh\"; [ -f \"$f\" ] || { echo \"Protected-files guard launcher is missing: $f\" >&2; exit 2; }; exec sh \"$f\" --client claude --event pre"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash|Monitor|PowerShell|Edit|Write|MultiEdit|NotebookEdit|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$CLAUDE_PROJECT_DIR/scripts/hooks/launch.sh\"; [ -f \"$f\" ] || { echo \"Protected-files guard launcher is missing: $f\" >&2; exit 2; }; exec sh \"$f\" --client claude --event post"
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "Bash|Monitor|PowerShell|Edit|Write|MultiEdit|NotebookEdit|mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$CLAUDE_PROJECT_DIR/scripts/hooks/launch.sh\"; [ -f \"$f\" ] || { echo \"Protected-files guard launcher is missing: $f\" >&2; exit 2; }; exec sh \"$f\" --client claude --event post-failure"
+          }
+        ]
+      }
+    ],
+    "ConfigChange": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$CLAUDE_PROJECT_DIR/scripts/hooks/launch.sh\"; [ -f \"$f\" ] || { echo \"Protected-files guard launcher is missing: $f\" >&2; exit 2; }; exec sh \"$f\" --client claude --event config-change"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$CLAUDE_PROJECT_DIR/scripts/hooks/launch.sh\"; [ -f \"$f\" ] || { echo \"Protected-files guard launcher is missing: $f\" >&2; exit 1; }; exec sh \"$f\" --client claude --event stop"
+          }
+        ]
+      }
+    ]
+  },
   "extraKnownMarketplaces": {
     "claude-plugins-official": {
       "source": {
@@ -21,5 +78,84 @@
   },
   "enabledPlugins": {
     "compound-engineering@compound-engineering-plugin": true
+  },
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash(pnpm run check)",
+      "Bash(pnpm run format)",
+      "Bash(pnpm run format:check)",
+      "Bash(pnpm run lint)",
+      "Bash(pnpm run lint:fix)",
+      "Bash(pnpm run typecheck)",
+      "Bash(pnpm run docs:build)",
+      "Bash(pnpm run test:permissions)",
+      "Bash(pnpm run test:integration)",
+      "Bash(pnpm run test:integration --scenario=*)",
+      "Bash(pnpm run test:one --test=tests/*)",
+      "Bash(pnpm run deps:add *)",
+      "Bash(pnpm run deps:remove *)",
+      "Bash(pnpm run deps:upgrade)",
+      "Bash(pnpm run deps:upgrade *)",
+      "Bash(node scripts/bootstrap.cjs setup)",
+      "Bash(node scripts/bootstrap.cjs repair)",
+      "Bash(node scripts/bootstrap.cjs deps-lock)"
+    ],
+    "ask": [
+      "Edit(/package.json)",
+      "Edit(/pnpm-lock.yaml)",
+      "Edit(/pnpm-workspace.yaml)",
+      "Edit(/.npmrc)",
+      "Edit(/.node-version)",
+      "Edit(/.nvmrc)",
+      "Edit(/.template-state.json)",
+      "Edit(/.gitignore)",
+      "Edit(/.gitattributes)",
+      "Edit(/.editorconfig)",
+      "Edit(/.prettierignore)",
+      "Edit(/.eslintignore)",
+      "Edit(/.npmignore)",
+      "Edit(/AGENTS.md)",
+      "Edit(/CLAUDE.md)",
+      "Edit(/tsconfig.json)",
+      "Edit(/tsconfig.tooling.json)",
+      "Edit(/next.config.ts)",
+      "Edit(/eslint.config.mjs)",
+      "Edit(/.prettierrc.json)",
+      "Edit(/vitest.config.ts)",
+      "Edit(/vitest.app.config.ts)",
+      "Edit(/vitest.infrastructure.config.ts)",
+      "Edit(/vitest.integration.config.ts)",
+      "Edit(/playwright.config.ts)",
+      "Edit(/postcss.config.mjs)",
+      "Edit(/docs/.vitepress/config.ts)",
+      "Edit(/scripts/**)",
+      "Edit(/tooling/**)",
+      "Edit(/.claude/**)",
+      "Edit(/.codex/**)",
+      "Edit(/.githooks/**)",
+      "Edit(/.husky/**)",
+      "Bash(node scripts/bootstrap.cjs guard-accept)",
+      "Bash(git switch *)",
+      "Bash(git checkout *)",
+      "Bash(git pull)",
+      "Bash(git pull *)",
+      "Bash(git merge *)",
+      "Bash(git rebase *)",
+      "Bash(git restore *)",
+      "Bash(git stash)",
+      "Bash(git stash *)",
+      "Bash(git reset *)",
+      "Bash(git cherry-pick *)",
+      "Bash(gh pr checkout *)",
+      "Bash(git push)",
+      "Bash(git push *)",
+      "Bash(gh pr create)",
+      "Bash(gh pr create *)",
+      "Bash(gh pr merge)",
+      "Bash(gh pr merge *)",
+      "Bash(pnpm run release:bump *)",
+      "Bash(pnpm run release:tag)"
+    ]
   }
 }

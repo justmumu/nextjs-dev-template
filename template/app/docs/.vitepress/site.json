@@ -1,0 +1,76 @@
+{
+  "title": "Documentation",
+  "description": "Development guide for this Next.js application",
+  "sidebar": [
+    {
+      "text": "Guide",
+      "items": [
+        {
+          "text": "Overview",
+          "link": "/"
+        },
+        {
+          "text": "Getting started",
+          "link": "/getting-started"
+        },
+        {
+          "text": "Prerequisites and platforms",
+          "link": "/guides/platforms"
+        },
+        {
+          "text": "Activate the agent hosts",
+          "link": "/guides/first-use"
+        },
+        {
+          "text": "Recover a stopped workflow",
+          "link": "/guides/recovery"
+        },
+        {
+          "text": "Updating from the template",
+          "link": "/updating"
+        }
+      ]
+    },
+    {
+      "text": "Contributing",
+      "items": [
+        {
+          "text": "Toolchain",
+          "link": "/contributing/toolchain"
+        },
+        {
+          "text": "Static quality",
+          "link": "/contributing/static-quality"
+        },
+        {
+          "text": "Unit tests and coverage",
+          "link": "/contributing/testing"
+        },
+        {
+          "text": "Production browser and standalone tests",
+          "link": "/contributing/production-tests"
+        },
+        {
+          "text": "Git hooks and agent hosts",
+          "link": "/contributing/git-hooks"
+        },
+        {
+          "text": "Claude Code and Codex",
+          "link": "/contributing/agents"
+        },
+        {
+          "text": "CI and supply chain",
+          "link": "/contributing/ci"
+        },
+        {
+          "text": "Release process",
+          "link": "/contributing/release-process"
+        },
+        {
+          "text": "Pull request checklist",
+          "link": "/contributing/pr-checklist"
+        }
+      ]
+    }
+  ]
+}

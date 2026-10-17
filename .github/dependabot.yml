@@ -1,0 +1,32 @@
+# Dependency updates arrive as reviewed pull requests, grouped so that one review covers one kind of
+# change. Nothing merges automatically: the reviewed overrides, build-script denials and exact pins are
+# protected files, and a human decides each update.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      actions:
+        patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      tooling:
+        patterns: ["*"]
+  - package-ecosystem: npm
+    directory: /template/app
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      application-seed:
+        patterns: ["*"]

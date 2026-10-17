@@ -1,0 +1,11 @@
+# Generated, vendored or reviewed-as-data inputs are never reformatted.
+node_modules/
+.compound-engineering/
+.private/
+pnpm-lock.yaml
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+docs/.vitepress/.temp/

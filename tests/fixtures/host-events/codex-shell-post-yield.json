@@ -1,0 +1,12 @@
+{
+  "session_id": "thread-root",
+  "turn_id": "turn-1",
+  "tool_use_id": "call-1",
+  "transcript_path": "<TRANSCRIPT>",
+  "cwd": "<ROOT>",
+  "tool_name": "exec_command",
+  "tool_input": {
+    "command": "pnpm run format"
+  },
+  "tool_response": "Process running with session ID 1"
+}

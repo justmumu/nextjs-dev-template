@@ -1,0 +1,3 @@
+# Missing page
+
+[Gone](./gone)

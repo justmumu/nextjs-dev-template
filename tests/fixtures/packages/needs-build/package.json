@@ -1,0 +1,1 @@
+{ "name": "needs-build", "version": "1.0.0", "scripts": { "postinstall": "node -e \"0\"" } }

@@ -1,0 +1,85 @@
+# Generator-only CI. The same file exists in every application, where the plan job finds the role
+# "application" and integration is skipped. No path filter is used, so the result job always reports.
+# Pull requests cover the merge tree; do not repeat generator integration on a main push.
+name: Template CI
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: template-ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  plan:
+    name: Plan
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      role: ${{ steps.plan.outputs.role }}
+      initialize: ${{ steps.plan.outputs.initialize }}
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up the pinned Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+      - name: Read the role of this repository
+        id: plan
+        run: node scripts/ci/context.cjs plan
+
+  generator-integration:
+    name: Generator integration
+    needs: plan
+    if: needs.plan.outputs.role == 'generator'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Set up pnpm
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      - name: Set up Node.js and the pnpm store cache
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          package-manager-cache: false
+          cache: pnpm
+          cache-dependency-path: |
+            pnpm-lock.yaml
+            template/app/pnpm-lock.yaml
+      - name: Record the toolchain of this job
+        run: node scripts/ci/context.cjs toolchain --lane=24
+      - name: Install dependencies from the frozen lock
+        run: pnpm install --frozen-lockfile
+      - name: Allow the unprivileged namespaces of the offline build proof
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+      - name: Creation, update, recovery and release scenarios
+        run: pnpm run test:integration
+
+  template-ci-result:
+    name: Template CI result
+    if: always()
+    needs: [plan, generator-integration]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Fail when a job failed or was cancelled
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: exit 1
+      - name: Every job that ran passed
+        run: echo "all jobs passed or were skipped by role"

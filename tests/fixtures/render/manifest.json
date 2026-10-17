@@ -1,0 +1,11 @@
+{
+  "schema": "nextjs-dev-template/manifest",
+  "protocol": 1,
+  "role": "application",
+  "entries": [
+    { "type": "json-metadata", "projection": "package-json", "base": "template", "source": "package.json", "destination": "package.json" },
+    { "type": "copy", "base": "template", "source": "run.sh", "destination": "bin/run.sh" },
+    { "type": "copy", "base": "template", "source": "dir/data.txt", "destination": "dir/data.txt" },
+    { "type": "copy", "base": "root", "source": ".node-version", "destination": ".node-version" }
+  ]
+}

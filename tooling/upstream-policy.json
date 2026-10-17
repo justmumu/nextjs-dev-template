@@ -1,0 +1,252 @@
+{
+  "source": {
+    "repository": "https://github.com/justmumu/python-dev-template",
+    "revision": "7f8da69c6f9f69e4fc4d1547c712fb8ef1f1d0b7",
+    "role": "behavior reference only; no executable import, no runtime dependency"
+  },
+  "mapping": {
+    "format": "Each entry names the source file or document, the behavior carried over, the JS owner unit and the JS test or document that holds the proof. Python tools are never carried over, only behavior. A deliberate Node-port difference is listed under `differences` with a reason and a test.",
+    "entries": [
+      {
+        "source": "scripts/hooks/guard_config.py: protected file and directory inventory",
+        "behavior": "Protected rules, tooling and configuration paths are one inventory; new files appear in worktree, index and HEAD discovery.",
+        "owner": "U6",
+        "proof": {
+          "file": "tests/unit/guard/commands.test.ts",
+          "title": "one protected inventory"
+        }
+      },
+      {
+        "source": "scripts/hooks/guard_config.py: forbidden override configuration",
+        "behavior": "A configuration copy below the root that would shadow the root one is removed.",
+        "owner": "U6",
+        "proof": {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a new shadow configuration is removed, whether it is only created or also staged, and ordinary source beside it stays"
+        }
+      },
+      {
+        "source": "scripts/hooks/guard_config.py: shell_words, executable_text, SWITCH_OFF",
+        "behavior": "Quoted data and heredoc bodies are not executable text; code handed to a shell is. Commands that switch checks off are refused.",
+        "owner": "U6",
+        "proof": {
+          "file": "tests/unit/guard/policy.test.ts",
+          "title": "quoted data and heredoc bodies are not executable text, but code handed to a shell is"
+        }
+      },
+      {
+        "source": "scripts/hooks/guard_config.py: ALLOWLISTED_TARGETS",
+        "behavior": "Only exact literal foreground commands with declared arguments are routes.",
+        "owner": "U6",
+        "proof": {
+          "file": "tests/unit/guard/policy.test.ts",
+          "title": "the command grammar"
+        }
+      },
+      {
+        "source": "scripts/hooks/guard_config.py: admit, post_tool, finish_call",
+        "behavior": "A call that may change protected files runs alone and is settled only by its own result.",
+        "owner": "U6",
+        "proof": {
+          "file": "tests/unit/guard/state.test.ts",
+          "title": "reservations"
+        }
+      },
+      {
+        "source": "scripts/hooks/guard_config.py: evaluate, check_files, check_index, check_head",
+        "behavior": "After the last running call, unapproved protected changes are restored, unstaged or held, and unapproved commits block.",
+        "owner": "U6",
+        "proof": {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "direct writes to protected files"
+        }
+      },
+      {
+        "source": "scripts/hooks/guard_config.py: check_hooks, hooks_state",
+        "behavior": "Git hooks, their modes and core.hooksPath are part of the baseline.",
+        "owner": "U6",
+        "proof": {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "Git hooks, for real"
+        }
+      },
+      {
+        "source": "scripts/hooks/guard_config.py: venv_fingerprint, check_venv",
+        "behavior": "The dependency environment is fingerprinted by links and metadata and blocks until repaired.",
+        "owner": "U6",
+        "proof": {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "the environment fingerprint claims links and metadata only"
+        }
+      },
+      {
+        "source": "scripts/hooks/guard_config.py: config_change, disables_hooks",
+        "behavior": "Settings that would switch the guard or hooks off are blocked or restored.",
+        "owner": "U6",
+        "proof": {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "the Claude settings and the user's Codex configuration"
+        }
+      },
+      {
+        "source": "scripts/hooks/guard_config.py: accept, pre_commit",
+        "behavior": "The user accepts a reviewed state; an agent commit with unapproved staged content fails.",
+        "owner": "U6",
+        "proof": {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "commits, history and conflicts, for real"
+        }
+      },
+      {
+        "source": "AGENTS.md and docs/contributing/agents.md: shared policy text, approval routes and stated limits",
+        "behavior": "One shared policy for both hosts: command facade, scopes of unit and integration tests, hook-owned gates, narrow suppressions, the protected-file and publishing routes, the guard's limits, optional Compound Engineering and the once-only learning offer.",
+        "owner": "U16",
+        "proof": {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "the shared policy imports into Claude and states the rules the declarations enforce"
+        }
+      },
+      {
+        "source": "LICENSE (MIT, Copyright (c) 2026 justmumu)",
+        "behavior": "The full license notice of the source stays in this repository and in every application's shared tooling, with the source revision named as provenance, whatever the application's own answers.",
+        "owner": "U16",
+        "proof": {
+          "file": "tests/contracts/rendered-output.test.ts",
+          "title": "every application carries the full license notice and the source attribution of its derived tooling, whatever the answers"
+        }
+      }
+    ],
+    "differences": [
+      {
+        "id": "no-age-expiry",
+        "source": "A call that never reported back stops blocking others after an hour (STALE_SECONDS).",
+        "javascript": "A reservation is never completed or reclaimed by age; it is settled by its own result or later by completion evidence or offline recovery.",
+        "reason": "KTD16 and KTD17 forbid age-based completion: an hour is not evidence that a command stopped.",
+        "proof": {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "a reservation never expires by age, so an abandoned call keeps the state unclean until it is settled"
+        }
+      },
+      {
+        "id": "literal-routes",
+        "source": "Allowlisted Make targets with PKG= and GROUP= variables.",
+        "javascript": "Exact pnpm run and node scripts/bootstrap.cjs commands with --name=value flags and no prefix, chain, background or override.",
+        "reason": "D1 (JavaScript only) and the Command Contract.",
+        "proof": {
+          "file": "tests/unit/guard/policy.test.ts",
+          "title": "the command grammar"
+        }
+      },
+      {
+        "id": "field-level-scopes",
+        "source": "A make target may change any protected file.",
+        "javascript": "A route may change only its own fields: dependency maps and the lock, formatting-only JSON and prose, the version field.",
+        "reason": "R16 and KTD11: a successful command is not broad approval.",
+        "proof": {
+          "file": "tests/unit/guard/policy.test.ts",
+          "title": "field-level scopes (KTD11)"
+        }
+      },
+      {
+        "id": "result-bound-identity",
+        "source": "A result for an unknown id was evaluated with an allowance computed from the result itself.",
+        "javascript": "A result settles a reservation only when client, session, turn, id and command digest match; an unknown result approves nothing.",
+        "reason": "AE5: a late result of another call must not approve a waiting change.",
+        "proof": {
+          "file": "tests/unit/guard/state.test.ts",
+          "title": "only the very call that was admitted settles it, and only then does its allowance count"
+        }
+      },
+      {
+        "id": "baseline-policy-copy",
+        "source": "The Python module itself held the lists.",
+        "javascript": "The guard enforces the policy copy recorded in its baseline, adopted again only by accept.",
+        "reason": "R16: an edited working copy of tooling/policy.json must not shrink what is protected.",
+        "proof": {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "the baseline's policy"
+        }
+      },
+      {
+        "id": "shadow-as-protected",
+        "source": "forbidden_known tolerated override files that existed at the baseline.",
+        "javascript": "A shadow configuration is a protected path whose approved content is its baseline, absent when new.",
+        "reason": "One uniform restore path for edits, deletions and new files.",
+        "proof": {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a new shadow configuration is removed, whether it is only created or also staged, and ordinary source beside it stays"
+        }
+      },
+      {
+        "id": "environment-fingerprint",
+        "source": "venv_fingerprint hashed site-packages names, .pth files and bin metadata.",
+        "javascript": "A node_modules fingerprint of names, links and file metadata outside dot-directory caches. It claims no package or global store content integrity.",
+        "reason": "R21: the guard is not a full dependency integrity guarantee.",
+        "proof": {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "the content of a file inside a package is not claimed: the fingerprint says nothing about global store integrity"
+        }
+      },
+      {
+        "id": "bound-node-launcher",
+        "source": "Hooks ran /usr/bin/python3 -I -B.",
+        "javascript": "A POSIX launcher clears NODE_*, uses the Node bound at setup in machine-local Git state and starts it with hardening flags.",
+        "reason": "KTD15 and R2: no PATH lookup, no project binary, no repository-held absolute path.",
+        "proof": {
+          "file": "tests/integration/guard-launch.test.ts",
+          "title": "the machine-local Node binding"
+        }
+      },
+      {
+        "id": "own-module-loader",
+        "source": "Python -I ignores the project.",
+        "javascript": "entry.cjs loads the guard's .cjs files itself, because Node's resolver reads the nearest package.json for every local require and a malformed manifest would stop the guard.",
+        "reason": "R2: a malformed package.json must not disable protection.",
+        "proof": {
+          "file": "tests/integration/guard-launch.test.ts",
+          "title": "with no node_modules, no pnpm, a malformed manifest and a broken TypeScript configuration the guard still restores a protected edit"
+        }
+      },
+      {
+        "id": "accept-never-clears-pending",
+        "source": "accept re-snapshot could drop nothing but also ignored held operations.",
+        "javascript": "accept refuses while a reservation of another call is pending, a merge or rebase is unfinished, or the state cannot be read; the post hook never re-snapshots.",
+        "reason": "Command Contract: guard-accept does not clear a conflict or a pending reservation.",
+        "proof": {
+          "file": "tests/unit/guard/engine.test.ts",
+          "title": "accept neither clears a pending reservation nor drops it"
+        }
+      },
+      {
+        "id": "version-commit-scope",
+        "source": "A version-bump target could commit any head change.",
+        "javascript": "The head change a release:bump commit makes is accepted only if every protected difference is a version-only package.json change.",
+        "reason": "R16: the commit it makes is judged by the same field-level scope.",
+        "proof": {
+          "file": "tests/integration/guard-routes.test.ts",
+          "title": "a version bump commits its own output, and only the version may differ"
+        }
+      },
+      {
+        "id": "no-make-routes",
+        "source": "Plain make targets and Makefile discovery (codex_make_elsewhere).",
+        "javascript": "Not carried.",
+        "reason": "There is no Make in a JavaScript project (D1).",
+        "proof": {
+          "file": "tests/unit/guard/commands.test.ts",
+          "title": "no route runs a forbidden tool"
+        }
+      },
+      {
+        "id": "launcher-missing-fails-closed",
+        "source": "The registered hooks exit 0 when the guard file is missing or speaks another protocol.",
+        "javascript": "The registered command refuses in every shell when the launcher is missing, and the launcher refuses when no machine-bound Node exists; a stop only reports.",
+        "reason": "A silent pass is a failure route the guard could not notice (R21); the user, not the hook, decides to restore an older checkout.",
+        "proof": {
+          "file": "tests/integration/host-declarations.test.ts",
+          "title": "a checkout without the launcher is refused in every shell, and the end of a turn only reports it"
+        }
+      }
+    ]
+  }
+}

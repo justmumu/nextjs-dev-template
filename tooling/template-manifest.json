@@ -1,0 +1,1274 @@
+{
+  "schema": "nextjs-dev-template/manifest",
+  "protocol": 1,
+  "role": "application",
+  "entries": [
+    {
+      "type": "json-metadata",
+      "projection": "package-json",
+      "base": "template",
+      "source": "package.json",
+      "destination": "package.json"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "pnpm-lock.yaml",
+      "destination": "pnpm-lock.yaml"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "pnpm-workspace.yaml",
+      "destination": "pnpm-workspace.yaml"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": ".gitignore",
+      "destination": ".gitignore"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tooling/project-role.json",
+      "destination": "tooling/project-role.json"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": ".env.example",
+      "destination": ".env.example"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": ".prettierignore",
+      "destination": ".prettierignore"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "eslint.config.mjs",
+      "destination": "eslint.config.mjs"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "next.config.ts",
+      "destination": "next.config.ts"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "public/favicon.svg",
+      "destination": "public/favicon.svg"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "src/app/error.tsx",
+      "destination": "src/app/error.tsx"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "src/app/globals.css",
+      "destination": "src/app/globals.css"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "src/app/layout.tsx",
+      "destination": "src/app/layout.tsx"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "src/app/not-found.tsx",
+      "destination": "src/app/not-found.tsx"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "src/app/page.module.css",
+      "destination": "src/app/page.module.css"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "src/app/page.tsx",
+      "destination": "src/app/page.tsx"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tsconfig.json",
+      "destination": "tsconfig.json"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tsconfig.tooling.json",
+      "destination": "tsconfig.tooling.json"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": ".node-version",
+      "destination": ".node-version"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/bootstrap.cjs",
+      "destination": "scripts/bootstrap.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/dependencies.cjs",
+      "destination": "scripts/dependencies.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/development.cjs",
+      "destination": "scripts/development.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/args.cjs",
+      "destination": "scripts/core/args.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/dependency-policy.cjs",
+      "destination": "scripts/core/dependency-policy.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/install-state.cjs",
+      "destination": "scripts/core/install-state.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/protected.cjs",
+      "destination": "scripts/core/protected.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/process.cjs",
+      "destination": "scripts/core/process.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/toolchain.cjs",
+      "destination": "scripts/core/toolchain.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/transaction.cjs",
+      "destination": "scripts/core/transaction.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tooling/capabilities.json",
+      "destination": "tooling/capabilities.json"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tooling/policy.json",
+      "destination": "tooling/policy.json"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": ".prettierrc.json",
+      "destination": ".prettierrc.json"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/json.cjs",
+      "destination": "scripts/core/json.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/quality.cjs",
+      "destination": "scripts/core/quality.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tooling/eslint/shared.mjs",
+      "destination": "tooling/eslint/shared.mjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tooling/eslint/suppression-policy.mjs",
+      "destination": "tooling/eslint/suppression-policy.mjs"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "vitest.config.ts",
+      "destination": "vitest.config.ts"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "vitest.app.config.ts",
+      "destination": "vitest.app.config.ts"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tests/setup/app.ts",
+      "destination": "tests/setup/app.ts"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tests/app/error.test.tsx",
+      "destination": "tests/app/error.test.tsx"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tests/app/home.test.tsx",
+      "destination": "tests/app/home.test.tsx"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tests/app/layout.test.tsx",
+      "destination": "tests/app/layout.test.tsx"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tests/app/not-found.test.tsx",
+      "destination": "tests/app/not-found.test.tsx"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/testing.cjs",
+      "destination": "scripts/core/testing.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/focused-run.cjs",
+      "destination": "scripts/core/focused-run.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "vitest.infrastructure.config.ts",
+      "destination": "vitest.infrastructure.config.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "vitest.integration.config.ts",
+      "destination": "vitest.integration.config.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tooling/vitest/suite.ts",
+      "destination": "tooling/vitest/suite.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/support/json.ts",
+      "destination": "tests/support/json.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/support/project.ts",
+      "destination": "tests/support/project.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/bootstrap.test.ts",
+      "destination": "tests/integration/bootstrap.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/commands.test.ts",
+      "destination": "tests/unit/commands.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/dependencies-cli.test.ts",
+      "destination": "tests/integration/dependencies-cli.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/dependency-policy.test.ts",
+      "destination": "tests/unit/dependency-policy.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/development-gates.test.ts",
+      "destination": "tests/integration/development-gates.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/executable-lookup.test.ts",
+      "destination": "tests/integration/executable-lookup.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/install-state.test.ts",
+      "destination": "tests/integration/install-state.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/process.test.ts",
+      "destination": "tests/integration/process.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/protected.test.ts",
+      "destination": "tests/unit/protected.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/quality.test.ts",
+      "destination": "tests/unit/quality.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/suppression-policy.test.ts",
+      "destination": "tests/unit/suppression-policy.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/testing.test.ts",
+      "destination": "tests/unit/testing.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/toolchain.test.ts",
+      "destination": "tests/unit/toolchain.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/transaction.test.ts",
+      "destination": "tests/integration/transaction.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/transaction.test.ts",
+      "destination": "tests/unit/transaction.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/process.test.ts",
+      "destination": "tests/unit/process.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/install-state.test.ts",
+      "destination": "tests/unit/install-state.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/gates.test.ts",
+      "destination": "tests/unit/gates.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/dependencies.test.ts",
+      "destination": "tests/unit/dependencies.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/bootstrap.test.ts",
+      "destination": "tests/unit/bootstrap.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/support/memory-disk.ts",
+      "destination": "tests/support/memory-disk.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/contracts/coverage-policy.test.ts",
+      "destination": "tests/contracts/coverage-policy.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/contracts/suite-classification.test.ts",
+      "destination": "tests/contracts/suite-classification.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/docs.cjs",
+      "destination": "scripts/docs.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "docs/.vitepress/config.ts",
+      "destination": "docs/.vitepress/config.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "docs/contributing/pr-checklist.md",
+      "destination": "docs/contributing/pr-checklist.md"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "docs/.vitepress/site.json",
+      "destination": "docs/.vitepress/site.json"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "docs/index.md",
+      "destination": "docs/index.md"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "docs/getting-started.md",
+      "destination": "docs/getting-started.md"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "docs/contributing/toolchain.md",
+      "destination": "docs/contributing/toolchain.md"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "docs/contributing/static-quality.md",
+      "destination": "docs/contributing/static-quality.md"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "docs/contributing/testing.md",
+      "destination": "docs/contributing/testing.md"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/docs-version.test.ts",
+      "destination": "tests/unit/docs-version.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/hooks/install.cjs",
+      "destination": "scripts/hooks/install.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/hooks/pre-commit.cjs",
+      "destination": "scripts/hooks/pre-commit.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/hooks/commit-msg.cjs",
+      "destination": "scripts/hooks/commit-msg.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/hooks/pre-push.cjs",
+      "destination": "scripts/hooks/pre-push.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tooling/hooks/staged.mjs",
+      "destination": "tooling/hooks/staged.mjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tooling/hooks/commit-message.mjs",
+      "destination": "tooling/hooks/commit-message.mjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/hooks/install.test.ts",
+      "destination": "tests/unit/hooks/install.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/hooks/hooks.test.ts",
+      "destination": "tests/unit/hooks/hooks.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/core/plugins.cjs",
+      "destination": "scripts/core/plugins.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/plugins.test.ts",
+      "destination": "tests/unit/plugins.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "docs/contributing/git-hooks.md",
+      "destination": "docs/contributing/git-hooks.md"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/hooks/completion.cjs",
+      "destination": "scripts/hooks/completion.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/hooks/entry.cjs",
+      "destination": "scripts/hooks/entry.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/hooks/guard.cjs",
+      "destination": "scripts/hooks/guard.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/hooks/launch.sh",
+      "destination": "scripts/hooks/launch.sh"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/hooks/mutex.cjs",
+      "destination": "scripts/hooks/mutex.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/hooks/policy.cjs",
+      "destination": "scripts/hooks/policy.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/hooks/recover-lock.cjs",
+      "destination": "scripts/hooks/recover-lock.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/hooks/repo.cjs",
+      "destination": "scripts/hooks/repo.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/hooks/state.cjs",
+      "destination": "scripts/hooks/state.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "AGENTS.md",
+      "destination": "AGENTS.md"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "CLAUDE.md",
+      "destination": "CLAUDE.md"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": ".claude/settings.json",
+      "destination": ".claude/settings.json"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": ".codex/config.toml",
+      "destination": ".codex/config.toml"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": ".codex/hooks.json",
+      "destination": ".codex/hooks.json"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": ".codex/rules/publishing.rules",
+      "destination": ".codex/rules/publishing.rules"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": ".compound-engineering/config.yaml",
+      "destination": ".compound-engineering/config.yaml"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": ".compound-engineering/config.example.yaml",
+      "destination": ".compound-engineering/config.example.yaml"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "compound-packs/README.md",
+      "destination": "compound-packs/README.md"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/guard/commands.test.ts",
+      "destination": "tests/unit/guard/commands.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/guard/completion-engine.test.ts",
+      "destination": "tests/unit/guard/completion-engine.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/guard/completion.test.ts",
+      "destination": "tests/unit/guard/completion.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/guard/engine.test.ts",
+      "destination": "tests/unit/guard/engine.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/guard/entry.test.ts",
+      "destination": "tests/unit/guard/entry.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/guard/events.test.ts",
+      "destination": "tests/unit/guard/events.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/guard/mutex.test.ts",
+      "destination": "tests/unit/guard/mutex.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/guard/policy.test.ts",
+      "destination": "tests/unit/guard/policy.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/guard/repo.test.ts",
+      "destination": "tests/unit/guard/repo.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/guard/state.test.ts",
+      "destination": "tests/unit/guard/state.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/support/guard-repo.ts",
+      "destination": "tests/support/guard-repo.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/support/memory-fs.ts",
+      "destination": "tests/support/memory-fs.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/support/rollout.ts",
+      "destination": "tests/support/rollout.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/support/update-model.ts",
+      "destination": "tests/support/update-model.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/support/agent-declarations.ts",
+      "destination": "tests/support/agent-declarations.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/contracts/agent-permissions.test.ts",
+      "destination": "tests/contracts/agent-permissions.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/permissions.test.ts",
+      "destination": "tests/integration/permissions.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "playwright.config.ts",
+      "destination": "playwright.config.ts"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tests/e2e/support.ts",
+      "destination": "tests/e2e/support.ts"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tests/e2e/pages.spec.ts",
+      "destination": "tests/e2e/pages.spec.ts"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tests/e2e/boundaries.spec.ts",
+      "destination": "tests/e2e/boundaries.spec.ts"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "tests/e2e/environment.spec.ts",
+      "destination": "tests/e2e/environment.spec.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/testing/owned.cjs",
+      "destination": "scripts/testing/owned.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/testing/environment.cjs",
+      "destination": "scripts/testing/environment.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/testing/network.cjs",
+      "destination": "scripts/testing/network.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/testing/fixtures.cjs",
+      "destination": "scripts/testing/fixtures.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/testing/stage.cjs",
+      "destination": "scripts/testing/stage.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/testing/harness.cjs",
+      "destination": "scripts/testing/harness.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/testing/production.cjs",
+      "destination": "scripts/testing/production.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/testing/artifact.cjs",
+      "destination": "scripts/testing/artifact.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "docs/contributing/production-tests.md",
+      "destination": "docs/contributing/production-tests.md"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/production/owned.test.ts",
+      "destination": "tests/unit/production/owned.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/production/environment.test.ts",
+      "destination": "tests/unit/production/environment.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/production/network.test.ts",
+      "destination": "tests/unit/production/network.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/production/fixtures.test.ts",
+      "destination": "tests/unit/production/fixtures.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/production/harness.test.ts",
+      "destination": "tests/unit/production/harness.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/production/production.test.ts",
+      "destination": "tests/unit/production/production.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/production/artifact.test.ts",
+      "destination": "tests/unit/production/artifact.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/support/production-host.ts",
+      "destination": "tests/support/production-host.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/support/owned-processes.ts",
+      "destination": "tests/support/owned-processes.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/owned-process.test.ts",
+      "destination": "tests/integration/owned-process.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/artifact-compose.test.ts",
+      "destination": "tests/integration/artifact-compose.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/artifact-run.test.ts",
+      "destination": "tests/integration/artifact-run.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/interruption.test.ts",
+      "destination": "tests/integration/interruption.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/production-scratch.test.ts",
+      "destination": "tests/integration/production-scratch.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/template/git.cjs",
+      "destination": "scripts/template/git.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/template/inputs.cjs",
+      "destination": "scripts/template/inputs.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/template/journal.cjs",
+      "destination": "scripts/template/journal.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/template/manifest.cjs",
+      "destination": "scripts/template/manifest.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/template/preview.cjs",
+      "destination": "scripts/template/preview.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/template/pristine.cjs",
+      "destination": "scripts/template/pristine.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/template/provenance.cjs",
+      "destination": "scripts/template/provenance.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/template/recovery.cjs",
+      "destination": "scripts/template/recovery.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/template/render.cjs",
+      "destination": "scripts/template/render.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/template/state.cjs",
+      "destination": "scripts/template/state.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/template/update.cjs",
+      "destination": "scripts/template/update.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/template-state.test.ts",
+      "destination": "tests/unit/template-state.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/template-git.test.ts",
+      "destination": "tests/unit/template-git.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/template-journal.test.ts",
+      "destination": "tests/unit/template-journal.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/template-recovery.test.ts",
+      "destination": "tests/unit/template-recovery.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/template-update.test.ts",
+      "destination": "tests/unit/template-update.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/renderer.test.ts",
+      "destination": "tests/unit/renderer.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/fixtures/render/manifest.json",
+      "destination": "tests/fixtures/render/manifest.json"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/fixtures/render/template/run.sh",
+      "destination": "tests/fixtures/render/template/run.sh"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/fixtures/render/template/package.json",
+      "destination": "tests/fixtures/render/template/package.json"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/fixtures/render/root/.node-version",
+      "destination": "tests/fixtures/render/root/.node-version"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/fixtures/render/template/dir/data.txt",
+      "destination": "tests/fixtures/render/template/dir/data.txt"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "docs/updating.md",
+      "destination": "docs/updating.md"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/release.cjs",
+      "destination": "scripts/release.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/release/metadata.cjs",
+      "destination": "scripts/release/metadata.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/release/changelog.cjs",
+      "destination": "scripts/release/changelog.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/release/validate.cjs",
+      "destination": "scripts/release/validate.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/support/release-fixture.ts",
+      "destination": "tests/support/release-fixture.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/release.test.ts",
+      "destination": "tests/unit/release.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/release.test.ts",
+      "destination": "tests/integration/release.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "docs/contributing/release-process.md",
+      "destination": "docs/contributing/release-process.md"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": ".github/workflows/ci.yml",
+      "destination": ".github/workflows/ci.yml"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": ".github/workflows/template-ci.yml",
+      "destination": ".github/workflows/template-ci.yml"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": ".github/workflows/template-initialize.yml",
+      "destination": ".github/workflows/template-initialize.yml"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": ".github/workflows/release.yml",
+      "destination": ".github/workflows/release.yml"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": ".github/workflows/dependency-audit.yml",
+      "destination": ".github/workflows/dependency-audit.yml"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": ".github/pull_request_template.md",
+      "destination": ".github/pull_request_template.md"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": ".github/dependabot.yml",
+      "destination": ".github/dependabot.yml"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/audit.cjs",
+      "destination": "scripts/audit.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/ci/context.cjs",
+      "destination": "scripts/ci/context.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tooling/audit-policy.json",
+      "destination": "tooling/audit-policy.json"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/audit.test.ts",
+      "destination": "tests/unit/audit.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/ci-context.test.ts",
+      "destination": "tests/unit/ci-context.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/audit.test.ts",
+      "destination": "tests/integration/audit.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/ci-context.test.ts",
+      "destination": "tests/integration/ci-context.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "docs/contributing/ci.md",
+      "destination": "docs/contributing/ci.md"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "README.md",
+      "destination": "README.md"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "LICENSE",
+      "destination": "tooling/LICENSE"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tooling/NOTICE.md",
+      "destination": "tooling/NOTICE.md"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "docs/contributing/agents.md",
+      "destination": "docs/contributing/agents.md"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "docs/guides/first-use.md",
+      "destination": "docs/guides/first-use.md"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "docs/guides/recovery.md",
+      "destination": "docs/guides/recovery.md"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "docs/guides/platforms.md",
+      "destination": "docs/guides/platforms.md"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/contracts/documented-commands.test.ts",
+      "destination": "tests/contracts/documented-commands.test.ts"
+    }
+  ]
+}

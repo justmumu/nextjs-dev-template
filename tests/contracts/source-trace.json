@@ -1,0 +1,1353 @@
+{
+  "source": {
+    "repository": "https://github.com/justmumu/python-dev-template",
+    "revision": "7f8da69c6f9f69e4fc4d1547c712fb8ef1f1d0b7",
+    "files": [
+      "tests/test_copier.py",
+      "tests/test_bootstrap.py",
+      "tests/test_bootstrap_integration.py",
+      "tests/test_development_workflow.py",
+      "tests/test_development_integration.py",
+      "tests/test_release.py",
+      "tests/test_release_workflow.py"
+    ],
+    "role": "behavior reference only; never executed, never shipped"
+  },
+  "statuses": {
+    "carried": "The JavaScript test asserts the same behavior directly; only the language and the harness differ.",
+    "adapted": "The behavior is kept but its mechanism changed (Copier, Make, uv or Python replaced by the renderer, the pnpm run facade, hooks, pnpm or Node core), and the JavaScript tests prove the adapted form.",
+    "not-carried": "The behavior is specific to Python tooling (uv, venv, taplo, mdformat, Make recipes, MkDocs) or to a feature the JavaScript template does not have, so no JavaScript test proves it."
+  },
+  "entries": [
+    {
+      "sourceFile": "tests/test_copier.py",
+      "sourceTest": "test_rendered_project_contract",
+      "status": "adapted",
+      "owner": "U2",
+      "jsTests": [
+        {
+          "file": "tests/contracts/rendered-output.test.ts",
+          "title": "emits the application role files and nothing from the generator"
+        },
+        {
+          "file": "tests/contracts/rendered-output.test.ts",
+          "title": "package.json carries the reviewed pins as its own graph"
+        },
+        {
+          "file": "tests/unit/renderer.test.ts",
+          "title": "version is answer-owned and defaults to 0.0.0"
+        },
+        {
+          "file": "tests/unit/renderer.test.ts",
+          "title": "owner is projected as author and omitted when absent"
+        }
+      ],
+      "note": "Copier and pyproject.toml are replaced by the JavaScript renderer and a projected package.json: the render of the seed emits the application role files and none of the generator's, the project name, version default and author projection are asserted, and the dependency graph is the reviewed one."
+    },
+    {
+      "sourceFile": "tests/test_copier.py",
+      "sourceTest": "test_include_stubs_render_their_root_file_exactly",
+      "status": "adapted",
+      "owner": "U2",
+      "jsTests": [
+        {
+          "file": "tests/contracts/workflows.test.ts",
+          "title": "workflow files are regular, non-executable files rendered byte for byte into applications"
+        },
+        {
+          "file": "tests/contracts/rendered-output.test.ts",
+          "title": "the guard runtime, host declarations and permission checks are in the render itself"
+        },
+        {
+          "file": "tests/integration/renderer.test.ts",
+          "title": "two destinations get the same bytes and modes"
+        }
+      ],
+      "note": "Jinja include stubs do not exist; the manifest copies root files directly, and the tests prove the rendered workflow, guard and host files are byte-identical to their sources and that two renders agree byte for byte."
+    },
+    {
+      "sourceFile": "tests/test_copier.py",
+      "sourceTest": "test_metadata_answers_are_escaped",
+      "status": "adapted",
+      "owner": "U2",
+      "jsTests": [
+        {
+          "file": "tests/unit/renderer.test.ts",
+          "title": "quotes, backslashes, Unicode and numeric-looking text survive losslessly"
+        }
+      ],
+      "note": "The TOML escaping of description and author is replaced by canonical JSON projection into package.json; the same quote, backslash and Unicode answers must survive losslessly."
+    },
+    {
+      "sourceFile": "tests/test_copier.py",
+      "sourceTest": "test_answers_preserve_strings_after_yaml_formatting",
+      "status": "adapted",
+      "owner": "U2",
+      "jsTests": [
+        {
+          "file": "tests/unit/renderer.test.ts",
+          "title": "quotes, backslashes, Unicode and numeric-looking text survive losslessly"
+        },
+        {
+          "file": "tests/unit/template-state.test.ts",
+          "title": "round-trips, and holds no state about itself"
+        },
+        {
+          "file": "tests/unit/template-state.test.ts",
+          "title": "keeps a copied commit as the copy's own"
+        }
+      ],
+      "note": "The Copier answers file and yamlfix are replaced by the JSON state file, so numeric-looking text such as 1e6 or 123e456 cannot be re-typed by a formatter; the tests prove strings survive the projection and the state round-trips."
+    },
+    {
+      "sourceFile": "tests/test_copier.py",
+      "sourceTest": "test_invalid_project_names_are_rejected",
+      "status": "carried",
+      "owner": "U2",
+      "jsTests": [
+        {
+          "file": "tests/unit/renderer.test.ts",
+          "title": "answers validation"
+        },
+        {
+          "file": "tests/unit/renderer.test.ts",
+          "title": "rejects ${label}"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "refuses invalid answers and a destination that is not empty before any other step"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_copier.py",
+      "sourceTest": "test_invalid_owner_is_rejected",
+      "status": "carried",
+      "owner": "U2",
+      "jsTests": [
+        {
+          "file": "tests/unit/renderer.test.ts",
+          "title": "answers validation"
+        },
+        {
+          "file": "tests/unit/renderer.test.ts",
+          "title": "rejects ${label}"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_copier.py",
+      "sourceTest": "test_names_with_trailing_newline_are_rejected",
+      "status": "carried",
+      "owner": "U2",
+      "jsTests": [
+        {
+          "file": "tests/unit/renderer.test.ts",
+          "title": "answers validation"
+        },
+        {
+          "file": "tests/unit/renderer.test.ts",
+          "title": "rejects ${label}"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_copier.py",
+      "sourceTest": "test_copy_has_no_implicit_tasks",
+      "status": "adapted",
+      "owner": "U2",
+      "jsTests": [
+        {
+          "file": "tests/integration/template-create.test.ts",
+          "title": "the staged manifest holds no install, cache, build or hook path"
+        },
+        {
+          "file": "tests/contracts/rendered-output.test.ts",
+          "title": "emits the application role files and nothing from the generator"
+        }
+      ],
+      "note": "There is no .venv or uv.lock to be absent; the equivalent is that the rendered manifest carries no install, cache, build or hook output, so creation runs no implicit setup in the project."
+    },
+    {
+      "sourceFile": "tests/test_bootstrap.py",
+      "sourceTest": "test_clean_state_policy_rejects_hidden_and_visible_changes",
+      "status": "carried",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "uncommitted work, hidden changes, unmerged entries and an unborn HEAD each refuse it"
+        },
+        {
+          "file": "tests/integration/template-initialize.test.ts",
+          "title": "a copy that cannot be converted is refused before staging, untouched"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_bootstrap.py",
+      "sourceTest": "test_target_policy_uses_supplied_git_identity",
+      "status": "carried",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/integration/template-initialize.test.ts",
+          "title": "a copy that cannot be converted is refused before staging, untouched"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "the origin must be the new repository; a checkout of the template itself is never converted"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "the template's own repository is refused whatever the answers name, over any spelling of its origin"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_bootstrap.py",
+      "sourceTest": "test_path_policy_rejects_repository_escape",
+      "status": "carried",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/integration/template-initialize.test.ts",
+          "title": "a tracked symlink above a rendered path"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "a tracked symlink or submodule on or above a rendered path is refused"
+        },
+        {
+          "file": "tests/integration/renderer.test.ts",
+          "title": "never writes outside the destination for tampered file lists"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_bootstrap.py",
+      "sourceTest": "test_path_policy_protects_existing_local_data",
+      "status": "carried",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "an ignored file or directory may stay unless the render writes onto it or through it"
+        },
+        {
+          "file": "tests/integration/template-initialize.test.ts",
+          "title": "a copy that cannot be converted is refused before staging, untouched"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_bootstrap.py",
+      "sourceTest": "test_workflow_policy_requires_identical_content_and_execution_mode",
+      "status": "carried",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "identical bytes and mode pass; the rest of the tree is not compared"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "a difference in bytes, mode, or presence on either side is a problem"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_bootstrap.py",
+      "sourceTest": "test_file_installation_preserves_local_data_and_recovers_on_failure",
+      "status": "carried",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "replaces, removes and adds, drops directories it emptied, and keeps nothing it did not need"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "a failure takes every step back: removed files, replaced files, added files and the directories it made"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "a rollback that cannot restore names the exact paths, and a path changed meanwhile is never overwritten"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_bootstrap.py",
+      "sourceTest": "test_bootstrap_installs_only_validated_unchanged_output",
+      "status": "carried",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "converts the copy: validate in staging, install from a backup, B0 as a child of O, then E0"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "a repository that already has the committed state is initialized: nothing happens"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "a failed validation leaves the copy untouched, and so does drift during validation"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_bootstrap.py",
+      "sourceTest": "test_cli_passes_explicit_answers_without_running_setup",
+      "status": "adapted",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/integration/workflow-initialization.test.ts",
+          "title": "without a description the flag is not passed"
+        },
+        {
+          "file": "tests/contracts/workflows.test.ts",
+          "title": "passes the repository's own name, owner and description as literal arguments, and the description only when it has one"
+        },
+        {
+          "file": "tests/contracts/workflows.test.ts",
+          "title": "installs the copy without hooks or guard, then initializes, then proves the result, then publishes once"
+        }
+      ],
+      "note": "The argparse CLI is replaced by the first-run workflow calling the initializer with the repository's own name, owner and description as literal arguments, without running setup before conversion."
+    },
+    {
+      "sourceFile": "tests/test_bootstrap.py",
+      "sourceTest": "test_command_adapter_keeps_failure_diagnostics",
+      "status": "adapted",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/unit/template-git.test.ts",
+          "title": "the caller's environment keeps its Git configuration but cannot point Git at another repository"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "a failing step stops the run, names the step and still removes the scratch"
+        },
+        {
+          "file": "tests/unit/template-git.test.ts",
+          "title": "an unreadable index entry or a failed command is an error that says what failed"
+        }
+      ],
+      "note": "The Python subprocess adapter is replaced by the Git runner and step runner: the outer GIT_DIR cannot redirect Git and a failing command is reported with what failed instead of being swallowed."
+    },
+    {
+      "sourceFile": "tests/test_bootstrap.py",
+      "sourceTest": "test_failed_recovery_keeps_staged_backup_available",
+      "status": "carried",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "when the installation cannot be taken back the backup is kept and the paths are named"
+        },
+        {
+          "file": "tests/integration/template-initialize.test.ts",
+          "title": "a rollback that fails keeps the backup, names the paths, and the copy can be restored from Git"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_bootstrap.py",
+      "sourceTest": "test_validation_uses_make_without_node",
+      "status": "adapted",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "the steps are the application's own setup, check, docs and build"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "renders into scratch with a committed baseline, runs every step in order, and always removes the scratch"
+        }
+      ],
+      "note": "make install, format, check, docs-build and uv build are replaced by the application's own pnpm run setup, check, docs and build steps in a staged render; the Node-less constraint does not apply because Node is the toolchain."
+    },
+    {
+      "sourceFile": "tests/test_bootstrap.py",
+      "sourceTest": "test_nested_environment_keeps_python_selection_without_other_project_context",
+      "status": "adapted",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/unit/template-git.test.ts",
+          "title": "the caller's environment keeps its Git configuration but cannot point Git at another repository"
+        },
+        {
+          "file": "tests/unit/template-git.test.ts",
+          "title": "the generator's own objects read no configuration of the machine and carry its own identity"
+        }
+      ],
+      "note": "UV_PYTHON, VIRTUAL_ENV and PYTHONPATH have no JavaScript counterpart; only the Git half is carried: an outer GIT_DIR cannot redirect Git while the caller's configuration is kept."
+    },
+    {
+      "sourceFile": "tests/test_bootstrap.py",
+      "sourceTest": "test_staging_directory_is_removed_after_ordinary_exit",
+      "status": "carried",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "renders into scratch with a committed baseline, runs every step in order, and always removes the scratch"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "a failing step stops the run, names the step and still removes the scratch"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_bootstrap_integration.py",
+      "sourceTest": "test_setup_preserves_git_and_ignored_data",
+      "status": "carried",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/integration/template-initialize.test.ts",
+          "title": "validates in staging, keeps O in the history under B0 and E0, and a second run changes nothing"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "an ignored file or directory may stay unless the render writes onto it or through it"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_bootstrap_integration.py",
+      "sourceTest": "test_dirty_target_is_rejected",
+      "status": "carried",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/integration/template-initialize.test.ts",
+          "title": "a copy that cannot be converted is refused before staging, untouched"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_bootstrap_integration.py",
+      "sourceTest": "test_hidden_tracked_edits_are_rejected",
+      "status": "carried",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/integration/template-initialize.test.ts",
+          "title": "a copy that cannot be converted is refused before staging, untouched"
+        },
+        {
+          "file": "tests/unit/template-git.test.ts",
+          "title": "reads the index, hidden flags, changes and ignored paths from NUL-separated output"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_bootstrap_integration.py",
+      "sourceTest": "test_wrong_repository_is_rejected",
+      "status": "carried",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/integration/template-initialize.test.ts",
+          "title": "a copy that cannot be converted is refused before staging, untouched"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "the origin must be the new repository; a checkout of the template itself is never converted"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_bootstrap_integration.py",
+      "sourceTest": "test_original_origin_is_rejected",
+      "status": "carried",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/integration/template-initialize.test.ts",
+          "title": "a copy that cannot be converted is refused before staging, untouched"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "the template's own repository is refused whatever the answers name, over any spelling of its origin"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_bootstrap_integration.py",
+      "sourceTest": "test_failure_before_install_leaves_target_untouched",
+      "status": "carried",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/integration/template-initialize.test.ts",
+          "title": "a failed validation, or an interruption, changes nothing"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "a failed validation leaves the copy untouched, and so does drift during validation"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_bootstrap_integration.py",
+      "sourceTest": "test_ignored_output_collision_is_rejected",
+      "status": "carried",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/integration/template-initialize.test.ts",
+          "title": "a copy that cannot be converted is refused before staging, untouched"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "an ignored file or directory may stay unless the render writes onto it or through it"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_bootstrap_integration.py",
+      "sourceTest": "test_symlink_ancestor_cannot_escape_target",
+      "status": "carried",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/integration/template-initialize.test.ts",
+          "title": "a tracked symlink above a rendered path"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "a symlinked directory on the way is refused, and a successful installation can still be taken back"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_bootstrap_integration.py",
+      "sourceTest": "test_install_io_failure_restores_original_files",
+      "status": "carried",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/integration/template-initialize.test.ts",
+          "title": "a failure part-way restores every file, the index and HEAD from the backup, and drops the backup"
+        },
+        {
+          "file": "tests/integration/template-install.test.ts",
+          "title": "a write that stores one byte and then fails is taken back to the original bytes"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_bootstrap_integration.py",
+      "sourceTest": "test_failed_restore_preserves_recovery_backup",
+      "status": "carried",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/integration/template-initialize.test.ts",
+          "title": "a rollback that fails keeps the backup, names the paths, and the copy can be restored from Git"
+        },
+        {
+          "file": "tests/integration/template-install.test.ts",
+          "title": "a torn write whose restore also tears is named, and the backup holds the original"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_bootstrap_integration.py",
+      "sourceTest": "test_concurrent_edit_is_preserved",
+      "status": "carried",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/integration/template-initialize.test.ts",
+          "title": "an edit made meanwhile is dirt, and is not overwritten"
+        },
+        {
+          "file": "tests/integration/template-install.test.ts",
+          "title": "a user file that atomically replaced the target is left alone and named"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_bootstrap_integration.py",
+      "sourceTest": "test_head_change_during_validation_is_rejected",
+      "status": "carried",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/integration/template-initialize.test.ts",
+          "title": "a commit made meanwhile moves HEAD"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "a moved HEAD, a changed file or new dirt between the first look and the write is drift"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_bootstrap_integration.py",
+      "sourceTest": "test_generated_symlinks_are_rejected",
+      "status": "adapted",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "a rewritten file, a changed mode, a missing file and an untracked leftover are each reported"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "a validator that rewrote a rendered file fails the run instead of adopting its output"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "a file that is not the regular file Git tracks stops the installation before anything changes"
+        }
+      ],
+      "note": "The renderer cannot produce symlinks (a symlinked source is refused), so the carried guard is that validation may not leave a rewritten or extra file behind and that installation refuses anything that is not a regular tracked file; a link written by a validator is covered as a leftover."
+    },
+    {
+      "sourceFile": "tests/test_bootstrap_integration.py",
+      "sourceTest": "test_workflow_writes_that_github_token_cannot_push_are_rejected",
+      "status": "adapted",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "a difference in bytes, mode, or presence on either side is a problem"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "identical bytes and mode pass; the rest of the tree is not compared"
+        },
+        {
+          "file": "tests/integration/template-initialize.test.ts",
+          "title": "a copy that cannot be converted is refused before staging, untouched"
+        }
+      ],
+      "note": "The workflow parity check refuses a conversion that would add, change or remove a workflow file the GitHub token could not push; refusal happens before staging, and the case of a workflow the render would not keep is exercised in the refusal table."
+    },
+    {
+      "sourceFile": "tests/test_bootstrap_integration.py",
+      "sourceTest": "test_file_directory_collision_is_rejected",
+      "status": "adapted",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "a tracked symlink or submodule on or above a rendered path is refused"
+        },
+        {
+          "file": "tests/unit/template-transaction.test.ts",
+          "title": "an ignored file or directory may stay unless the render writes onto it or through it"
+        }
+      ],
+      "note": "A tracked file standing where the render needs a directory is covered through the collision checks for tracked links, submodules and ignored paths on or above a rendered path; the plain tracked-file case relies on the same planner and has no dedicated scenario."
+    },
+    {
+      "sourceFile": "tests/test_bootstrap_integration.py",
+      "sourceTest": "test_cli_passes_github_answers",
+      "status": "adapted",
+      "owner": "U11",
+      "jsTests": [
+        {
+          "file": "tests/contracts/workflows.test.ts",
+          "title": "passes the repository's own name, owner and description as literal arguments, and the description only when it has one"
+        },
+        {
+          "file": "tests/integration/workflow-initialization.test.ts",
+          "title": "converts the copy under the bot identity with the guard and hooks active, and publishes the history with one push"
+        }
+      ],
+      "note": "GITHUB_REPOSITORY and PROJECT_DESCRIPTION environment variables are replaced by the workflow passing the repository name, owner and description as literal arguments, and the workflow scenario proves the conversion from those answers."
+    },
+    {
+      "sourceFile": "tests/test_development_workflow.py",
+      "sourceTest": "test_install_initializes_only_a_missing_lock",
+      "status": "adapted",
+      "owner": "U3",
+      "jsTests": [
+        {
+          "file": "tests/unit/bootstrap.test.ts",
+          "title": "it installs from the frozen lock without touching manifests"
+        },
+        {
+          "file": "tests/unit/bootstrap.test.ts",
+          "title": "a lock that does not match the manifest removes nothing and is never regenerated"
+        }
+      ],
+      "note": "uv lock then uv sync is replaced by pnpm install --frozen-lockfile: setup never creates or rewrites a lock, and a lock that disagrees with the manifest is refused instead of regenerated."
+    },
+    {
+      "sourceFile": "tests/test_development_workflow.py",
+      "sourceTest": "test_typecheck_uses_only_the_active_python",
+      "status": "adapted",
+      "owner": "U3",
+      "jsTests": [
+        {
+          "file": "tests/integration/development-gates.test.ts",
+          "title": "the generator type-checks once, and the application generates route types first and checks both programs"
+        }
+      ],
+      "note": "pyright with the active Python version is replaced by the TypeScript checks run through the pnpm facade; the role decides which programs are checked and in what order."
+    },
+    {
+      "sourceFile": "tests/test_development_workflow.py",
+      "sourceTest": "test_python_gate_runs_typing_and_unit_coverage_once",
+      "status": "adapted",
+      "owner": "U3",
+      "jsTests": [
+        {
+          "file": "tests/unit/gates.test.ts",
+          "title": "every gate runs, in order, and a clean run says so"
+        },
+        {
+          "file": "tests/integration/development-gates.test.ts",
+          "title": "the generator is measured as one suite and the application as two, each by its own configuration"
+        }
+      ],
+      "note": "make check-python is replaced by the check and unit gates of the pnpm facade: type checking and the unit suites with coverage thresholds each run once, in order."
+    },
+    {
+      "sourceFile": "tests/test_development_workflow.py",
+      "sourceTest": "test_lock_gate_rejects_a_missing_lock_without_creating_it",
+      "status": "adapted",
+      "owner": "U3",
+      "jsTests": [
+        {
+          "file": "tests/unit/bootstrap.test.ts",
+          "title": "a lock that does not match the manifest removes nothing and is never regenerated"
+        },
+        {
+          "file": "tests/unit/transaction.test.ts",
+          "title": "a deleted lock is a violation"
+        }
+      ],
+      "note": "make lock-check on uv.lock is replaced by the pnpm lock checks: a missing or mismatched pnpm-lock.yaml is refused or reported as a violation and is never created by the check."
+    },
+    {
+      "sourceFile": "tests/test_development_workflow.py",
+      "sourceTest": "test_selected_test_is_one_literal_argument",
+      "status": "adapted",
+      "owner": "U3",
+      "jsTests": [
+        {
+          "file": "tests/integration/unit-suites.test.ts",
+          "title": "a literal test name selects only that test, with its metacharacters taken literally"
+        },
+        {
+          "file": "tests/integration/unit-suites.test.ts",
+          "title": "a path with spaces and glob or regular-expression characters is taken literally"
+        },
+        {
+          "file": "tests/unit/gates.test.ts",
+          "title": "a name is a literal pattern"
+        }
+      ],
+      "note": "make test-one TEST=... is replaced by pnpm run test:one with a file and a literal name; shell and regular-expression metacharacters never reach a shell or a pattern."
+    },
+    {
+      "sourceFile": "tests/test_development_workflow.py",
+      "sourceTest": "test_selected_test_rejects_missing_or_option_input",
+      "status": "adapted",
+      "owner": "U3",
+      "jsTests": [
+        {
+          "file": "tests/unit/gates.test.ts",
+          "title": "refuses runner flags, a repeated flag and a missing file"
+        },
+        {
+          "file": "tests/integration/development-gates.test.ts",
+          "title": "test:one refuses a file outside its suite without starting Vitest"
+        },
+        {
+          "file": "tests/unit/gates.test.ts",
+          "title": "a refused request never reaches Vitest"
+        }
+      ],
+      "note": "A missing selector, an option-shaped selector and a path outside the suite are refused by the focused-test grammar before the runner starts, instead of by a Make recipe."
+    },
+    {
+      "sourceFile": "tests/test_development_workflow.py",
+      "sourceTest": "test_integration_target_runs_the_complete_suite",
+      "status": "adapted",
+      "owner": "U3",
+      "jsTests": [
+        {
+          "file": "tests/integration/development-gates.test.ts",
+          "title": "test:integration runs the integration project, optionally one scenario named after a test file of the project"
+        },
+        {
+          "file": "tests/integration/unit-suites.test.ts",
+          "title": "every integration test file is a scenario of test:integration, and nothing else is"
+        }
+      ],
+      "note": "make test-integration with pytest markers is replaced by the integration Vitest project: every integration file is a scenario of the command and nothing else is selected."
+    },
+    {
+      "sourceFile": "tests/test_development_workflow.py",
+      "sourceTest": "test_permission_target_requires_an_actual_codex_binary",
+      "status": "adapted",
+      "owner": "U3",
+      "jsTests": [
+        {
+          "file": "tests/unit/commands.test.ts",
+          "title": "runs the declared policy tests, then the real Codex checks, and says whether a Codex CLI was found"
+        },
+        {
+          "file": "tests/unit/commands.test.ts",
+          "title": "a project without the permission tests fails instead of passing"
+        }
+      ],
+      "note": "The Make target that refused to run without CODEX_TEST_BINARY is replaced by test:permissions, which runs the policy tests and the real Codex checks and reports whether a Codex CLI was found; the JavaScript dispatcher reports the absence instead of failing on it, and fails only when the policy tests are missing."
+    },
+    {
+      "sourceFile": "tests/test_development_workflow.py",
+      "sourceTest": "test_uv_add_adds_the_package_then_formats_toml",
+      "status": "adapted",
+      "owner": "U9",
+      "jsTests": [
+        {
+          "file": "tests/unit/dependencies.test.ts",
+          "title": "an addition is exact and saved in the group that was asked for"
+        },
+        {
+          "file": "tests/unit/commands.test.ts",
+          "title": "builds the pnpm argv for add, remove and upgrade without a shell"
+        }
+      ],
+      "note": "uv add followed by taplo formatting is replaced by an exact pnpm add through the dependency transaction; there is no TOML to format afterwards."
+    },
+    {
+      "sourceFile": "tests/test_development_workflow.py",
+      "sourceTest": "test_uv_add_passes_the_group_only_when_given",
+      "status": "adapted",
+      "owner": "U9",
+      "jsTests": [
+        {
+          "file": "tests/unit/dependencies.test.ts",
+          "title": "an addition is exact and saved in the group that was asked for"
+        }
+      ],
+      "note": "The uv --group flag is replaced by the pnpm dependency group (--save-prod or --save-dev) in the planned argv."
+    },
+    {
+      "sourceFile": "tests/test_development_workflow.py",
+      "sourceTest": "test_uv_remove_removes_the_package_then_formats_toml",
+      "status": "adapted",
+      "owner": "U9",
+      "jsTests": [
+        {
+          "file": "tests/unit/dependencies.test.ts",
+          "title": "a removal and an upgrade of one or of all"
+        }
+      ],
+      "note": "uv remove followed by taplo formatting is replaced by pnpm remove through the dependency transaction; no TOML formatting follows."
+    },
+    {
+      "sourceFile": "tests/test_development_workflow.py",
+      "sourceTest": "test_uv_remove_passes_the_group_only_when_given",
+      "status": "adapted",
+      "owner": "U9",
+      "jsTests": [
+        {
+          "file": "tests/unit/dependencies.test.ts",
+          "title": "a removal and an upgrade of one or of all"
+        },
+        {
+          "file": "tests/unit/dependencies.test.ts",
+          "title": "an addition is exact and saved in the group that was asked for"
+        }
+      ],
+      "note": "The uv --group flag is replaced by the pnpm group selection in the planned argv for add and remove."
+    },
+    {
+      "sourceFile": "tests/test_development_workflow.py",
+      "sourceTest": "test_uv_add_and_remove_require_a_package",
+      "status": "adapted",
+      "owner": "U9",
+      "jsTests": [
+        {
+          "file": "tests/unit/dependencies.test.ts",
+          "title": "a malformed request prints the usage and changes nothing"
+        },
+        {
+          "file": "tests/integration/dependencies-cli.test.ts",
+          "title": "a malformed request prints the usage and changes nothing"
+        }
+      ],
+      "note": "The PKG= requirement of the Make targets becomes the request grammar of the dependency commands: a missing or empty package prints the usage with a usage status and changes nothing."
+    },
+    {
+      "sourceFile": "tests/test_development_workflow.py",
+      "sourceTest": "test_a_package_with_spaces_is_one_argument",
+      "status": "adapted",
+      "owner": "U9",
+      "jsTests": [
+        {
+          "file": "tests/unit/commands.test.ts",
+          "title": "builds the pnpm argv for add, remove and upgrade without a shell"
+        },
+        {
+          "file": "tests/unit/dependencies.test.ts",
+          "title": "an option-shaped value never reaches pnpm through the request boundary"
+        }
+      ],
+      "note": "Make variable expansion is replaced by a validated package specifier: a request is one value in an argv array, never split by a shell, and specifiers with spaces, option shapes or other sources are refused."
+    },
+    {
+      "sourceFile": "tests/test_development_workflow.py",
+      "sourceTest": "test_uv_upgrade_upgrades_everything_then_syncs",
+      "status": "adapted",
+      "owner": "U9",
+      "jsTests": [
+        {
+          "file": "tests/unit/dependencies.test.ts",
+          "title": "a removal and an upgrade of one or of all"
+        },
+        {
+          "file": "tests/unit/dependencies.test.ts",
+          "title": "an accepted change runs exactly the requested step against the plan, and prints the redacted output"
+        }
+      ],
+      "note": "uv lock --upgrade then sync is replaced by pnpm update of every dependency inside the dependency transaction, which checks the result against the plan; there is no separate sync step."
+    },
+    {
+      "sourceFile": "tests/test_development_workflow.py",
+      "sourceTest": "test_uv_upgrade_can_target_one_package",
+      "status": "adapted",
+      "owner": "U9",
+      "jsTests": [
+        {
+          "file": "tests/unit/dependencies.test.ts",
+          "title": "a removal and an upgrade of one or of all"
+        }
+      ],
+      "note": "uv lock --upgrade-package is replaced by pnpm update of one named dependency in the planned argv."
+    },
+    {
+      "sourceFile": "tests/test_development_workflow.py",
+      "sourceTest": "test_uv_lock_relocks_then_syncs",
+      "status": "adapted",
+      "owner": "U9",
+      "jsTests": [
+        {
+          "file": "tests/unit/bootstrap.test.ts",
+          "title": "an approved edit relocks and then installs frozen, as a relock that can be retried"
+        }
+      ],
+      "note": "uv lock then sync is replaced by the approved relock (deps-lock), which relocks and then installs from the frozen lock, and can be retried when interrupted."
+    },
+    {
+      "sourceFile": "tests/test_development_workflow.py",
+      "sourceTest": "test_uv_reinstall_removes_the_venv_then_syncs_and_restores_taplo",
+      "status": "adapted",
+      "owner": "U9",
+      "jsTests": [
+        {
+          "file": "tests/unit/bootstrap.test.ts",
+          "title": "it removes the install state only after the lock was confirmed, rebuilds, and then clears the marker"
+        }
+      ],
+      "note": "Removing .venv and restoring taplo is replaced by the repair command, which removes the install state only after the lock is confirmed and then rebuilds from the frozen lock; taplo has no counterpart."
+    },
+    {
+      "sourceFile": "tests/test_development_workflow.py",
+      "sourceTest": "test_setup_has_no_sandbox_workarounds",
+      "status": "not-carried",
+      "owner": "U3",
+      "note": "This asserts that the Make setup recipe in scripts/development.mk contains no sandbox workarounds (exclude-placeholders, .codex/rules); the JavaScript setup is a Node dispatcher with no recipe text to inspect, so the check is Make-specific and has no equivalent."
+    },
+    {
+      "sourceFile": "tests/test_development_integration.py",
+      "sourceTest": "test_commit_message_hook_works_without_global_python",
+      "status": "adapted",
+      "owner": "U9",
+      "jsTests": [
+        {
+          "file": "tests/integration/hooks.test.ts",
+          "title": "ordinary and invalid Conventional subjects, and the 72-character limit"
+        }
+      ],
+      "note": "pre-commit and Commitizen through uv are replaced by the installed commit-msg hook running on Node; the subjects accepted and refused are Conventional ones."
+    },
+    {
+      "sourceFile": "tests/test_development_integration.py",
+      "sourceTest": "test_non_python_change_runs_format_hook_and_preserves_metadata_values",
+      "status": "adapted",
+      "owner": "U9",
+      "jsTests": [
+        {
+          "file": "tests/integration/hooks.test.ts",
+          "title": "the first commit without HEAD formats staged files, restages the fixes and keeps names with spaces and Unicode literal"
+        },
+        {
+          "file": "tests/integration/hooks.test.ts",
+          "title": "a partially staged file commits only the staged hunk and keeps the unstaged one in the working tree"
+        },
+        {
+          "file": "tests/integration/static-policy.test.ts",
+          "title": "unformatted public Markdown and workflow YAML fail format:check and are repaired by format"
+        }
+      ],
+      "note": "The pre-commit format hook with mdformat, taplo and yamlfix is replaced by the pre-commit hook running Prettier through lint-staged style staging; staged files are formatted and restaged, and package metadata values are never changed by whitespace formatting."
+    },
+    {
+      "sourceFile": "tests/test_development_integration.py",
+      "sourceTest": "test_formatter_handles_spaces_and_skips_private_files",
+      "status": "adapted",
+      "owner": "U9",
+      "jsTests": [
+        {
+          "file": "tests/integration/hooks.test.ts",
+          "title": "the first commit without HEAD formats staged files, restages the fixes and keeps names with spaces and Unicode literal"
+        },
+        {
+          "file": "tests/integration/static-policy.test.ts",
+          "title": "unformatted public Markdown and workflow YAML fail format:check and are repaired by format"
+        }
+      ],
+      "note": "scripts/format_files.py is replaced by Prettier through the pnpm facade and the pre-commit hook: names with spaces are handled literally and format:check fails and format repairs; the private-directory skip is expressed through the ignore files instead of a dedicated scenario."
+    },
+    {
+      "sourceFile": "tests/test_development_integration.py",
+      "sourceTest": "test_markdown_formatter_preserves_mkdocs_admonition_content",
+      "status": "not-carried",
+      "owner": "U9",
+      "note": "MkDocs admonitions and mdformat are Python documentation tooling; the JavaScript template documents with VitePress and formats Markdown with Prettier, so there is no admonition rewrite to guard against."
+    },
+    {
+      "sourceFile": "tests/test_development_integration.py",
+      "sourceTest": "test_asset_formatters_check_then_rewrite_without_node",
+      "status": "not-carried",
+      "owner": "U9",
+      "note": "This proves HTML and CSS formatting works with taplo, mdformat and the Python formatter script when Node is absent; the JavaScript template requires Node and formats assets with Prettier, so a Node-free asset formatter is Python-specific."
+    },
+    {
+      "sourceFile": "tests/test_release.py",
+      "sourceTest": "test_bump_uses_uv_changelog_and_defers_tag_until_review",
+      "status": "adapted",
+      "owner": "U14",
+      "jsTests": [
+        {
+          "file": "tests/integration/release.test.ts",
+          "title": "writes the version and a changelog section, commits only those through the hooks, and never tags"
+        },
+        {
+          "file": "tests/unit/release.test.ts",
+          "title": "a bump writes the version and the changelog and commits them, and never tags"
+        }
+      ],
+      "note": "uv version and Commitizen are replaced by a Node release module editing package.json and CHANGELOG.md; the commit is made through the hooks, inherited template history is left out, and the tag is deferred until the merge is reviewed."
+    },
+    {
+      "sourceFile": "tests/test_release.py",
+      "sourceTest": "test_bump_requires_clean_feature_branch",
+      "status": "carried",
+      "owner": "U14",
+      "jsTests": [
+        {
+          "file": "tests/unit/release.test.ts",
+          "title": "refuses before anything is written"
+        },
+        {
+          "file": "tests/integration/release.test.ts",
+          "title": "a segment outside patch, minor and major is refused before the repository is read"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_release.py",
+      "sourceTest": "test_failed_git_hook_stops_before_tag_without_disabling_hooks",
+      "status": "carried",
+      "owner": "U14",
+      "jsTests": [
+        {
+          "file": "tests/integration/release.test.ts",
+          "title": "a failing %s hook preserves prepared files and edits made by the hook without committing or tagging"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_release.py",
+      "sourceTest": "test_command_failure_stops_before_commit_and_tag",
+      "status": "adapted",
+      "owner": "U14",
+      "jsTests": [
+        {
+          "file": "tests/integration/release.test.ts",
+          "title": "a lock that no longer matches stops the bump and leaves prepared files for inspection"
+        },
+        {
+          "file": "tests/integration/release.test.ts",
+          "title": "a concurrent change during %s is preserved outside the release commit"
+        }
+      ],
+      "note": "The three injected failures (uv version, Commitizen, mdformat) are replaced by the failures a Node bump can have: a lock that no longer matches, and a concurrent change during generation, lock check or head advance; each stops before a tag and keeps prepared files."
+    },
+    {
+      "sourceFile": "tests/test_release.py",
+      "sourceTest": "test_hidden_edits_are_not_a_clean_release",
+      "status": "carried",
+      "owner": "U14",
+      "jsTests": [
+        {
+          "file": "tests/unit/release.test.ts",
+          "title": "a clean tree has no change and no index flag that hides one"
+        },
+        {
+          "file": "tests/unit/release.test.ts",
+          "title": "refuses before anything is written"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_release.py",
+      "sourceTest": "test_post_commit_edits_stop_tag_creation",
+      "status": "carried",
+      "owner": "U14",
+      "jsTests": [
+        {
+          "file": "tests/integration/release.test.ts",
+          "title": "a hook that dirties the tree after the commit is reported, and the commit and the tree stay as they are"
+        },
+        {
+          "file": "tests/unit/release.test.ts",
+          "title": "creates no tag"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_release.py",
+      "sourceTest": "test_existing_tag_is_rejected_before_metadata_changes",
+      "status": "carried",
+      "owner": "U14",
+      "jsTests": [
+        {
+          "file": "tests/unit/release.test.ts",
+          "title": "refuses before anything is written"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_release.py",
+      "sourceTest": "test_standalone_changelog_preserves_version_and_scopes_history",
+      "status": "adapted",
+      "owner": "U14",
+      "jsTests": [
+        {
+          "file": "tests/integration/release-lineage.test.ts",
+          "title": "leaves out snapshots and template history and keeps merged feature commits"
+        },
+        {
+          "file": "tests/unit/release.test.ts",
+          "title": "the baselines of every state and the enrollment itself are outside the application's history"
+        }
+      ],
+      "note": "There is no standalone changelog command; the changelog is produced by the bump, and the carried behavior is the scoping: template snapshots and inherited history are left out of an application's changelog while its own commits stay."
+    },
+    {
+      "sourceFile": "tests/test_release.py",
+      "sourceTest": "test_generator_changelog_includes_its_own_history",
+      "status": "adapted",
+      "owner": "U14",
+      "jsTests": [
+        {
+          "file": "tests/unit/release.test.ts",
+          "title": "a project that was never enrolled has no lineage to leave out"
+        }
+      ],
+      "note": "Removing .copier-answers.yml is replaced by the absence of a template state: a project that was never enrolled has no lineage, so its own full history is kept; there is no standalone changelog command to run."
+    },
+    {
+      "sourceFile": "tests/test_release.py",
+      "sourceTest": "test_notes_cli_writes_only_the_verified_section",
+      "status": "carried",
+      "owner": "U14",
+      "jsTests": [
+        {
+          "file": "tests/unit/release.test.ts",
+          "title": "validates the tag of the current version and writes only the notes it was asked to write"
+        },
+        {
+          "file": "tests/integration/release.test.ts",
+          "title": "is annotated, sits on the merge commit, and is judged by the repository alone"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_release.py",
+      "sourceTest": "test_consecutive_release_keeps_earlier_application_section",
+      "status": "carried",
+      "owner": "U14",
+      "jsTests": [
+        {
+          "file": "tests/integration/release.test.ts",
+          "title": "a consecutive release keeps the earlier section and only its own commits"
+        },
+        {
+          "file": "tests/unit/release.test.ts",
+          "title": "an earlier section survives the next bump"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_release.py",
+      "sourceTest": "test_release_notes_reject_invalid_release_identity",
+      "status": "carried",
+      "owner": "U14",
+      "jsTests": [
+        {
+          "file": "tests/integration/release.test.ts",
+          "title": "validation refuses %s"
+        },
+        {
+          "file": "tests/unit/release.test.ts",
+          "title": "release:validate"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_release.py",
+      "sourceTest": "test_release_rejects_tag_that_omits_post_bump_review_fixes",
+      "status": "carried",
+      "owner": "U14",
+      "jsTests": [
+        {
+          "file": "tests/integration/release.test.ts",
+          "title": "validation refuses a feature tag after merge, with review changes=%s"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_release.py",
+      "sourceTest": "test_finalize_tags_reviewed_merge_and_preserves_future_main_changes",
+      "status": "carried",
+      "owner": "U14",
+      "jsTests": [
+        {
+          "file": "tests/integration/release.test.ts",
+          "title": "is annotated, sits on the merge commit, and is judged by the repository alone"
+        },
+        {
+          "file": "tests/unit/release.test.ts",
+          "title": "the reviewed merge at the head of the current main gets an annotated tag"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_release.py",
+      "sourceTest": "test_finalize_rejects_unreviewed_or_ambiguous_state",
+      "status": "carried",
+      "owner": "U14",
+      "jsTests": [
+        {
+          "file": "tests/unit/release.test.ts",
+          "title": "%s creates no tag"
+        },
+        {
+          "file": "tests/integration/release.test.ts",
+          "title": "validation refuses an annotated tag on an ordinary main commit"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_release.py",
+      "sourceTest": "test_historical_branch_tag_with_identical_reviewed_tree_stays_valid",
+      "status": "carried",
+      "owner": "U14",
+      "jsTests": [
+        {
+          "file": "tests/unit/release.test.ts",
+          "title": "a feature commit is not the reviewed merge even when their trees match"
+        },
+        {
+          "file": "tests/unit/release.test.ts",
+          "title": "an old release stays valid after main moves on, because only its own reachability is judged"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_release.py",
+      "sourceTest": "test_make_release_tag_finalizes_reviewed_merge",
+      "status": "adapted",
+      "owner": "U14",
+      "jsTests": [
+        {
+          "file": "tests/unit/release.test.ts",
+          "title": "the reviewed merge at the head of the current main gets an annotated tag"
+        },
+        {
+          "file": "tests/integration/release.test.ts",
+          "title": "release:tag takes no argument and release:validate only --tag and --notes"
+        }
+      ],
+      "note": "make release-tag is replaced by pnpm run release:tag, which takes no argument and tags the reviewed merge at the head of main; the tests drive the command module rather than Make."
+    },
+    {
+      "sourceFile": "tests/test_release.py",
+      "sourceTest": "test_configured_changelog_boundary_overrides_copier_default",
+      "status": "adapted",
+      "owner": "U14",
+      "jsTests": [
+        {
+          "file": "tests/unit/release.test.ts",
+          "title": "the baselines of every state and the enrollment itself are outside the application's history"
+        },
+        {
+          "file": "tests/integration/release-lineage.test.ts",
+          "title": "leaves out snapshots and template history and keeps merged feature commits"
+        }
+      ],
+      "note": "The changelog_start_rev setting that overrode the Copier default is not carried: the boundary is derived from the template state's baselines and enrollment, and no configurable override exists."
+    },
+    {
+      "sourceFile": "tests/test_release.py",
+      "sourceTest": "test_bump_commits_only_tracked_own_repository_install_pins",
+      "status": "not-carried",
+      "owner": "U14",
+      "note": "The bump rewrites uv add git+ install pins in tracked documentation to the new tag; the JavaScript bump changes only package.json and CHANGELOG.md and has no documentation pin rewrite, so there is no behavior to carry."
+    },
+    {
+      "sourceFile": "tests/test_release_workflow.py",
+      "sourceTest": "test_github_release_step_is_idempotent_and_treats_notes_as_data",
+      "status": "adapted",
+      "owner": "U15",
+      "jsTests": [
+        {
+          "file": "tests/contracts/workflows.test.ts",
+          "title": "publication is a separate job that needs validation, runs only from a manual start on the default branch, and takes the notes as a file"
+        }
+      ],
+      "note": "The workflow test asserts that publication creates the release from the notes file with --verify-tag and literal environment values; the idempotent gh release view check and the shell-injection execution of the step are not carried."
+    },
+    {
+      "sourceFile": "tests/test_release_workflow.py",
+      "sourceTest": "test_release_validation_uses_main_without_publication_permissions",
+      "status": "adapted",
+      "owner": "U15",
+      "jsTests": [
+        {
+          "file": "tests/contracts/workflows.test.ts",
+          "title": "a tag push validates read-only with the code of the default branch, never the tag's"
+        },
+        {
+          "file": "tests/contracts/workflows.test.ts",
+          "title": "publication is a separate job that needs validation, runs only from a manual start on the default branch, and takes the notes as a file"
+        },
+        {
+          "file": "tests/contracts/workflows.test.ts",
+          "title": "permissions are closed at the top and explicit in every job; write exists only to initialize and to publish"
+        }
+      ],
+      "note": "Validation checks out the default branch (not a hardcoded main) with full history and read-only permissions, and publication is a separate write job that needs validation; the structure is asserted on workflow text instead of parsed YAML."
+    }
+  ]
+}
