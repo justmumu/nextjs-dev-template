@@ -31,7 +31,18 @@ const SHELL_TOOLS = new Set(["Bash", "PowerShell", "Monitor", "shell", "local_sh
 const EDIT_TOOLS = new Set(["Edit", "Write", "MultiEdit", "NotebookEdit"]);
 const HISTORY_COMMANDS = new Set(["switch", "checkout", "pull", "merge", "rebase", "reset", "restore", "stash", "cherry-pick"]);
 const STATE_DIR_NAME = "protected-baseline";
-const GUARD_FILES = ["entry.cjs", "guard.cjs", "policy.cjs", "state.cjs", "repo.cjs", "launch.sh", "recover-lock.cjs", "install.cjs"];
+const GUARD_FILES = [
+  "entry.cjs",
+  "guard.cjs",
+  "policy.cjs",
+  "state.cjs",
+  "repo.cjs",
+  "completion.cjs",
+  "mutex.cjs",
+  "launch.sh",
+  "recover-lock.cjs",
+  "install.cjs",
+];
 const SHELL_EXPANSION = /[`$\n\r{}]/;
 const OPERATOR_CHARS = new Set([";", "&", "|", "<", ">", "(", ")"]);
 const HEREDOC = /(<<-?\s*(['"]?)(\w+)\2[^\n]*)\n[\s\S]*?^\t*\3[ \t]*$/gm;

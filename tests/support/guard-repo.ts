@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { memoryFs } from "./memory-fs.ts";
 
 const require = createRequire(import.meta.url);
 type Guard = typeof import("../../scripts/hooks/guard.cjs");
@@ -33,7 +34,7 @@ function idOf(node: Node): string {
  * way the real repository does for the questions the guard asks. Every question is recorded in
  * `calls` where a test needs to know what was touched.
  */
-export function memoryRepo(committed: Record<string, Node>, options: { codex?: Record<string, string> } = {}) {
+export function memoryRepo(committed: Record<string, Node>, options: { codex?: Record<string, string>; codexHome?: string; files?: Repo["files"] } = {}) {
   const worktree = new Map<string, Node>(Object.entries(committed));
   const commits = new Map<string, Map<string, Node>>();
   const commit = (id: string, files: Map<string, Node>) => commits.set(id, new Map(files));
@@ -140,6 +141,8 @@ export function memoryRepo(committed: Record<string, Node>, options: { codex?: R
     },
     realpath: (absolute) => links.get(absolute) ?? absolute,
     userHome: "/home",
+    codexHome: options.codexHome ?? "/home/.codex",
+    files: options.files ?? memoryFs(),
     readText: (absolute) => texts.get(absolute) ?? null,
     writeText(absolute, text) {
       texts.set(absolute, text);

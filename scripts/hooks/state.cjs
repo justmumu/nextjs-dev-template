@@ -6,33 +6,36 @@
 // foreign result cannot approve a change that is waiting.
 const fs = require("node:fs");
 const { execFileSync } = require("node:child_process");
+const os = require("node:os");
 const nodePath = require("node:path");
 const { isObject } = require("../core/json.cjs");
+const completion = require("./completion.cjs");
+const { GuardError, STATE_NAME, withLock, writeAtomic } = require("./mutex.cjs");
 const { STATE_DIR_NAME } = require("./policy.cjs");
 
 const STATE_VERSION = 2;
 const BINDING_NAME = "protected-baseline-node";
 const MAX_STATE_BYTES = 16 * 1024 * 1024;
 const MAX_ID_LENGTH = 256;
-const LOCK_WAIT_MS = 10_000;
-// The dependency commands ask for this status from inside the very call that reserved them.
+// The dependency commands ask for this status from inside the very call that reserved them. Nothing in
+// the reservation or the process binds the asker to that call, so a single exclusive reservation of a
+// dependency route is taken to be the asker: the guard admits only one exclusive call at a time and
+// refuses every other dependency call while it exists. Limitation: a dependency command started
+// outside the guard (a terminal) while a dead call's dependency reservation is still stored is
+// treated the same way; only a transcript that shows that call finished (settled first) or a second
+// reservation makes the status unclean. The route name is never completion evidence.
 const SELF_CHECKING_ROUTES = ["deps-add", "deps-remove", "deps-upgrade", "deps-lock"];
 const OPERATION_MARKERS = ["MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "REBASE_HEAD", "rebase-merge", "rebase-apply"];
-
-class GuardError extends Error {
-  /** @param {string} message */
-  constructor(message) {
-    super(message);
-    this.name = "GuardError";
-  }
-}
 
 /**
  * @typedef {import("./policy.cjs").Allowance} Allowance
  * @typedef {{
  *   client: string, session: string | null, turn: string | null, digest: string, exclusive: boolean, route: string | null,
  *   completion: "result", allowances: { success: Allowance, failure: Allowance },
- * }} Reservation a call that was admitted and has not been settled; `completion` names the evidence that settles it
+ *   shell?: boolean, transcript?: string | null, rolloutRequired?: boolean,
+ *   rolloutReader?: { identity: [string, string] | null, offset: number, discarding: boolean },
+ * }} Reservation a call that was admitted and has not been settled; `completion` names the evidence that settles it,
+ * and the optional fields are what a Codex shell call needs to be matched with its own transcript
  * @typedef {{
  *   version: number,
  *   policy: string,
@@ -92,7 +95,7 @@ function parseState(text) {
 
 /** @param {string} dir the state directory @param {Disk} [disk] @returns {State | null} null before the first baseline */
 function readState(dir, disk = fs) {
-  const path = nodePath.join(dir, "state.json");
+  const path = nodePath.join(dir, STATE_NAME);
   let stat;
   try {
     stat = disk.statSync(path);
@@ -106,55 +109,7 @@ function readState(dir, disk = fs) {
 
 /** Writes the baseline atomically: a reader sees the old state or the new one, never a torn file. @param {string} dir @param {State} state @param {Disk} [disk] */
 function writeState(dir, state, disk = fs) {
-  disk.mkdirSync(dir, { recursive: true, mode: 0o700 });
-  const path = nodePath.join(dir, "state.json");
-  const temporary = `${path}.${process.pid}.tmp`;
-  const handle = disk.openSync(temporary, "w", 0o600);
-  try {
-    disk.writeFileSync(handle, JSON.stringify(state, null, 1));
-    disk.fsyncSync(handle);
-  } finally {
-    disk.closeSync(handle);
-  }
-  disk.renameSync(temporary, path);
-}
-
-/** @param {number} ms */
-function pause(ms) {
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
-}
-
-/**
- * Serializes hook runs for one worktree. The lock is never reclaimed by age; one that cannot be
- * taken in time is reported as busy, and an abandoned one is removed only by offline recovery.
- * @template T
- * @param {string} dir @param {() => T} action @param {number} [waitMs] @param {Disk} [disk]
- * @returns {T}
- */
-function withLock(dir, action, waitMs = LOCK_WAIT_MS, disk = fs) {
-  disk.mkdirSync(dir, { recursive: true, mode: 0o700 });
-  const path = nodePath.join(dir, "lock");
-  const token = `${process.pid}:${Date.now()}:${Math.random()}`;
-  const until = Date.now() + waitMs;
-  for (;;) {
-    try {
-      disk.writeFileSync(path, token, { flag: "wx", mode: 0o600 });
-      break;
-    } catch (error) {
-      if (/** @type {NodeJS.ErrnoException} */ (error).code !== "EEXIST") throw error;
-      if (Date.now() >= until) throw new GuardError("another guard run holds the state lock; retry after it finishes");
-      pause(25);
-    }
-  }
-  try {
-    return action();
-  } finally {
-    try {
-      if (disk.readFileSync(path, "utf8") === token) disk.unlinkSync(path);
-    } catch {
-      // releasing is best effort
-    }
-  }
+  writeAtomic(dir, STATE_NAME, JSON.stringify(state, null, 1), disk);
 }
 
 /** @param {string} dir @param {string} id @param {Buffer} content @param {Disk} [disk] keeps a copy of approved content so it can be restored */
@@ -212,6 +167,18 @@ function reserve(state, id, reservation) {
 }
 
 /**
+ * @param {State} state @param {ReturnType<typeof identityOf>} identity @param {string} digest
+ * @returns {Reservation | string} the reservation this very call holds, or why it holds none
+ */
+function owned(state, identity, digest) {
+  const entry = Object.hasOwn(state.inflight, identity.id) ? state.inflight[identity.id] : undefined;
+  if (!entry) return "no reservation for this call";
+  if (entry.client !== identity.client || entry.session !== identity.session || entry.turn !== identity.turn || entry.digest !== digest)
+    return "the result does not belong to the reserved call";
+  return entry;
+}
+
+/**
  * Settles a reservation from a host result. Only the result of the very call that was admitted
  * settles it: another client, session, turn or command leaves the reservation and approves nothing.
  * @param {State} state
@@ -221,10 +188,8 @@ function reserve(state, id, reservation) {
  * @returns {{ settled: true } | { settled: false, reason: string }}
  */
 function settle(state, identity, digest, outcome) {
-  const entry = Object.hasOwn(state.inflight, identity.id) ? state.inflight[identity.id] : undefined;
-  if (!entry) return { settled: false, reason: "no reservation for this call" };
-  if (entry.client !== identity.client || entry.session !== identity.session || entry.turn !== identity.turn || entry.digest !== digest)
-    return { settled: false, reason: "the result does not belong to the reserved call" };
+  const entry = owned(state, identity, digest);
+  if (typeof entry === "string") return { settled: false, reason: entry };
   Reflect.deleteProperty(state.inflight, identity.id);
   state.window.push(entry.allowances[outcome]);
   state.needsEvaluation = true;
@@ -257,12 +222,15 @@ function locateGit(cwd) {
   return { root: fs.realpathSync(root), gitDir, commonDir };
 }
 
+/** @returns {string} where the host keeps its transcripts on this machine */
+const codexHomeOf = () => process.env.CODEX_HOME || nodePath.join(os.homedir(), ".codex");
+
 /**
  * The answer the dependency transaction asks for before it changes anything: only an explicit
  * `clean: true` lets it proceed. A missing baseline, a pending reservation, a held conflict or
  * environment drift are not clean, and neither is anything that cannot be read.
  * @param {string} root
- * @param {{ gitDir?: string, disk?: Disk }} [options]
+ * @param {{ gitDir?: string, disk?: Disk, codexHome?: string }} [options]
  * @returns {{ clean: boolean, reason?: string }}
  */
 function status(root, options = {}) {
@@ -272,6 +240,8 @@ function status(root, options = {}) {
     const state = readState(nodePath.join(gitDir, STATE_DIR_NAME), disk);
     if (state === null)
       return { clean: false, reason: "the guard has no approved baseline yet; commit the project, then run node scripts/bootstrap.cjs guard-accept" };
+    // A call its own transcript shows as finished is no longer the one asking, whatever its route says.
+    completion.liveCalls(state, { codexHome: options.codexHome ?? codexHomeOf(), files: disk });
     const reserved = Object.values(state.inflight);
     const own = reserved.length === 1 && SELF_CHECKING_ROUTES.includes(reserved[0]?.route ?? "");
     const pending = own ? [] : Object.keys(state.inflight);
@@ -313,10 +283,13 @@ module.exports = {
   MAX_STATE_BYTES,
   STATE_DIR_NAME,
   STATE_VERSION,
+  STATE_NAME,
   bindNode,
+  codexHomeOf,
   identityOf,
   liveCalls,
   locateGit,
+  owned,
   operationInProgress,
   parseState,
   pruneBlobs,

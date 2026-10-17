@@ -2,7 +2,7 @@ type StateModule = typeof import("../../scripts/hooks/state.cjs");
 
 export type Disk = NonNullable<Parameters<StateModule["readState"]>[1]>;
 
-type Stored = { kind: "file"; content: Buffer; mode: number; mtimeMs: number } | { kind: "symlink"; target: string };
+type Stored = { kind: "file"; content: Buffer; mode: number; mtimeMs: number; ino: number } | { kind: "symlink"; target: string };
 
 const failure = (code: string, path: string) => Object.assign(new Error(`${code}: ${path}`), { code });
 const parentOf = (path: string) => path.slice(0, Math.max(path.lastIndexOf("/"), 0)) || "/";
@@ -20,14 +20,15 @@ export function memoryFs(nodes: Record<string, string | { content: string; mode:
   const addDirs = (path: string) => {
     for (let dir = parentOf(path); !dirs.has(dir); dir = parentOf(dir)) dirs.add(dir);
   };
+  let nextInode = 1;
   const put = (path: string, stored: Stored) => {
     addDirs(path);
     entries.set(path, stored);
   };
   for (const [path, node] of Object.entries(nodes)) {
-    if (typeof node === "string") put(path, { kind: "file", content: Buffer.from(node), mode: 0o100644, mtimeMs: 1000 });
+    if (typeof node === "string") put(path, { kind: "file", content: Buffer.from(node), mode: 0o100644, mtimeMs: 1000, ino: nextInode++ });
     else if ("link" in node) put(path, { kind: "symlink", target: node.link });
-    else put(path, { kind: "file", content: Buffer.from(node.content), mode: node.mode, mtimeMs: node.mtimeMs ?? 1000 });
+    else put(path, { kind: "file", content: Buffer.from(node.content), mode: node.mode, mtimeMs: node.mtimeMs ?? 1000, ino: nextInode++ });
   }
   const kindOf = (path: string) => entries.get(path) ?? (dirs.has(path) ? ("dir" as const) : undefined);
   const stat = (path: string) => {
@@ -95,12 +96,42 @@ export function memoryFs(nodes: Record<string, string | { content: string; mode:
       const target = typeof path === "number" ? (open.get(path) ?? "") : path;
       if (options?.flag === "wx" && kindOf(target) !== undefined) throw failure("EEXIST", target);
       operations.push(`write ${target}`);
-      put(target, { kind: "file", content: Buffer.from(data), mode: 0o100000 | (options?.mode ?? 0o644), mtimeMs: operations.length });
+      const existing = entries.get(target);
+      const ino = existing?.kind === "file" ? existing.ino : nextInode++;
+      put(target, { kind: "file", content: Buffer.from(data), mode: 0o100000 | (options?.mode ?? 0o644), mtimeMs: operations.length, ino });
     },
-    openSync: (path: string) => {
+    appendFileSync: (path: string, data: string | Buffer) => {
+      const existing = entries.get(path);
+      const before = existing?.kind === "file" ? existing : undefined;
+      operations.push(`append ${path}`);
+      put(path, {
+        kind: "file",
+        content: Buffer.concat([before?.content ?? Buffer.alloc(0), Buffer.from(data)]),
+        mode: before?.mode ?? 0o100644,
+        mtimeMs: operations.length,
+        ino: before?.ino ?? nextInode++,
+      });
+    },
+    // A read-only open (a numeric flag) needs the entry to exist, as it does on disk; a write open
+    // ("w") names a file the write is about to create.
+    openSync: (path: string, flags?: string | number) => {
+      if (typeof flags === "number" && kindOf(resolveLinks(path)) === undefined) throw failure("ENOENT", path);
       const handle = nextHandle++;
       open.set(handle, path);
       return handle;
+    },
+    fstatSync: (handle: number, options?: { bigint: true }) => {
+      const found = stat(resolveLinks(open.get(handle) ?? ""));
+      const node = entries.get(resolveLinks(open.get(handle) ?? ""));
+      const inode = node?.kind === "file" ? node.ino : 0;
+      const size = options?.bigint ? BigInt(found.size) : found.size;
+      return Object.assign(found, options?.bigint ? { dev: 1n, ino: BigInt(inode), size } : { dev: 1, ino: inode, size });
+    },
+    readSync: (handle: number, buffer: Buffer, offset: number, length: number, position: number) => {
+      const content = file(resolveLinks(open.get(handle) ?? "")).content;
+      const copied = content.subarray(position, position + length);
+      copied.copy(buffer, offset);
+      return copied.length;
     },
     fsyncSync: () => undefined,
     closeSync: (handle: number) => {

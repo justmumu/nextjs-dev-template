@@ -62,50 +62,86 @@
     {
       "sourceFile": "tests/test_guard.py",
       "sourceTest": "test_codex_spawn_failure_releases_reservation",
-      "status": "pending",
+      "status": "carried",
       "owner": "U7",
-      "note": "Releasing a reservation from host completion evidence (a failed spawn) belongs to completion; U6 reservations are settled only by a matching result."
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a spawn failure closes only its own call"
+        },
+        {
+          "file": "tests/unit/guard/completion-engine.test.ts",
+          "title": "a call that never started a process leaves an unrelated write stranded no longer"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_guard.py",
       "sourceTest": "test_nested_completion_controls_next_commit_admission",
-      "status": "pending",
+      "status": "carried",
       "owner": "U7",
-      "note": "Nested completion ancestry is U7."
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion-engine.test.ts",
+          "title": "a nested completion controls the admission of the next commit"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_guard.py",
       "sourceTest": "test_saved_nested_call_recovers_when_parent_arrives",
-      "status": "pending",
+      "status": "carried",
       "owner": "U7",
-      "note": "Nested completion ancestry is U7."
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion-engine.test.ts",
+          "title": "a saved nested call recovers when its parent arrives"
+        },
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a missing parent can appear without losing the completion"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_guard.py",
       "sourceTest": "test_nested_recovery_restores_unauthorized_protected_write",
-      "status": "pending",
+      "status": "carried",
       "owner": "U7",
-      "note": "Nested completion ancestry is U7."
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion-engine.test.ts",
+          "title": "a nested recovery restores an unauthorized protected write"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_guard.py",
       "sourceTest": "test_codex_yielded_post_keeps_reservation",
-      "status": "pending",
+      "status": "carried",
       "owner": "U7",
-      "note": "A yielded Codex post is not completion; transcript evidence is U7. U6 settles a reservation on the matching result only."
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion-engine.test.ts",
+          "title": "a yielded result settles nothing; the call's terminal record applies the recorded allowance once"
+        },
+        {
+          "file": "tests/integration/guard-completion.test.ts",
+          "title": "a yielded result keeps the call reserved; its terminal record, not a later duplicate, settles it"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_guard.py",
       "sourceTest": "test_recovered_call_still_restores_protected_write",
-      "status": "pending",
+      "status": "carried",
       "owner": "U7",
       "jsTests": [
         {
-          "file": "tests/unit/guard/engine.test.ts",
-          "title": "a redirect into a protected file is restored and explained"
+          "file": "tests/unit/guard/completion-engine.test.ts",
+          "title": "a call that never started is restored at the stop, and the pre-commit check keeps that evaluation for it"
         }
-      ],
-      "note": "Recovery from completion evidence is U7; the restore itself is proven by the carried write tests."
+      ]
     },
     {
       "sourceFile": "tests/test_guard.py",
@@ -130,45 +166,45 @@
     {
       "sourceFile": "tests/test_guard.py",
       "sourceTest": "test_rollout_failure_grants_make_allowance_only_after_execution",
-      "status": "pending",
+      "status": "adapted",
       "owner": "U7",
       "jsTests": [
         {
-          "file": "tests/unit/guard/policy.test.ts",
-          "title": "a failed call changes nothing in the environment and accepts nothing"
+          "file": "tests/unit/guard/completion-engine.test.ts",
+          "title": "a failed command's partial output is accepted only if the process ran"
         }
       ],
-      "note": "Outcome from the rollout is U7; U6 grants a failure allowance with no file scope."
+      "note": "The command is the dependency route (pnpm run deps:add), whose recorded failure allowance keeps the dependency scope; the process that ran is told from the one that never started by the terminal record."
     },
     {
       "sourceFile": "tests/test_guard.py",
       "sourceTest": "test_rollout_accept_requires_success",
-      "status": "pending",
+      "status": "adapted",
       "owner": "U7",
       "jsTests": [
         {
-          "file": "tests/unit/guard/policy.test.ts",
-          "title": "a failed call changes nothing in the environment and accepts nothing"
+          "file": "tests/unit/guard/completion-engine.test.ts",
+          "title": "the acceptance is recorded only for a successful command"
         }
       ],
-      "note": "Outcome from the rollout is U7; U6 never accepts on a failed call."
+      "note": "In the Node port the acceptance is the accept event the guard-accept command runs itself; a failed command did not run it, so the drift is restored. The proof drives that event."
     },
     {
       "sourceFile": "tests/test_guard.py",
       "sourceTest": "test_rollout_failed_reinstall_does_not_accept_venv",
-      "status": "pending",
+      "status": "adapted",
       "owner": "U7",
       "jsTests": [
         {
-          "file": "tests/unit/guard/engine.test.ts",
-          "title": "a dependency change that touches the environment is accepted on success only"
+          "file": "tests/unit/guard/completion-engine.test.ts",
+          "title": "a failed reinstall does not accept the environment it left"
         },
         {
-          "file": "tests/unit/guard/engine.test.ts",
-          "title": "a failed repair leaves the environment blocked"
+          "file": "tests/integration/guard-completion.test.ts",
+          "title": "a command whose terminal record is a failure is not given the environment change it made"
         }
       ],
-      "note": "Outcome from the rollout is U7; U6 does not accept an environment change from a failed call."
+      "note": "The reinstall is node scripts/bootstrap.cjs repair and the environment is node_modules; a failed terminal record leaves the environment blocked."
     },
     {
       "sourceFile": "tests/test_guard.py",
@@ -193,22 +229,30 @@
     {
       "sourceFile": "tests/test_guard.py",
       "sourceTest": "test_omitted_history_mode_preserves_normal_post_hook",
-      "status": "pending",
+      "status": "carried",
       "owner": "U7",
-      "note": "The Codex history mode is completion evidence handling."
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion-engine.test.ts",
+          "title": "a transcript without a history mode keeps the ordinary post hook"
+        },
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a missing history mode uses the legacy results"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_guard.py",
       "sourceTest": "test_pre_commit_preserves_recovered_evaluation_for_stop",
-      "status": "pending",
+      "status": "carried",
       "owner": "U7",
       "jsTests": [
         {
-          "file": "tests/unit/guard/engine.test.ts",
-          "title": "finished calls whose result never arrived are judged at the next call or stop"
+          "file": "tests/unit/guard/completion-engine.test.ts",
+          "title": "a call that never started is restored at the stop, and the pre-commit check keeps that evaluation for it"
         }
-      ],
-      "note": "Recovered evaluations come from completion evidence."
+      ]
     },
     {
       "sourceFile": "tests/test_guard.py",
@@ -416,15 +460,14 @@
     {
       "sourceFile": "tests/test_guard.py",
       "sourceTest": "test_pre_admission_blocks_unapproved_head_after_completion",
-      "status": "pending",
+      "status": "carried",
       "owner": "U7",
       "jsTests": [
         {
-          "file": "tests/unit/guard/engine.test.ts",
-          "title": "a head that moved outside any call is judged by the next call"
+          "file": "tests/unit/guard/completion-engine.test.ts",
+          "title": "it blocks the next call after an unknown or a duplicate result"
         }
-      ],
-      "note": "The unknown/duplicate completion variants are U7; the head check itself is carried."
+      ]
     },
     {
       "sourceFile": "tests/test_guard.py",
@@ -647,14 +690,19 @@
     {
       "sourceFile": "tests/test_guard.py",
       "sourceTest": "test_parallel_calls_defer_the_check_to_the_last_one",
-      "status": "carried",
-      "owner": "U6",
+      "status": "adapted",
+      "owner": "U7",
       "jsTests": [
         {
           "file": "tests/unit/guard/engine.test.ts",
-          "title": "parallel calls defer the check to the last one"
+          "title": "a long-running ordinary call, such as a development server, does not defer the check of another call (R19)"
+        },
+        {
+          "file": "tests/integration/guard-concurrency.test.ts",
+          "title": "it neither defers the judgement of another call's protected write nor lets a protected write through"
         }
-      ]
+      ],
+      "note": "Only a call that may change protected files defers the check to the last call. A long-running ordinary call, such as a development server, does not (R19), so a protected write by another ordinary call is judged when it reports."
     },
     {
       "sourceFile": "tests/test_guard.py",
@@ -671,15 +719,14 @@
     {
       "sourceFile": "tests/test_guard.py",
       "sourceTest": "test_denied_call_does_not_keep_others_waiting",
-      "status": "pending",
+      "status": "carried",
       "owner": "U7",
       "jsTests": [
         {
-          "file": "tests/unit/guard/engine.test.ts",
-          "title": "a reservation never expires by age, so an abandoned call keeps the state unclean until it is settled"
+          "file": "tests/unit/guard/completion-engine.test.ts",
+          "title": "its own result in the transcript stops it keeping others waiting"
         }
-      ],
-      "note": "A denied permission produces no result; settling it needs transcript evidence (U7). Until then U6 reports it as an unfinished call."
+      ]
     },
     {
       "sourceFile": "tests/test_guard.py",
@@ -840,9 +887,15 @@
     {
       "sourceFile": "tests/test_guard.py",
       "sourceTest": "test_denied_call_does_not_strand_a_parallel_write",
-      "status": "pending",
+      "status": "adapted",
       "owner": "U7",
-      "note": "Needs completion evidence for the denied call."
+      "note": "A denied ordinary call no longer defers the check (R19), so the parallel write is restored when the writer reports rather than at the next call; the end state is the same.",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion-engine.test.ts",
+          "title": "it does not strand a parallel write"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_guard.py",
@@ -878,10 +931,558 @@
     },
     {
       "sourceFile": "tests/test_guard_completion.py",
-      "sourceTest": "(the whole completion corpus)",
-      "status": "pending",
+      "sourceTest": "test_nested_completion_preserves_leaf_identity",
+      "status": "carried",
       "owner": "U7",
-      "note": "Rollout and transcript completion, nested ancestry, lock recovery and yielded Codex sessions are U7. U6 exposes ownership-aware reservations (completion: \"result\") and no age expiry, and claims none of them."
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a nested completion keeps the leaf call's identity at depth"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_old_nested_reservation_recovers_without_reader_fields",
+      "status": "adapted",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a reservation saved without reader fields recovers, and age is not what recovers it"
+        }
+      ],
+      "note": "The reservation recovers from the transcript alone; the legacy hour-based age is deliberately not part of the case (KTD16, KTD17)."
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_nested_parent_can_be_archived",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a nested parent can be archived"
+        },
+        {
+          "file": "tests/integration/guard-completion.test.ts",
+          "title": "a parent that is archived, and one that is deleted and comes back"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_unverified_nested_ancestry_stays_pending",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "unverified nested ancestry stays pending"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_nested_ancestry_requires_valid_first_header",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "nested ancestry requires a valid first header"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_conflicting_duplicate_parent_cannot_prove_ancestry",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a conflicting duplicate parent cannot prove ancestry"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_invalid_duplicate_parent_is_not_ignored",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "an invalid duplicate parent is not ignored"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_missing_parent_can_appear_without_losing_completion",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a missing parent can appear without losing the completion"
+        },
+        {
+          "file": "tests/integration/guard-completion.test.ts",
+          "title": "a parent that is archived, and one that is deleted and comes back"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_changed_ancestor_invalidates_previous_binding",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a changed ancestor invalidates the previous binding"
+        },
+        {
+          "file": "tests/integration/guard-completion.test.ts",
+          "title": "a parent header replaced by another's invalidates the binding until it is valid again"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_parent_discovery_does_not_follow_links_outside_store",
+      "status": "adapted",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/integration/guard-completion.test.ts",
+          "title": "a parent that is a link to a file outside the store proves nothing"
+        },
+        {
+          "file": "tests/integration/guard-completion.test.ts",
+          "title": "a parent below a linked directory proves nothing, and the linked directory is not read"
+        },
+        {
+          "file": "tests/integration/guard-completion.test.ts",
+          "title": "a linked store is refused"
+        }
+      ],
+      "note": "The directory walk lists entries without following links (Dirent), so the proof is that a parent reachable only through a link stays unproven rather than a spy on the directory reader."
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_unreadable_parent_does_not_prove_ancestry",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "an unreadable parent does not prove ancestry"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_nested_terminal_must_match_leaf_call",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a nested terminal must match the leaf call"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_nested_ancestry_does_not_relax_terminal_evidence",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "nested ancestry does not relax terminal evidence"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_nested_completion_keeps_outcome_allowance_once",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a nested completion keeps its outcome allowance once"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_nested_admission_skips_prior_results_but_not_future_completion",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "nested admission skips the results before it but not a future completion"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_nested_calls_share_discovery_without_reading_unrelated_bodies",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "nested calls share one discovery and read no unrelated transcript body"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_spawn_failure_closes_only_its_call",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a spawn failure closes only its own call"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_new_call_skips_history_before_admission",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a new call skips the history before its admission"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_admission_does_not_skip_an_incomplete_record",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "admission does not skip an incomplete record"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_process_completion_grants_existing_outcome_once",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "process completion grants the existing outcome allowance once"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_yielded_output_and_age_do_not_prove_process_completion",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "yielded output and age do not prove process completion"
+        },
+        {
+          "file": "tests/unit/guard/completion-engine.test.ts",
+          "title": "a yielded result settles nothing; the call's terminal record applies the recorded allowance once"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_other_identity_cannot_close_call",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "another identity cannot close the call"
+        },
+        {
+          "file": "tests/unit/guard/completion-engine.test.ts",
+          "title": "a late record of another call approves nothing"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_unrecognized_or_inconsistent_result_stays_pending",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "an unrecognized or inconsistent result stays pending"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_partial_last_line_is_retried",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a partial last line is retried"
+        },
+        {
+          "file": "tests/integration/guard-completion.test.ts",
+          "title": "a partial last line is retried once"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_missing_rollout_does_not_undo_observed_pending_state",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a missing transcript keeps the call pending, however long it has been"
+        },
+        {
+          "file": "tests/integration/guard-completion.test.ts",
+          "title": "a transcript deleted after the call was observed pending keeps it pending"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_duplicate_records_do_not_duplicate_allowance",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "duplicate records do not duplicate the allowance"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_large_rollout_advances_without_losing_completion",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a large transcript advances without losing the completion"
+        },
+        {
+          "file": "tests/integration/guard-completion.test.ts",
+          "title": "a large transcript is read on over several scans"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_oversized_unrelated_record_does_not_hide_completion",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "an oversized unrelated record does not hide the completion"
+        },
+        {
+          "file": "tests/integration/guard-completion.test.ts",
+          "title": "an oversized unrelated record does not hide the terminal record"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_oversized_terminal_is_not_completion_evidence",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "an oversized terminal record is not completion evidence"
+        },
+        {
+          "file": "tests/integration/guard-completion.test.ts",
+          "title": "an oversized unrelated record does not hide the terminal record"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_replaced_rollout_revalidates_identity",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a replaced transcript revalidates its identity"
+        },
+        {
+          "file": "tests/integration/guard-completion.test.ts",
+          "title": "a transcript replaced by another session's is revalidated, and a replacement that fits restarts at its header"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_replaced_rollout_restarts_at_matching_session_header",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a replaced transcript restarts at its matching session header"
+        },
+        {
+          "file": "tests/integration/guard-completion.test.ts",
+          "title": "a transcript replaced by another session's is revalidated, and a replacement that fits restarts at its header"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_truncated_rollout_restarts_reader",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a truncated transcript restarts the reader"
+        },
+        {
+          "file": "tests/integration/guard-completion.test.ts",
+          "title": "a transcript truncated in place"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_child_transcript_must_belong_to_hook_session",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a child transcript must belong to the hook session"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_malformed_record_is_not_completion_evidence",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a malformed record is not completion evidence"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_legacy_expiry_is_unchanged",
+      "status": "not-carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a reservation is never completed by its age"
+        }
+      ],
+      "note": "Deliberate Node-port difference (KTD16, KTD17): a reservation is never completed or reclaimed by age; the replacement proof is that an old reservation with no evidence stays reserved."
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_legacy_transcript_result_is_still_supported",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a legacy transcript result still finishes the call"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_missing_history_mode_uses_legacy_results",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a missing history mode uses the legacy results"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_unrecognized_history_mode_stays_pending",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "an unrecognized history mode stays pending"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_non_shell_tool_keeps_existing_completion_path",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "a non-shell tool keeps the existing completion path"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_intercepted_patch_finishes_without_shell_allowance",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "an intercepted patch finishes the call without a shell allowance"
+        }
+      ]
+    },
+    {
+      "sourceFile": "tests/test_guard_completion.py",
+      "sourceTest": "test_replayed_parent_metadata_does_not_replace_child_identity",
+      "status": "carried",
+      "owner": "U7",
+      "jsTests": [
+        {
+          "file": "tests/unit/guard/completion.test.ts",
+          "title": "replayed parent metadata does not replace the child identity"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",

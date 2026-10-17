@@ -569,18 +569,28 @@ describe("history, branches and the first run", () => {
 });
 
 describe("calls, identity and reservations (AE5, R17)", () => {
-  test("parallel calls defer the check to the last one", () => {
+  test("a long-running ordinary call, such as a development server, does not defer the check of another call (R19)", () => {
     const machine = approvedProject();
     const context = machine.context();
-    const first = shell("sleep 1", "first");
+    const server = shell("pnpm run dev", "server");
     const second = shell("echo x >> AGENTS.md", "second");
-    expect(guard.preTool(context, first)).toEqual({});
+    expect(guard.preTool(context, server)).toEqual({});
     expect(guard.preTool(context, second)).toEqual({});
     machine.worktree.set("AGENTS.md", "x\n");
-    expect(guard.postTool(context, second, false)).toEqual({});
-    expect(text(machine, "AGENTS.md")).toBe("x\n");
-    expect(guard.postTool(context, first, false).decision).toBe("block");
+    expect(guard.postTool(context, second, false).decision).toBe("block");
     expect(text(machine, "AGENTS.md")).toBe("# Rules\n");
+    expect(Object.keys(machine.state()?.inflight ?? {})).toEqual(["server"]);
+    expect(machine.state()?.window).toEqual([]);
+  });
+
+  test("a development server grants no allowance and does not hide a later drift from the next call or the stop", () => {
+    const machine = approvedProject();
+    const context = machine.context();
+    expect(guard.preTool(context, shell("pnpm run dev", "server"))).toEqual({});
+    machine.worktree.set("AGENTS.md", "# Edited\n");
+    expect(denial(guard.preTool(context, shell("true", "next")))).toMatch(/outside an agent call/);
+    expect(reason(guard.stop(context, {}))).toMatch(/outside an agent call/);
+    expect(denial(guard.preTool(context, shell("pnpm run format", "fmt")))).toMatch(/Another call/);
   });
 
   test("a call that can change protected files runs alone, and nothing runs beside it", () => {
@@ -800,10 +810,10 @@ describe("the end of a turn", () => {
     expect(guard.stop(machine.context(), { stop_hook_active: true }).systemMessage).toMatch(/AGENTS\.md/);
   });
 
-  test("a stop with live calls or no baseline reports nothing", () => {
+  test("a stop with a live call that may change protected files, or no baseline, reports nothing", () => {
     expect(guard.stop(memoryRepo(base()).context(), {})).toEqual({});
     const machine = approvedProject();
-    guard.preTool(machine.context(), shell("true", "running"));
+    guard.preTool(machine.context(), shell("pnpm run format", "running"));
     machine.worktree.set("AGENTS.md", "# Edited\n");
     expect(guard.stop(machine.context(), {})).toEqual({});
   });

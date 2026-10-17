@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const nodePath = require("node:path");
 const { createInventory } = require("../core/protected.cjs");
 const { isObject } = require("../core/json.cjs");
+const completion = require("./completion.cjs");
 const policy = require("./policy.cjs");
 const { openRepo, SYMLINK_PREFIX, contentOf } = require("./repo.cjs");
 const state = require("./state.cjs");
@@ -12,6 +13,7 @@ const state = require("./state.cjs");
 const { GuardError } = state;
 const MAX_INPUT_BYTES = 1024 * 1024;
 const MAX_MESSAGE = 2000;
+const MAX_TRANSCRIPT_PATH = 4096;
 const CLAUDE_GUARD_EVENTS = ["PreToolUse", "PostToolUse", "PostToolUseFailure", "ConfigChange", "Stop"];
 const USER_FILES = ["config.toml", "hooks.json"];
 const HOOKS_OFF = /^\s*(?:codex_)?hooks\s*=\s*false\b/m;
@@ -38,6 +40,12 @@ const BACKGROUND = "Run the project's commands in the foreground, so the guard c
 
 /** @param {unknown} value @returns {string} the value when it is a string, otherwise empty */
 const textOf = (value) => (typeof value === "string" ? value : "");
+
+/** @param {Context} context @returns {completion.Environment} where this machine's host keeps the transcripts that show a call finished */
+const transcripts = (context) => ({ codexHome: context.repo.codexHome, files: context.repo.files });
+
+/** @param {unknown} value @returns {string | null} the transcript path a host named, when it is a usable absolute path */
+const transcriptOf = (value) => (typeof value === "string" && value.length <= MAX_TRANSCRIPT_PATH && nodePath.isAbsolute(value) ? value : null);
 
 /** @param {string} template @param {string} paths @returns {string} */
 const fill = (template, paths) => template.replace("{paths}", paths);
@@ -391,9 +399,14 @@ function preTool(context, payload) {
       if (driftFromHead(context)) return deny(fill(DRIFT, "protected files differ from HEAD on the guard's first run"));
       baseline = snapshot(context, null);
     }
-    const others = state.liveCalls(baseline);
+    const environment = transcripts(context);
+    const ancestry = completion.createAncestry(environment);
+    const others = completion.liveCalls(baseline, environment, ancestry);
     const idle = Object.keys(others).length === 0;
-    if (idle && (baseline.window.length > 0 || baseline.needsEvaluation)) {
+    // Only a call that may change protected files defers judging them: a long-running ordinary call, such
+    // as a development server, is not an exclusive writer and gives no allowance, so it cannot postpone the check.
+    const quiet = completion.exclusiveCalls(others).length === 0;
+    if (quiet && (baseline.window.length > 0 || baseline.needsEvaluation)) {
       // Calls that ended without a result (a denied permission) left changes to judge.
       const problems = evaluate(context, baseline);
       if (problems.length > 0) {
@@ -401,11 +414,11 @@ function preTool(context, payload) {
         return deny(problems.join(" "));
       }
     }
-    if (!idle && (call.exclusive || Object.values(others).some((entry) => entry.exclusive))) {
+    if (!idle && (call.exclusive || !quiet)) {
       context.repo.writeState(baseline);
       return deny(BUSY);
     }
-    if (idle && call.route?.allowance !== "accept") {
+    if (quiet && call.route?.allowance !== "accept") {
       const refusal = preDriftRefusal(context, baseline, call.route?.id ?? null);
       if (refusal) {
         context.repo.writeState(baseline);
@@ -420,6 +433,8 @@ function preTool(context, payload) {
       exclusive: call.exclusive,
       route: call.route?.id ?? null,
       completion: "result",
+      shell: call.shell,
+      transcript: transcriptOf(payload.transcript_path),
       allowances: {
         success: policy.allowanceFor({
           route: call.route,
@@ -439,6 +454,9 @@ function preTool(context, payload) {
         }),
       },
     });
+    // History before the admission is skipped, so only what the call itself does can finish it.
+    const admitted = reserved ? baseline.inflight[identity.id] : undefined;
+    if (admitted) completion.commandCompletion(admitted, identity.id, { environment, ancestry, starting: true });
     context.repo.writeState(baseline);
     return reserved ? {} : deny(BUSY);
   });
@@ -452,12 +470,23 @@ function postTool(context, payload, failed) {
   context.repo.locked(() => {
     const baseline = context.repo.readState();
     if (baseline === null) return;
+    const environment = transcripts(context);
+    const ancestry = completion.createAncestry(environment);
     try {
-      state.settle(baseline, state.identityOf(payload, context.client), call.digest, failed ? "failure" : "success");
+      const identity = state.identityOf(payload, context.client);
+      const entry = state.owned(baseline, identity, call.digest);
+      if (typeof entry !== "string") {
+        // A Codex shell call is finished by its own transcript; its result may only be a yield. Only a call
+        // the transcript cannot govern is settled by the result that names it.
+        const verdict = completion.commandCompletion(entry, identity.id, { environment, ancestry });
+        if (verdict === null) state.settle(baseline, identity, call.digest, failed ? "failure" : "success");
+        else if (verdict !== "pending") completion.finishCall(baseline, identity.id, verdict);
+      }
     } catch (error) {
       if (!(error instanceof GuardError)) throw error;
     }
-    if (Object.keys(state.liveCalls(baseline)).length === 0 && (baseline.window.length > 0 || baseline.needsEvaluation)) problems = evaluate(context, baseline);
+    const live = completion.liveCalls(baseline, environment, ancestry);
+    if (completion.exclusiveCalls(live).length === 0 && (baseline.window.length > 0 || baseline.needsEvaluation)) problems = evaluate(context, baseline);
     context.repo.writeState(baseline);
   });
   if (problems.length === 0) return {};
@@ -472,7 +501,7 @@ function stop(context, payload) {
   context.repo.locked(() => {
     const baseline = context.repo.readState();
     if (baseline === null) return;
-    if (Object.keys(state.liveCalls(baseline)).length === 0) {
+    if (completion.exclusiveCalls(completion.liveCalls(baseline, transcripts(context))).length === 0) {
       if (baseline.window.length > 0 || baseline.needsEvaluation) changed = evaluate(context, baseline);
       const found = drift(context, baseline);
       if (found.length > 0) changed.push(fill(DRIFT, found.join(", ")));
@@ -531,7 +560,9 @@ function preCommit(context, err = (text) => process.stderr.write(text)) {
   const message = context.repo.locked(() => {
     const baseline = context.repo.readState();
     if (baseline === null) return null;
-    const running = Object.values(state.liveCalls(baseline));
+    // Calls the transcripts show as finished are settled and kept for the next evaluation, not forgotten.
+    const running = Object.values(completion.liveCalls(baseline, transcripts(context)));
+    context.repo.writeState(baseline);
     if (running.length === 0) return null;
     if (running.some((entry) => entry.route === "release-bump")) return null;
     const paths = candidates(context, baseline);
@@ -562,6 +593,8 @@ function accept(context, out) {
       );
       return 1;
     }
+    // A call its own transcript shows as finished no longer holds the user's approval back.
+    if (previous) completion.liveCalls(previous, transcripts(context));
     const paths = candidates(context, previous);
     if (context.repo.operationInProgress() || context.repo.unmerged(paths).size > 0) {
       out("Not accepted: a merge, rebase, cherry-pick or revert is still waiting to be finished. Resolve it first.\n");

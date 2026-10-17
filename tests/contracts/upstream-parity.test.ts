@@ -42,9 +42,9 @@ describe("the guard behavior map", () => {
     }
   });
 
-  test("a carried or adapted behavior is owned by U6 and proven by a JavaScript test that exists", () => {
+  test("a carried or adapted behavior is owned by U6 or U7 and proven by a JavaScript test that exists", () => {
     for (const entry of parity.entries.filter((candidate) => ["carried", "adapted"].includes(candidate.status))) {
-      expect(entry.owner, entry.sourceTest).toBe("U6");
+      expect(["U6", "U7"], entry.sourceTest).toContain(entry.owner);
       expect(entry.jsTests?.length ?? 0, entry.sourceTest).toBeGreaterThan(0);
       for (const proof of entry.jsTests ?? []) expect(proves(proof), `${entry.sourceTest}: ${proof.file} has no "${proof.title}"`).toBe(true);
     }
@@ -54,7 +54,7 @@ describe("the guard behavior map", () => {
     const pending = parity.entries.filter((entry) => entry.status === "pending");
     expect(pending.length).toBeGreaterThan(0);
     for (const entry of pending) {
-      expect(["U7", "U9"], entry.sourceTest).toContain(entry.owner);
+      expect(entry.owner, entry.sourceTest).toBe("U9");
       expect((entry.note ?? "").length, entry.sourceTest).toBeGreaterThan(20);
       for (const proof of entry.jsTests ?? []) expect(proves(proof), `${entry.sourceTest}: ${proof.file} has no "${proof.title}"`).toBe(true);
     }
@@ -65,6 +65,24 @@ describe("the guard behavior map", () => {
       expect((entry.note ?? "").length, entry.sourceTest).toBeGreaterThan(20);
       for (const proof of entry.jsTests ?? []) expect(proves(proof), `${entry.sourceTest}: ${proof.file} has no "${proof.title}"`).toBe(true);
     }
+  });
+
+  test("every source completion test is listed by name, none by a placeholder, and none is left pending", () => {
+    const completion = parity.entries.filter((entry) => entry.sourceFile === "tests/test_guard_completion.py");
+    expect(completion).toHaveLength(41);
+    for (const entry of completion) {
+      expect(entry.sourceTest, "a placeholder for a corpus").toMatch(/^test_[a-z0-9_]+$/);
+      expect(["carried", "adapted", "not-carried"], entry.sourceTest).toContain(entry.status);
+      expect(entry.owner, entry.sourceTest).toBe("U7");
+      expect(entry.jsTests?.length ?? 0, entry.sourceTest).toBeGreaterThan(0);
+    }
+    expect(parity.entries.filter((entry) => entry.owner === "U7" && entry.status === "pending")).toEqual([]);
+    expect(parity.entries.filter((entry) => entry.sourceTest.startsWith("("))).toEqual([]);
+  });
+
+  test("an adapted behavior says what changed", () => {
+    for (const entry of parity.entries.filter((candidate) => candidate.status === "adapted" && candidate.owner === "U7"))
+      expect((entry.note ?? "").length, entry.sourceTest).toBeGreaterThan(20);
   });
 
   test("the age-based expiry is the one deliberate difference in the guard's calls, and it is recorded as such", () => {

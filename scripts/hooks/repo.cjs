@@ -43,6 +43,8 @@ const MAX_ENTRIES = 20_000;
  *   writeUserFile: (name: string, content: Buffer) => void,
  *   realpath: (absolute: string) => string,
  *   userHome: string,
+ *   codexHome: string,
+ *   files: import("./completion.cjs").Files,
  *   readText: (absolute: string) => string | null,
  *   writeText: (absolute: string, text: string) => void,
  *   readState: () => import("./state.cjs").State | null,
@@ -407,6 +409,8 @@ function createRepo(host, inventory) {
     },
     realpath,
     userHome: host.userHome,
+    codexHome: home,
+    files: disk,
     readText(absolute) {
       try {
         return disk.readFileSync(absolute, "utf8");
