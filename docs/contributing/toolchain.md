@@ -6,52 +6,40 @@ Python-based pre-commit or Commitizen.
 
 ## Exact versions
 
-| Tool                                     | Version                  | Where it is pinned                 |
-| ---------------------------------------- | ------------------------ | ---------------------------------- |
-| Node                                     | 24.21.0                  | `.node-version`, `engines.node`    |
-| pnpm                                     | 12.14.0                  | `packageManager`                   |
-| Next.js / React / React DOM              | 16.4.1 / 19.3.0 / 19.3.0 | `tooling/versions.json` (app seed) |
-| TypeScript                               | 6.0.3                    | `tooling/versions.json`            |
-| ESLint / eslint-config-next              | 9.39.5 / 16.4.1          | `tooling/versions.json` (app seed) |
-| Vitest / Playwright                      | 5.0.5 / 1.64.1           | `tooling/versions.json`            |
-| typescript-eslint / @eslint/js / globals | 8.71.2 / 9.39.5 / 16.4.0 | `tooling/versions.json`            |
-| Prettier                                 | 3.9.10                   | `tooling/versions.json`            |
-| VitePress / hyperlink                    | 1.6.4 / 5.0.4            | `tooling/versions.json`            |
+| Dependency graph      | Version authority                                        |
+| --------------------- | -------------------------------------------------------- |
+| Generator tools       | Root `package.json` and `pnpm-lock.yaml`                 |
+| Application seed      | `template/app/package.json` and its own `pnpm-lock.yaml` |
+| Generated application | Its own `package.json` and `pnpm-lock.yaml`              |
 
-`tooling/versions.json` is the reviewed source. The root `package.json` projects
-its `root` section; a test fails when they drift. Node and pnpm are host-owned
-prerequisites: install exactly these versions (for example with Corepack).
+Package versions live only in their manifest and lock. `tooling/versions.json` keeps the Node and
+pnpm metadata, the explicit `root.reviewedTools` name list and `seed.deniedBuilds`. A dependency
+update does not require copying its version into that file. The root and seed graphs can move independently.
+
+Node and pnpm are host-owned prerequisites: install the exact versions in `.node-version` and
+`packageManager`. The runtime metadata must agree with those declarations and `engines.node`.
 No runtime picks another version for you, and `devEngines.runtime` is not used.
 
-## Why these versions
+## Supported update lines
 
-Chosen from registry engines/peers and proven with a real Next.js fixture
-(strict peers, `next build`, `tsc`, ESLint, Vitest, Playwright, frozen reinstall):
+- TypeScript stays below 7 until `typescript-eslint` supports it and the suppression-policy rule has
+  a supported compiler API. A TypeScript 7 migration is separate work.
+- ESLint and `@eslint/js` stay below 10 in the seed and generated apps until the React, import and
+  accessibility plugins used by `eslint-config-next` accept that major. The generator has no such peer
+  restriction; its ESLint updates must still pass checks for both the generator and rendered application.
+- `@types/node` stays on the Node 24 runtime line. Reassess the hold with a runtime-major upgrade.
+- Coupled packages such as Next.js and its ESLint config are reviewed together. Other majors, including
+  `globals`, are assessed separately. No version is considered compatible solely because a bot proposes it.
 
-- TypeScript 6.0.3, not 7.x: `typescript-eslint` (required by `eslint-config-next`)
-  supports TypeScript `<6.1.0`.
-- ESLint 9.39.5, not 10.x: `eslint-plugin-import`, `eslint-plugin-jsx-a11y` and
-  `eslint-plugin-react` (via `eslint-config-next@16.4.1`) do not accept ESLint 10.
-- React DOM 19.3.0, not 19.3.1: 19.3.1 requires a `react@^19.3.1` that is not published.
-- typescript-eslint 8.71.2 is the newest release older than the 24-hour release-age limit that accepts
-  TypeScript 6.0.3 and ESLint 9; `@eslint/js` follows ESLint, and `globals` 16.4.0 is the version
-  `eslint-config-next@16.4.1` uses.
-- `@types/node` 24.x matches the Node 24 runtime.
-- VitePress 1.6.4 is the newest stable release (2.x is alpha only); hyperlink 5.0.4 is the newest
-  release. Both go through the same exact-pin and frozen-lock rules. Their dependencies bring two
-  build scripts that are denied (`allowBuilds`): `esbuild` (its prebuilt platform binary is used) and
-  `core-js` (its script only prints a banner). hyperlink pulls in the deprecated `request`; it only
-  reads local files here (`--internal`), and the audit report names it.
-- `unrs-resolver` build scripts are denied (`allowBuilds`); its prebuilt native
-  binary is used. A dependency that needs a source build fails the install.
+See [Continuous integration](ci#dependabot-updates) for grouping and hold removal rules.
+All updates keep strict peers, the 24-hour release-age limit, reviewed overrides and frozen installs.
+The build scripts of `esbuild`, `core-js` and `unrs-resolver` remain denied where declared in the
+workspace policy. The prebuilt native binaries are used; a dependency that needs a source build fails.
+The documentation link checker uses `hyperlink --internal` on local files, and its dependencies remain
+subject to the reviewed [audit decisions](ci#dependency-audit).
 
-Next.js and eslint-config-next use 16.4.1: the first cold-cache test rejected
-16.4.2 because it was younger than pnpm's default 24-hour release-age limit.
-The [16.4.2 release notes](https://github.com/vercel/next.js/releases/tag/v16.4.2)
-list Turbopack and documentation fixes. No release-age exception was added.
-The rendered application is tested with a fresh package store and cache.
-
-Re-run the fixture proof when any pin changes. Pins are exact; ranges are rejected.
+Package pins stay exact. Existing CI checks the rendered application's install, static gates, production
+build and browser behavior when the seed or shared tooling changes.
 
 ## Graph ownership
 
@@ -136,13 +124,18 @@ Any other incomplete install must be repaired first.
 
 ### Reviewed pins versus ordinary dependencies
 
-`tooling/versions.json` lists the generator's reviewed tool pins. Changing one is a
+`tooling/versions.json` lists the generator's reviewed tool names; `package.json` supplies their exact
+versions. The dependency command snapshots those versions before running pnpm. Changing one is a
 reviewed tooling change; `deps:add`, `deps:remove` and `deps:upgrade` refuse it before
 running anything. `deps:upgrade` without a name is the whole set or nothing: while a pin is
 a dependency it is refused with the pin names, and other dependencies are upgraded one at a
 time with `--package=<name>`. Any other dependency is ordinary: the pin contract checks that the pins hold, not that
 the dependency set is exactly the pins, so adding one does not break the checks.
-Generated applications carry no pin file and are not restricted this way.
+A reviewed version change edits the manifest through the approved route and relocks with
+`node scripts/bootstrap.cjs deps-lock`. Seed changes use `pnpm run template:seed:refresh`, which resolves
+the seed manifest in a disposable directory and replaces its lock only on success. Dependabot supplies
+the manifest and lock together; its proposal is reviewed through the same PR gates.
+Generated applications carry no reviewed-name file and are not restricted this way.
 
 ### Workspace policy parser
 

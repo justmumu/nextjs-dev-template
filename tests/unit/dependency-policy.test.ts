@@ -153,8 +153,8 @@ describe("manifest delta", () => {
   const add = { action: "add", group: "dev", name: "c" } as const;
   const clone = () => structuredClone(base);
 
-  test("add changes only the chosen map with an exact version", () => {
-    const after = { ...clone(), devDependencies: { b: "2.0.0", c: "3.0.0" } };
+  test.each(["3.0.0", "3.0.0-rc.1", "3.0.0+build.7"])("add changes only the chosen map with exact version %s", (version) => {
+    const after = { ...clone(), devDependencies: { b: "2.0.0", c: version } };
     expect(policy.manifestViolations(base, after, add)).toEqual([]);
   });
 

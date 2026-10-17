@@ -357,7 +357,50 @@ describe("the dependency audit workflow and Dependabot", () => {
     const dependabot = read(".github/dependabot.yml");
     expect(dependabot.match(/package-ecosystem: (\S+)/g)).toEqual(["package-ecosystem: github-actions", "package-ecosystem: npm", "package-ecosystem: npm"]);
     expect(dependabot.match(/directory: (\S+)/g)).toEqual(["directory: /", "directory: /", "directory: /template/app"]);
-    expect(dependabot.match(/groups:/g)).toHaveLength(3);
+    expect(dependabot.match(/interval: weekly/g)).toHaveLength(3);
+    expect(dependabot.match(/open-pull-requests-limit: 5/g)).toHaveLength(3);
     expect(code(dependabot)).not.toMatch(/merge|auto/i);
+  });
+
+  test.each([".github/dependabot.yml", "template/app/.github/dependabot.yml"])("%s keeps families together and holds only unsupported lines", (file) => {
+    const entries = code(read(file))
+      .split(/^ {2}- package-ecosystem: /m)
+      .slice(1);
+    for (const entry of entries.filter((value) => value.startsWith("npm\n"))) {
+      const app = file.startsWith("template/") || entry.includes("directory: /template/app");
+      const groupText = entry.split("    groups:\n")[1]?.split("    ignore:\n")[0] ?? "";
+      const groups = [...groupText.matchAll(/^ {6}([a-z-]+):\n((?: {8}.+\n)*)/gm)].map((match) => ({
+        name: match[1],
+        patterns: parseJson<string[]>(/^ {8}patterns: (.+)$/m.exec(match[2] ?? "")?.[1] ?? "[]"),
+        updates: /^ {8}update-types: (.+)$/m.exec(match[2] ?? "")?.[1],
+      }));
+      const families = [
+        ["vitest", "@vitest/coverage-v8"],
+        ["eslint", "@eslint/js"],
+        ["@commitlint/cli", "@commitlint/config-conventional"],
+        ...(app
+          ? [
+              ["next", "eslint-config-next"],
+              ["react", "react-dom", "@types/react", "@types/react-dom"],
+            ]
+          : []),
+      ];
+      expect(groups.slice(0, -1).map((group) => group.patterns)).toEqual(families);
+      expect(groups.slice(0, -1).every((group) => group.updates === undefined)).toBe(true);
+      const routine = groups.at(-1);
+      expect(routine?.patterns).toEqual(["*"]);
+      expect(parseJson<string[]>(routine?.updates ?? "[]")).toEqual(["minor", "patch"]);
+      expect(routine?.name).toBe(file.startsWith("template/") ? "dependencies" : app ? "application-seed" : "tooling");
+      const holds = Object.fromEntries(
+        [...entry.matchAll(/^ {6}- dependency-name: (.+)\n {8}versions: (.+)$/gm)].map((match) => [
+          parseJson<string>(match[1] ?? '""'),
+          parseJson<string[]>(match[2] ?? "[]"),
+        ]),
+      );
+      expect(holds).toEqual({ typescript: [">=7"], "@types/node": [">=25"], ...(app ? { eslint: [">=10"], "@eslint/js": [">=10"] } : {}) });
+      expect(entry).not.toContain("version-update:semver-major");
+    }
+    expect(entries.filter((entry) => entry.startsWith("npm\n"))).toHaveLength(file.startsWith("template/") ? 1 : 2);
+    expect(code(read(file))).not.toMatch(/merge|auto/i);
   });
 });

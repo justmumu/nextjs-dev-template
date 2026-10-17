@@ -4,7 +4,7 @@ import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { afterAll, describe, expect, test } from "vitest";
-import { parseJson, type Listed, type Versions } from "../support/json.ts";
+import { parseJson, type Listed, type EditableManifest, type Manifest, type Versions } from "../support/json.ts";
 
 const root = resolve(import.meta.dirname, "../..");
 const toolchain = createRequire(import.meta.url)("../../scripts/core/toolchain.cjs") as typeof import("../../scripts/core/toolchain.cjs");
@@ -129,7 +129,8 @@ describe("preflight never downloads or switches the package manager", () => {
 
 describe("isolated seed dependency graph", () => {
   test("the pinned seed tool set installs as its own graph without peer conflicts or build scripts", () => {
-    const { seed, node } = parseJson<Versions>(readFileSync(join(root, "tooling/versions.json"), "utf8"));
+    const { node } = parseJson<Versions>(readFileSync(join(root, "tooling/versions.json"), "utf8"));
+    const seed = parseJson<Manifest & EditableManifest>(readFileSync(join(root, "template/app/package.json"), "utf8"));
     const dir = scratchProject("seed-fixture", {
       type: "module",
       packageManager: `pnpm@${toolchain.readExpected(root).pnpm}`,

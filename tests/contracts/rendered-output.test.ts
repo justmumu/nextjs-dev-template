@@ -7,6 +7,7 @@ import { parseJson, type Manifest, type Versions } from "../support/json.ts";
 const root = resolve(import.meta.dirname, "../..");
 const render = createRequire(import.meta.url)("../../scripts/template/render.cjs") as typeof import("../../scripts/template/render.cjs");
 const versions = parseJson<Versions>(readFileSync(join(root, "tooling/versions.json"), "utf8"));
+const seed = parseJson<Manifest>(readFileSync(join(root, "template/app/package.json"), "utf8"));
 
 function renderFor(answers: Record<string, unknown>) {
   const { manifest, bases } = render.defaultInputs();
@@ -319,8 +320,8 @@ describe("real seed render", () => {
     expect(manifest.private).toBe(true);
     expect(manifest.packageManager).toBe(`pnpm@${versions.pnpm}`);
     expect(manifest.engines?.node).toBe(versions.node);
-    expect(manifest.dependencies).toEqual(versions.seed.dependencies);
-    expect(manifest.devDependencies).toEqual(versions.seed.devDependencies);
+    expect(manifest.dependencies).toEqual(seed.dependencies);
+    expect(manifest.devDependencies).toEqual(seed.devDependencies);
     expect(JSON.stringify(manifest)).not.toMatch(/workspace:|link:|file:|\.\.\//);
   });
 
@@ -344,9 +345,7 @@ describe("real seed render", () => {
     expect(lock).not.toMatch(/workspace:|\blink:|first-app|second-app/);
     expect(lock).not.toMatch(/\/(?:home|tmp|Users)\//);
     expect(lock).not.toMatch(/\d{4}-\d{2}-\d{2}T/);
-    for (const [name, version] of Object.entries({ ...versions.seed.dependencies, ...versions.seed.devDependencies })) {
-      expect(lock, name).toContain(`version: ${version}`);
-    }
+    expect(lock).toBe(readFileSync(join(root, "template/app/pnpm-lock.yaml"), "utf8"));
   });
 
   test("no e-mail address or log file reaches the output", () => {

@@ -14,8 +14,8 @@ export function readJsonFile<T = Record<string, unknown>>(path: string): T {
 export interface Versions {
   node: string;
   pnpm: string;
-  root: { devDependencies: Record<string, string> };
-  seed: { dependencies: Record<string, string>; devDependencies: Record<string, string>; deniedBuilds: string[] };
+  root: { reviewedTools: string[] };
+  seed: { deniedBuilds: string[] };
 }
 
 export interface Manifest {

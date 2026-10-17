@@ -238,12 +238,32 @@ describe("the command", () => {
 });
 
 describe("what the project says about its dependencies", () => {
-  test("the generator's own pins are those of its dependency maps, and only the strings among them", () => {
-    expect(
-      dependencies.rootPins({ root: { dependencies: { a: "1.0.0", b: 2 }, devDependencies: { c: "3.0.0" } }, seed: { dependencies: { z: "9.9.9" } } }),
-    ).toEqual({ a: "1.0.0", c: "3.0.0" });
-    expect(dependencies.rootPins({})).toEqual({});
-    expect(dependencies.rootPins({ root: { dependencies: ["a"] } })).toEqual({});
+  test("reviewed names resolve from the current manifest, leaving ordinary additions unpinned", () => {
+    const versions = { root: { reviewedTools: ["a", "c"] } };
+    const manifest = { dependencies: { a: "1.0.0", ordinary: "2.0.0" }, devDependencies: { c: "3.0.0" } };
+    expect(dependencies.rootPins(versions, manifest)).toEqual({ a: "1.0.0", c: "3.0.0" });
+    manifest.dependencies.a = "1.0.1";
+    expect(dependencies.rootPins(versions, manifest)).toEqual({ a: "1.0.1", c: "3.0.0" });
+  });
+
+  test.each<[Record<string, unknown>, Record<string, unknown>, string]>([
+    [{}, {}, "must be a list"],
+    [{ root: { reviewedTools: "a" } }, {}, "must be a list"],
+    [{ root: { reviewedTools: [7] } }, {}, "Invalid reviewed tool name"],
+    [{ root: { reviewedTools: ["--global"] } }, {}, "Invalid reviewed tool name"],
+    [{ root: { reviewedTools: ["a", "a"] } }, { dependencies: { a: "1.0.0" } }, "Duplicate reviewed tool name: a"],
+    [{ root: { reviewedTools: ["a"] } }, {}, "Reviewed tool a"],
+    [{ root: { reviewedTools: ["a"] } }, { dependencies: { a: "^1.0.0" } }, "Reviewed tool a"],
+    [{ root: { reviewedTools: ["a"] } }, { dependencies: { a: "1.0.0" }, devDependencies: { a: "1.0.0" } }, "Reviewed tool a"],
+  ])("invalid reviewed-tool data is refused: %j", (versions, manifest, reason) => {
+    const pins = dependencies.rootPins(versions, manifest);
+    expect(Array.isArray(pins)).toBe(true);
+    expect(pins).toEqual(expect.arrayContaining([expect.stringContaining(reason)]));
+    const { host, transactions } = project({ pins: () => pins });
+    const result = run(["upgrade", "--package=ordinary"], host);
+    expect(result.status).toBe(1);
+    expect(result.err).toContain(reason);
+    expect(transactions).toEqual([]);
   });
 
   test("the names a project depends on are the union of both maps", () => {
