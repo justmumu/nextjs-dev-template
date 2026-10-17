@@ -20,7 +20,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { afterAll, afterEach, describe, expect, test } from "vitest";
-import { parseJson, type EditableManifest, type Versions } from "../support/json.ts";
+import { parseJson, type EditableManifest } from "../support/json.ts";
 
 const require = createRequire(import.meta.url);
 const root = resolve(import.meta.dirname, "../..");
@@ -768,11 +768,11 @@ describe("guard seam fails closed", () => {
 describe("reviewed tool pins versus ordinary dependencies", () => {
   function generatorProject() {
     const dir = makeProject({ install: false });
-    const versions = parseJson<Versions>(readFileSync(join(root, "tooling/versions.json"), "utf8"));
+    const reviewed = parseJson<EditableManifest>(readFileSync(join(root, "package.json"), "utf8")).devDependencies;
     cpSync(join(root, "tooling/versions.json"), join(dir, "tooling/versions.json"));
     writeFileSync(join(dir, "tooling/project-role.json"), JSON.stringify({ role: "generator" }));
     const manifest = parseJson<EditableManifest>(readFileSync(join(dir, "package.json"), "utf8"));
-    manifest.devDependencies = versions.root.devDependencies;
+    manifest.devDependencies = reviewed;
     writeFileSync(join(dir, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`);
     return dir;
   }
@@ -891,11 +891,11 @@ describe("rollback ownership: only recorded protected paths are ever removed", (
 describe("deps:upgrade without a name is the whole set or nothing", () => {
   test("in the generator it refuses before running pnpm and names the pins and the reviewed path", () => {
     const dir = makeProject({ install: false });
-    const versions = parseJson<Versions>(readFileSync(join(root, "tooling/versions.json"), "utf8"));
+    const reviewed = parseJson<EditableManifest>(readFileSync(join(root, "package.json"), "utf8")).devDependencies;
     cpSync(join(root, "tooling/versions.json"), join(dir, "tooling/versions.json"));
     writeFileSync(join(dir, "tooling/project-role.json"), JSON.stringify({ role: "generator" }));
     const manifest = parseJson<EditableManifest>(readFileSync(join(dir, "package.json"), "utf8"));
-    manifest.devDependencies = { ...versions.root.devDependencies, "left-pad": "1.3.0" };
+    manifest.devDependencies = { ...reviewed, "left-pad": "1.3.0" };
     writeFileSync(join(dir, "package.json"), `${JSON.stringify(manifest, null, 2)}\n`);
     const before = tree(dir);
     const calls: string[][] = [];

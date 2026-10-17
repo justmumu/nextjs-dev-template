@@ -63,6 +63,25 @@ workflow uses `pull_request_target`, and `actions/checkout` keeps `allow-unsafe-
   command. It never fixes, overrides or merges. The reviewed `overrides` in `pnpm-workspace.yaml` are
   protected and shared with the template.
 
+## Dependabot updates
+
+Dependabot proposes weekly updates as reviewed PRs. This application has one npm dependency graph.
+Family groups come before the catch-all: Vitest and coverage, ESLint and `@eslint/js`, commitlint,
+Next.js and its ESLint config, and React with React DOM and their types.
+Families include major updates. The catch-all groups only minor and patch updates; unmatched majors
+arrive individually. Actions keep their existing group. Nothing auto-merges.
+
+The npm entries hold TypeScript `>=7` until `typescript-eslint` and the suppression-policy compiler API
+support it, and `@types/node >=25` until a reviewed Node runtime-major upgrade.
+ESLint and `@eslint/js >=10` are held until the React, import and accessibility
+plugins used by `eslint-config-next` accept ESLint 10.
+Each hold records its removal condition beside the configuration. Re-check current peer ranges when
+reviewing a change to a hold.
+
+Version ignores also restrict security-update candidates. If an advisory's only fix lies in a held line,
+reassess the hold and the required compatibility work; do not silently bypass the audit or peer checks.
+`pnpm run audit:dependencies` and its reviewed policy remain in effect.
+
 ## Release validation and publication
 
 Pushing a release tag (`vMAJOR.MINOR.PATCH`) starts `release.yml`, which checks out the default branch with its

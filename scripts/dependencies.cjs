@@ -88,27 +88,51 @@ function planFor(request, pinned = {}) {
 }
 
 /**
- * Reviewed tool pins of the generator itself (tooling/versions.json). They change only through a
+ * Reviewed tool names live in tooling/versions.json; their versions come from the root manifest.
+ * They change only through a
  * reviewed tooling change, never through the dependency commands; an application has none.
  * @param {string} root
- * @returns {Record<string, string>}
+ * @returns {Record<string, string> | string[]} resolved pins or refusal messages
  */
 function reviewedPins(root) {
+  if (readRole(root) !== "generator") return {};
   const file = nodePath.join(root, "tooling", "versions.json");
-  return !existsSync(file) || readRole(root) !== "generator" ? {} : rootPins(readObject(file));
+  return existsSync(file) ? rootPins(readObject(file), readObject(nodePath.join(root, "package.json"))) : {};
 }
 
-/** @param {import("./core/json.cjs").JsonObject} versions the parsed tooling/versions.json @returns {Record<string, string>} the pins of the generator's own dependencies */
-function rootPins(versions) {
-  const pins = isObject(versions.root) ? versions.root : {};
-  return { ...stringMap(pins.dependencies), ...stringMap(pins.devDependencies) };
-}
-
-/** @param {unknown} value @returns {Record<string, string>} the string entries of an object, or none */
-function stringMap(value) {
-  return isObject(value)
-    ? /** @type {Record<string, string>} */ (Object.fromEntries(Object.entries(value).filter((entry) => typeof entry[1] === "string")))
-    : {};
+/**
+ * Resolve the explicit reviewed names before a dependency transaction can change the manifest.
+ * @param {import("./core/json.cjs").JsonObject} versions
+ * @param {import("./core/json.cjs").JsonObject} manifest
+ * @returns {Record<string, string> | string[]} resolved pins or refusal messages
+ */
+function rootPins(versions, manifest) {
+  const names = isObject(versions.root) ? versions.root.reviewedTools : undefined;
+  if (!Array.isArray(names)) return ["tooling/versions.json root.reviewedTools must be a list of package names."];
+  const problems = [];
+  /** @type {Set<string>} */
+  const seen = new Set();
+  /** @type {[string, string][]} */
+  const entries = [];
+  for (const name of /** @type {unknown[]} */ (names)) {
+    if (typeof name !== "string" || !NAME.test(name) || name.length > 214) {
+      problems.push(`Invalid reviewed tool name: ${JSON.stringify(name)}.`);
+      continue;
+    }
+    if (seen.has(name)) {
+      problems.push(`Duplicate reviewed tool name: ${name}.`);
+      continue;
+    }
+    seen.add(name);
+    const values = [manifest.dependencies, manifest.devDependencies].flatMap((map) => (isObject(map) && Object.hasOwn(map, name) ? [map[name]] : []));
+    const version = values[0];
+    if (values.length !== 1 || typeof version !== "string" || !isExactVersion(version)) {
+      problems.push(`Reviewed tool ${name} must have one exact version in package.json dependencies or devDependencies.`);
+      continue;
+    }
+    entries.push([name, version]);
+  }
+  return problems.length > 0 ? problems : Object.fromEntries(entries);
 }
 
 /** @param {import("./core/json.cjs").JsonObject} manifest @returns {string[]} the names in its dependencies and devDependencies */
@@ -143,7 +167,7 @@ function pinRefusal(request, pins, dependencies) {
   if (request.action === "upgrade" && request.name === null) {
     const pinned = dependencies.filter((name) => Object.hasOwn(pins, name)).sort();
     if (pinned.length > 0) {
-      return `An all-dependency upgrade cannot run: these are reviewed tool pins (${pinned.map((name) => `${name}@${pins[name] ?? ""}`).join(", ")}) and change only through a reviewed tooling change (tooling/versions.json, then the matching manifest edit and node scripts/bootstrap.cjs deps-lock). Upgrade other dependencies one at a time with deps:upgrade --package=<name>. Nothing was changed.`;
+      return `An all-dependency upgrade cannot run: these are reviewed tool pins (${pinned.map((name) => `${name}@${pins[name] ?? ""}`).join(", ")}) and change only through a reviewed tooling change (an approved package.json edit, then node scripts/bootstrap.cjs deps-lock). Upgrade other dependencies one at a time with deps:upgrade --package=<name>. Nothing was changed.`;
     }
   }
   return null;
@@ -153,7 +177,7 @@ function pinRefusal(request, pins, dependencies) {
  * @typedef {{
  *   gateErrors: (root: string) => string[],
  *   guardRefusal: (root: string) => string | null,
- *   pins: (root: string) => Record<string, string>,
+ *   pins: (root: string) => Record<string, string> | string[],
  *   dependencies: (root: string) => string[],
  *   transact: (options: Parameters<typeof runTransaction>[0]) => ReturnType<typeof runTransaction>,
  * }} Host what the command needs from the project and the package manager
@@ -193,6 +217,10 @@ function main(argv, options = {}) {
     return 1;
   }
   const pins = host.pins(root);
+  if (Array.isArray(pins)) {
+    io.stderr(`${pins.join("\n")}\nNothing was changed.\n`);
+    return 1;
+  }
   const refusal = pinRefusal(request, pins, request.action === "upgrade" && request.name === null ? host.dependencies(root) : []);
   if (refusal !== null) {
     io.stderr(`${refusal}\n`);

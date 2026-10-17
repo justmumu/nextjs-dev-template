@@ -19,8 +19,23 @@ updates:
       day: monday
     open-pull-requests-limit: 5
     groups:
+      vitest:
+        patterns: ["vitest", "@vitest/coverage-v8"]
+      eslint:
+        patterns: ["eslint", "@eslint/js"]
+      commitlint:
+        patterns: ["@commitlint/cli", "@commitlint/config-conventional"]
       tooling:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
+    # Version ignores also affect security updates; reassess if an advisory's only fix is held.
+    ignore:
+      # Remove when typescript-eslint supports TS 7 and the suppression policy has a supported compiler API.
+      - dependency-name: "typescript"
+        versions: [">=7"]
+      # Remove together with a reviewed Node runtime-major upgrade.
+      - dependency-name: "@types/node"
+        versions: [">=25"]
   - package-ecosystem: npm
     directory: /template/app
     schedule:
@@ -28,5 +43,29 @@ updates:
       day: monday
     open-pull-requests-limit: 5
     groups:
+      vitest:
+        patterns: ["vitest", "@vitest/coverage-v8"]
+      eslint:
+        patterns: ["eslint", "@eslint/js"]
+      commitlint:
+        patterns: ["@commitlint/cli", "@commitlint/config-conventional"]
+      next:
+        patterns: ["next", "eslint-config-next"]
+      react:
+        patterns: ["react", "react-dom", "@types/react", "@types/react-dom"]
       application-seed:
         patterns: ["*"]
+        update-types: ["minor", "patch"]
+    # Version ignores also affect security updates; reassess if an advisory's only fix is held.
+    ignore:
+      # Remove when typescript-eslint supports TS 7 and the suppression policy has a supported compiler API.
+      - dependency-name: "typescript"
+        versions: [">=7"]
+      # Remove together with a reviewed Node runtime-major upgrade.
+      - dependency-name: "@types/node"
+        versions: [">=25"]
+      # Remove both ESLint holds when the Next config's react/import/jsx-a11y peers support ESLint 10.
+      - dependency-name: "eslint"
+        versions: [">=10"]
+      - dependency-name: "@eslint/js"
+        versions: [">=10"]

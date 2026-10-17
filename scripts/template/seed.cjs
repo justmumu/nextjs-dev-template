@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const { tmpdir } = require("node:os");
 const nodePath = require("node:path");
 const { run } = require("../core/process.cjs");
-const { same } = require("../core/dependency-policy.cjs");
+const { isExactVersion } = require("../core/dependency-policy.cjs");
 const { isObject, readObject } = require("../core/json.cjs");
 
 /**
@@ -15,11 +15,21 @@ const { isObject, readObject } = require("../core/json.cjs");
  */
 function refreshSeed({ root, io }) {
   const seed = nodePath.join(root, "template", "app");
-  const versions = readObject(nodePath.join(root, "tooling", "versions.json"));
-  const pins = isObject(versions.seed) ? versions.seed : {};
   const manifest = readObject(nodePath.join(seed, "package.json"));
-  if (!same(manifest.dependencies, pins.dependencies) || !same(manifest.devDependencies, pins.devDependencies)) {
-    io.stderr("template/app/package.json does not match the reviewed pins in tooling/versions.json; align them (reviewed edit) before refreshing the lock.\n");
+  const problems = [];
+  for (const group of ["dependencies", "devDependencies"]) {
+    const entries = manifest[group];
+    if (entries === undefined) continue;
+    if (!isObject(entries)) {
+      problems.push(`${group} must be an object`);
+      continue;
+    }
+    for (const [name, version] of Object.entries(entries)) {
+      if (!isExactVersion(version)) problems.push(`${group}.${name} must be an exact version`);
+    }
+  }
+  if (problems.length > 0) {
+    io.stderr(`template/app/package.json: ${problems.join("; ")}. Nothing was changed.\n`);
     return 1;
   }
   const copy = fs.realpathSync(fs.mkdtempSync(nodePath.join(tmpdir(), "seed-refresh-")));

@@ -6,6 +6,7 @@ import { parseJson, type Manifest, type Versions } from "../support/json.ts";
 
 const root = resolve(import.meta.dirname, "../..");
 const toolchain = createRequire(import.meta.url)("../../scripts/core/toolchain.cjs") as typeof import("../../scripts/core/toolchain.cjs");
+const policy = createRequire(import.meta.url)("../../scripts/core/dependency-policy.cjs") as typeof import("../../scripts/core/dependency-policy.cjs");
 
 describe("exact runtime and manager", () => {
   const expected = toolchain.readExpected(root);
@@ -26,27 +27,37 @@ describe("exact runtime and manager", () => {
   });
 });
 
-describe("single source of pins", () => {
+describe("manifest versions and reviewed tool names", () => {
   const versions = parseJson<Versions>(readFileSync(join(root, "tooling/versions.json"), "utf8"));
   const manifest = parseJson<Manifest>(readFileSync(join(root, "package.json"), "utf8"));
 
-  test("root manifest, .node-version and engines project tooling/versions.json", () => {
-    // Reviewed pins must hold; ordinary dependencies added with deps:add are free to appear next to them.
-    expect(manifest.devDependencies).toMatchObject(versions.root.devDependencies);
+  test("runtime metadata matches the manifest and .node-version", () => {
     expect(manifest.packageManager).toBe(`pnpm@${versions.pnpm}`);
     expect(manifest.engines?.node).toBe(versions.node);
     expect(readFileSync(join(root, ".node-version"), "utf8").trim()).toBe(versions.node);
     expect(manifest.devEngines).toBeUndefined();
   });
 
-  test("every pin is exact", () => {
-    const all = { ...versions.root.devDependencies, ...versions.seed.dependencies, ...versions.seed.devDependencies };
-    for (const [name, range] of Object.entries(all)) expect(range, name).toMatch(/^\d+\.\d+\.\d+$/);
+  test("each reviewed name resolves to an exact manifest version without a duplicate version catalog", () => {
+    const dependencies = createRequire(import.meta.url)("../../scripts/dependencies.cjs") as typeof import("../../scripts/dependencies.cjs");
+    const pins = dependencies.reviewedPins(root);
+    expect(Array.isArray(pins)).toBe(false);
+    expect(Object.keys(pins).sort()).toEqual([...versions.root.reviewedTools].sort());
+    expect(Object.keys(versions.root)).toEqual(["reviewedTools"]);
+    expect(Object.keys(versions.seed)).toEqual(["deniedBuilds"]);
+  });
+
+  test("every manifest pin is exact in both independent graphs", () => {
+    for (const file of ["package.json", "template/app/package.json"]) {
+      const current = parseJson<Manifest>(readFileSync(join(root, file), "utf8"));
+      for (const group of [current.dependencies, current.devDependencies]) {
+        for (const [name, range] of Object.entries(group ?? {})) expect(policy.isExactVersion(range), `${file}: ${name}`).toBe(true);
+      }
+    }
   });
 });
 
 describe("workspace policy of both graphs", () => {
-  const policy = createRequire(import.meta.url)("../../scripts/core/dependency-policy.cjs") as typeof import("../../scripts/core/dependency-policy.cjs");
   const read = (path: string) => readFileSync(join(root, path), "utf8");
 
   test("the generator and the seed workspace files satisfy the policy and the seed denies the reviewed builds", () => {

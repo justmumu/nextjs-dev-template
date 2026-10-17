@@ -115,6 +115,25 @@ requests with `GITHUB_TOKEN`, note that personal repositories do not allow Actio
 pull requests by default (Settings → Actions → General), and that pull requests created with that token
 do create workflow runs, which wait for approval.
 
+## Dependabot updates
+
+Dependabot proposes weekly updates as reviewed PRs. The generator and application seed have independent npm entries; updating one does not require changing the other.
+Family groups come before the catch-all: Vitest and coverage, ESLint and `@eslint/js`, commitlint,
+and, in the seed, Next.js with its ESLint config and React with React DOM and their types.
+Families include major updates. The catch-all groups only minor and patch updates; unmatched majors
+arrive individually. Actions keep their existing group. Nothing auto-merges.
+
+The npm entries hold TypeScript `>=7` until `typescript-eslint` and the suppression-policy compiler API
+support it, and `@types/node >=25` until a reviewed Node runtime-major upgrade.
+Only the seed entry holds ESLint and `@eslint/js >=10` until the React, import and accessibility
+plugins used by `eslint-config-next` accept ESLint 10. The generator has no ESLint major hold.
+Each hold records its removal condition beside the configuration. Re-check current peer ranges when
+reviewing a change to a hold.
+
+Version ignores also restrict security-update candidates. If an advisory's only fix lies in a held line,
+reassess the hold and the required compatibility work; do not silently bypass the audit or peer checks.
+`pnpm run audit:dependencies` and its reviewed policy remain in effect.
+
 ## Release validation and publication
 
 Pushing a release tag (`vMAJOR.MINOR.PATCH`) starts `release.yml`, which checks out the default branch

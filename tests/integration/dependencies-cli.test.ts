@@ -59,7 +59,7 @@ describe("refusals before the package manager runs", () => {
     const generator = () =>
       project("generator", {
         "package.json": manifest({ vitest: "5.0.5", eslint: "9.39.5" }, { other: "1.0.0" }),
-        "tooling/versions.json": JSON.stringify({ root: { devDependencies: { vitest: "5.0.5", eslint: "9.39.5" } } }),
+        "tooling/versions.json": JSON.stringify({ root: { reviewedTools: ["vitest", "eslint"] } }),
       });
 
     test("a pin cannot be added, removed or upgraded through the dependency commands", () => {
@@ -67,6 +67,29 @@ describe("refusals before the package manager runs", () => {
       expect(run(root, ["add", "--package=vitest@5.0.6", "--group=dev"]).err).toMatch(/vitest is a reviewed tool pin \(5\.0\.5\)/);
       expect(run(root, ["remove", "--package=vitest", "--group=dev"]).err).toMatch(/reviewed tool pin/);
       expect(run(root, ["upgrade", "--package=eslint"]).err).toMatch(/upgrading it is a reviewed tooling change/);
+    });
+
+    test("a reviewed manifest change is reflected without changing the reviewed-name file", () => {
+      const fixture = generator();
+      const metadata = readFileSync(join(fixture, "tooling/versions.json"), "utf8");
+      writeFileSync(join(fixture, "package.json"), manifest({ vitest: "5.0.6", eslint: "9.39.5", ordinary: "1.0.0" }));
+      expect(dependencies.reviewedPins(fixture)).toEqual({ vitest: "5.0.6", eslint: "9.39.5" });
+      expect(readFileSync(join(fixture, "tooling/versions.json"), "utf8")).toBe(metadata);
+    });
+
+    test("collateral changes to a reviewed tool roll back against its pre-transaction manifest version", () => {
+      const root = generator();
+      writeFileSync(join(root, "package.json"), manifest({ vitest: "5.0.6", eslint: "9.39.5" }, { other: "1.0.0" }));
+      const before = readFileSync(join(root, "package.json"), "utf8");
+      const lock = readFileSync(join(root, "pnpm-lock.yaml"), "utf8");
+      const result = run(root, ["upgrade", "--package=other"], () => {
+        writeFileSync(join(root, "package.json"), manifest({ vitest: "5.0.7", eslint: "9.39.5" }, { other: "1.0.1" }));
+        return { status: 0, stdout: "", stderr: "" };
+      });
+      expect(result.status).toBe(1);
+      expect(result.err).toContain("reviewed tool pin (5.0.6)");
+      expect(readFileSync(join(root, "package.json"), "utf8")).toBe(before);
+      expect(readFileSync(join(root, "pnpm-lock.yaml"), "utf8")).toBe(lock);
     });
 
     test("an all-dependency upgrade is refused as a whole while any pin is a dependency", () => {
@@ -77,7 +100,7 @@ describe("refusals before the package manager runs", () => {
     });
 
     test("an application has no pins, even when it carries a versions file", () => {
-      const root = project("application", { "tooling/versions.json": JSON.stringify({ root: { devDependencies: { vitest: "5.0.5" } } }) });
+      const root = project("application", { "tooling/versions.json": "not JSON: an application must not read this generator file" });
       expect(dependencies.reviewedPins(root)).toEqual({});
       expect(dependencies.reviewedPins(generator())).toEqual({ vitest: "5.0.5", eslint: "9.39.5" });
       expect(dependencies.reviewedPins(project("generator"))).toEqual({});
