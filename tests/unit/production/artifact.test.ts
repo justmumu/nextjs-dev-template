@@ -72,6 +72,20 @@ describe("fetching from the served artifact", () => {
 });
 
 describe("package names in a runtime tree", () => {
+  test("runtime reachability follows optional and peer edges, stops cycles and ignores dev-only packages", () => {
+    const manifests: Record<string, Record<string, unknown>> = {
+      next: { dependencies: { sharp: "1" }, optionalDependencies: { absent: "1" }, peerDependencies: { react: "1" }, devDependencies: { typescript: "1" } },
+      sharp: { dependencies: { semver: "1", next: "1" } },
+      semver: {},
+      react: {},
+    };
+    expect(
+      [
+        ...artifact.runtimeNames(["next"], "/project", (name) => (manifests[name] ? { directory: "/packages/" + name, manifest: manifests[name] } : null)),
+      ].sort(),
+    ).toEqual(["next", "react", "semver", "sharp"]);
+  });
+
   test.each([
     ["next@16.4.1", "next"],
     ["@swc+helpers@0.5.15", "@swc/helpers"],

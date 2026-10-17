@@ -1221,6 +1221,54 @@
       "base": "template",
       "source": "docs/contributing/ci.md",
       "destination": "docs/contributing/ci.md"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "README.md",
+      "destination": "README.md"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "LICENSE",
+      "destination": "tooling/LICENSE"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tooling/NOTICE.md",
+      "destination": "tooling/NOTICE.md"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "docs/contributing/agents.md",
+      "destination": "docs/contributing/agents.md"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "docs/guides/first-use.md",
+      "destination": "docs/guides/first-use.md"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "docs/guides/recovery.md",
+      "destination": "docs/guides/recovery.md"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "docs/guides/platforms.md",
+      "destination": "docs/guides/platforms.md"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/contracts/documented-commands.test.ts",
+      "destination": "tests/contracts/documented-commands.test.ts"
     }
   ]
 }

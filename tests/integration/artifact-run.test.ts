@@ -128,6 +128,27 @@ describe("the standalone run", () => {
     expect(out.err()).toMatch(/not self-contained: development dependencies typescript/);
   });
 
+  test("a package shared with a runtime dependency is not a development-only leak", async () => {
+    const root = application();
+    put(root, "package.json", JSON.stringify({ dependencies: { next: "1.0.0" }, devDependencies: { semver: "7.8.5", typescript: "6.0.3" } }));
+    const { host } = buildingHost({ leak: "semver" });
+    const build = host.run;
+    host.run = async (command, args, options) => {
+      const result = await build(command, args, options);
+      if (command === "isolate") {
+        put(options.cwd, ".next/standalone/node_modules/next/package.json", JSON.stringify({ dependencies: { sharp: "1.0.0" } }));
+        put(options.cwd, ".next/standalone/node_modules/sharp/package.json", JSON.stringify({ dependencies: { semver: "7.8.5" } }));
+      }
+      return result;
+    };
+    const out = capture();
+    let calls = 0;
+    expect(
+      await artifact.runArtifact({ root, host, io: out.io, base: {}, serve: () => Promise.resolve(calls++ === 0 ? [] : ["missing favicon"]) }),
+      out.err(),
+    ).toBe(0);
+  });
+
   test("a failed build is reported and everything created is removed", async () => {
     const { host, removed } = buildingHost({ statuses: [0, 1] });
     expect(await artifact.runArtifact({ root: application(), io: capture().io, host, base: {} })).toBe(1);

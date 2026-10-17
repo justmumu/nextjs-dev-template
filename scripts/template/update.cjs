@@ -240,7 +240,7 @@ async function apply(args, context) {
       });
       io.stdout(
         `${done.conflicted ? "the merge stopped on conflicts" : "the merge is clean and not committed"}; source ${source.sha}\n` +
-          `next: ${done.conflicted ? "resolve the conflicts and git add them; " : ""}review the diff, then node scripts/bootstrap.cjs guard-accept, node scripts/bootstrap.cjs repair, and a normal git commit\n` +
+          `next: ${done.conflicted ? "resolve the conflicts and git add them; " : ""}review the diff, then node scripts/bootstrap.cjs guard-accept, node scripts/bootstrap.cjs deps-lock if the resolved lock is stale, node scripts/bootstrap.cjs repair, and a normal git commit\n` +
           "to undo it: node scripts/template/update.cjs abort\n",
       );
       return 0;

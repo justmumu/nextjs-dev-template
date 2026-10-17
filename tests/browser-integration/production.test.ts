@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { connect } from "node:net";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -35,6 +35,30 @@ beforeAll(() => {
 }, 240_000);
 
 describe("production browser proof", () => {
+  test.each(["test:e2e", "test:artifact"])(
+    "%s preserves a PostCSS configuration and its local imports",
+    (command) => {
+      const before = leftovers();
+      mkdirSync(join(app, "config/css"), { recursive: true });
+      writeFileSync(join(app, "postcss.config.mjs"), 'export { default } from "./config/css/pipeline.mjs";\n');
+      writeFileSync(join(app, "config/css/pipeline.mjs"), 'import "./sentinel.mjs";\nexport default { plugins: {} };\n');
+      writeFileSync(join(app, "config/css/sentinel.mjs"), 'throw new Error("POSTCSS_PROJECT_INPUT_SENTINEL");\n');
+      try {
+        const result = run(app, "pnpm", ["run", command], 600_000);
+        const text = output(result);
+        expect(result.status, text).toBe(1);
+        expect(text).toContain("POSTCSS_PROJECT_INPUT_SENTINEL");
+        expect(text).toContain("build: the production build failed");
+        expect(text).not.toMatch(/server: next start owned|artifact: relocated/);
+        expect([...leftovers()].filter((name) => !before.has(name))).toEqual([]);
+      } finally {
+        rmSync(join(app, "postcss.config.mjs"));
+        rmSync(join(app, "config"), { recursive: true });
+      }
+    },
+    700_000,
+  );
+
   test("passes in a hostile environment, uses its own server and leaves the project and the machine as it found them", async () => {
     // A local environment file and the caller's own test-mode variables must not change the result.
     writeFileSync(join(app, ".env.local"), "NEXT_PUBLIC_LOCAL_SENTINEL=local-env-sentinel\nFIXTURE_SERVER_ONLY=from-local-file\n");
@@ -122,12 +146,12 @@ describe("production browser proof", () => {
 });
 
 describe("standalone artifact proof", () => {
-  test("serves its static and public assets from outside the project without development dependencies, and notices missing assets", () => {
+  test("serves its static and public assets from outside the project without development-only dependencies, and notices missing assets", () => {
     const before = leftovers();
     const result = run(app, "pnpm", ["run", "test:artifact"], 600_000, { NODE_ENV: "test", PORT: "1" });
     const text = output(result);
     expect(result.status, text).toBe(0);
-    expect(text).toMatch(/relocated outside the project, served with its static and public assets, no development dependency present/);
+    expect(text).toMatch(/relocated outside the project, served with its static and public assets, no development-only dependency present/);
     expect(text).toMatch(/negative control detected \d+ missing asset/);
     expect([...leftovers()].filter((name) => !before.has(name))).toEqual([]);
   }, 700_000);

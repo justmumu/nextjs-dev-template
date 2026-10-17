@@ -17,6 +17,7 @@ import {
   inputsOf,
   passing,
   render,
+  root,
   stateModule,
   type Host,
 } from "../support/template-fixture.ts";
@@ -79,9 +80,11 @@ describe("a real GitHub initialization", () => {
       .map((line) => /^(\d+) blob ([0-9a-f]+)\t([\s\S]+)$/.exec(line) as RegExpExecArray)
       .map((match) => ({ mode: match[1] as string, sha: match[2] as string, stage: "0", path: match[3] as string }));
     expect(gitModule.treeProblems(tree, files)).toEqual([]);
-    for (const gone of ["scripts/template/create.cjs", "tooling/template-sentinel.json", "README.md", "tests/unit/template-transaction.test.ts"]) {
+    for (const gone of ["scripts/template/create.cjs", "tooling/template-sentinel.json", "tests/unit/template-transaction.test.ts"]) {
       expect(existsSync(join(copy.dir, gone)), gone).toBe(false);
     }
+    // The generator's README is replaced by the application's, not carried over.
+    expect(readFileSync(join(copy.dir, "README.md"), "utf8")).toBe(readFileSync(join(root, "template/app/README.md"), "utf8"));
     expect(git(copy.dir, ["status", "--porcelain", "--ignored"], env)).toBe("");
 
     // The copy's own commit is recorded as exactly that; it names no upstream.
@@ -318,15 +321,15 @@ describe("installing over the copy", () => {
     const copy = copyOf(env);
     const base = hostFor(env, { run: passing });
     const { host: recording, made: scratches } = recordingScratch(base);
-    const readme = join(copy.dir, "README.md");
+    const readme = join(copy.dir, "tooling/template-sentinel.json");
     const original = readFileSync(readme);
     const host = { ...recording, disk: failingDisk(base, (path) => path === join(copy.dir, "src/app/page.tsx") || path === readme) };
     const result = await initializeIn(copy, host);
     expect(result.status).toBe(1);
-    expect(result.err).toMatch(/could not be restored: .*README\.md/);
+    expect(result.err).toMatch(/could not be restored: .*template-sentinel\.json/);
     const backup = scratches.find((path) => path.includes("template-backup-")) ?? "";
     expect(result.err).toContain(backup);
-    expect(readFileSync(join(backup, "README.md")).equals(original)).toBe(true);
+    expect(readFileSync(join(backup, "tooling/template-sentinel.json")).equals(original)).toBe(true);
     expect(git(copy.dir, ["rev-parse", "HEAD"], env).trim()).toBe(copy.original);
     // The exact commands the message names put the copy back.
     git(copy.dir, ["checkout", "-q", copy.original, "--", "."], env);

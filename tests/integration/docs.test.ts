@@ -106,9 +106,12 @@ describe("the generator's own and a generated application's documentation", () =
     const html = readFileSync(join(built, "index.html"), "utf8");
     expect(html).toContain(">v0.0.0<");
     expect(readdirSync(join(built, "contributing")).sort()).toEqual([
+      "agents.html",
+      "ci.html",
       "git-hooks.html",
       "pr-checklist.html",
       "production-tests.html",
+      "release-process.html",
       "static-quality.html",
       "testing.html",
       "toolchain.html",

@@ -159,6 +159,30 @@ describe("refusing a switch-off", () => {
     expect(reason("pnpm release:bump")).toMatch(/release:bump/);
   });
 
+  test.each([
+    "git -C /tmp/project push origin HEAD",
+    "git -c advice.pushUpdateRejected=false push",
+    "gh --repo owner/repo pr create --fill",
+    "gh --repo=owner/repo pr merge 1 --merge",
+    "env FOO=bar git push",
+    "git push && true",
+    "true; gh pr create --fill",
+    'sh -c "git push"',
+  ])("refuses publication outside the prompted standalone form: %s", (command) => {
+    expect(reason(command)).toMatch(/standalone.*user is asked/);
+  });
+
+  test.each(["git push origin HEAD", "gh pr create --fill", "gh pr merge 1 --merge"])("keeps the prompted publishing form: %s", (command) => {
+    expect(reason(command)).toBeNull();
+  });
+
+  test.each(['printf "%s" "git -C /tmp/project push"', "cat <<'EOF'\ngh --repo owner/repo pr create\nEOF"])(
+    "publication mentioned as data is not executed: %s",
+    (command) => {
+      expect(reason(command)).toBeNull();
+    },
+  );
+
   test("a plain commit is the only commit that is not refused", () => {
     expect(reason("git commit -q -m x")).toBeNull();
     expect(reason("git -C . commit -q -m x")).toMatch(/standalone/);

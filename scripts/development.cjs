@@ -125,8 +125,8 @@ function testOne(args, context) {
 }
 
 /** @returns {string[]} the scenario names: the integration test files a project carries */
-function scenariosOf(/** @type {string} */ root) {
-  const directory = nodePath.join(root, "tests", "integration");
+function scenariosOf(/** @type {string} */ root, suite = "integration") {
+  const directory = nodePath.join(root, "tests", suite);
   return existsSync(directory)
     ? readdirSync(directory)
         .filter((name) => name.endsWith(".test.ts"))
@@ -137,13 +137,11 @@ function scenariosOf(/** @type {string} */ root) {
 
 /** @type {SyncHandler} */
 function testIntegration(args, context) {
-  const { scenario } = parseArgs(args, { scenario: { values: scenariosOf(context.root) } });
-  return runNodeTool(context, "vitest", "vitest", [
-    "run",
-    "--project",
-    "integration",
-    ...(scenario === undefined ? [] : [`tests/integration/${scenario}.test.ts`]),
-  ]);
+  const allowed = testing.suitesFor(readRole(context.root)).filter((name) => name === "integration" || name === "browser-integration");
+  const { suite = "integration", scenario } = parseArgs(args, { suite: { values: allowed }, scenario: {} });
+  const scenarios = scenariosOf(context.root, suite);
+  if (scenario !== undefined && !scenarios.includes(scenario)) throw new UsageError(`--scenario must be one of: ${scenarios.join(", ")}`);
+  return runNodeTool(context, "vitest", "vitest", ["run", "--project", suite, ...(scenario === undefined ? [] : [`tests/${suite}/${scenario}.test.ts`])]);
 }
 
 /**

@@ -3,10 +3,31 @@
 const fs = require("node:fs");
 const nodePath = require("node:path");
 
-const STAGED = ["src", "public", "next.config.ts", "tsconfig.json", "package.json", "pnpm-lock.yaml", "pnpm-workspace.yaml", ".node-version"];
+// Configurations may import local code or data from anywhere in the project. Copy those inputs,
+// excluding machine state and environment files instead of guessing an import graph.
+const LOCAL_STATE = new Set([
+  ".git",
+  ".private",
+  ".claude",
+  ".codex",
+  ".compound-engineering",
+  "node_modules",
+  ".pnpm-store",
+  ".next",
+  "out",
+  "coverage",
+  "playwright-report",
+  "test-results",
+  ".cache",
+  ".temp",
+  "next-env.d.ts",
+  ".DS_Store",
+]);
 
 /** @param {string} source @param {string} dest */
 function copyTree(source, dest) {
+  const name = nodePath.basename(source);
+  if (LOCAL_STATE.has(name) || name === ".env" || name.startsWith(".env.") || name.endsWith(".tsbuildinfo")) return;
   const stat = fs.lstatSync(source);
   if (stat.isDirectory()) {
     fs.mkdirSync(dest, { recursive: true });
@@ -25,9 +46,7 @@ function copyTree(source, dest) {
  * `files` are written after the copy; `transform` rewrites copied text files by project-relative path
  */
 function stage({ source, dest, files, transform = {} }) {
-  for (const entry of STAGED) {
-    if (fs.existsSync(nodePath.join(source, entry))) copyTree(nodePath.join(source, entry), nodePath.join(dest, entry));
-  }
+  for (const entry of fs.readdirSync(source).sort()) copyTree(nodePath.join(source, entry), nodePath.join(dest, entry));
   for (const [path, rewrite] of Object.entries(transform)) {
     const target = nodePath.join(dest, path);
     fs.writeFileSync(target, rewrite(fs.readFileSync(target, "utf8")));
@@ -39,4 +58,4 @@ function stage({ source, dest, files, transform = {} }) {
   }
 }
 
-module.exports = { STAGED, stage };
+module.exports = { stage };

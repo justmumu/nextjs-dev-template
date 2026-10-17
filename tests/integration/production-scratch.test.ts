@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, readFileSync, readdirSync, statSync, symlinkSync, writeFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import { createRequire } from "node:module";
 import { describe, expect, test } from "vitest";
@@ -41,13 +41,13 @@ const application = {
   "src/app/page.tsx": "page",
   "src/app/nested/deeper/file.css": "css",
   "public/favicon.svg": "<svg/>",
-  // None of these may reach a fixture.
+  "tests/app/home.test.tsx": "test",
+  // None of these machine-local files may reach a fixture.
   ".env": "A=1",
   ".env.local": "NEXT_PUBLIC_LOCAL=sentinel",
   ".env.production.local": "B=2",
   ".next/cache/x": "build output",
   "node_modules/next/index.js": "dependency",
-  "tests/app/home.test.tsx": "test",
   "coverage/lcov.info": "report",
   "next-env.d.ts": "generated",
 };
@@ -61,6 +61,37 @@ function tree(dir: string, prefix = ""): string[] {
 describe("staging a fixture", () => {
   const source = scratch.project(application);
 
+  test("preserves build configuration and local imports while excluding nested machine state", () => {
+    const files = {
+      "postcss.config.mjs": 'export { default } from "./config/css/pipeline.mjs";',
+      "config/css/pipeline.mjs": "export default { plugins: {} };",
+      "config/css/data.json": '{"value":1}',
+      ".postcssrc.json": '{"plugins":{}}',
+      ".browserslistrc": "defaults",
+      ".npmrc": "registry=https://registry.npmjs.org/",
+      "tests/app/consumer.test.ts": "export {};",
+    };
+    const original = scratch.project({
+      ...files,
+      "config/.env.local": "SECRET=private",
+      "config/node_modules/pkg/index.js": "dependency",
+      ".private/note": "private",
+      ".git/config": "git",
+    });
+    const dest = scratch.project();
+    stage({ source: original, dest, files: {} });
+    expect(tree(dest).sort()).toEqual(Object.keys(files).sort());
+    for (const [path, content] of Object.entries(files)) expect(readFileSync(join(dest, path), "utf8")).toBe(content);
+  });
+
+  test("refuses a dangling configuration symlink instead of silently omitting it", () => {
+    const original = scratch.project();
+    symlinkSync("missing.mjs", join(original, "postcss.config.mjs"));
+    expect(() => {
+      stage({ source: original, dest: scratch.project(), files: {} });
+    }).toThrow(/neither a file nor a directory/);
+  });
+
   test("copies the application's own files and none of the checkout's local state", () => {
     const dest = scratch.project();
     stage({ source, dest, files: {} });
@@ -73,6 +104,7 @@ describe("staging a fixture", () => {
       "public/favicon.svg",
       "src/app/nested/deeper/file.css",
       "src/app/page.tsx",
+      "tests/app/home.test.tsx",
       "tsconfig.json",
     ]);
     expect(existsSync(join(dest, ".env.local"))).toBe(false);

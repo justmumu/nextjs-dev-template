@@ -5,10 +5,11 @@
 // never expire by age: a call is settled only by a result that carries its own identity, so a late or
 // foreign result cannot approve a change that is waiting.
 const fs = require("node:fs");
-const { execFileSync } = require("node:child_process");
+const { execFileSync, spawnSync } = require("node:child_process");
 const os = require("node:os");
 const nodePath = require("node:path");
 const { isObject } = require("../core/json.cjs");
+const { readJournal, readFacts, ownedMergeProblem } = require("../template/journal.cjs");
 const completion = require("./completion.cjs");
 const { GuardError, STATE_NAME, withLock, writeAtomic } = require("./mutex.cjs");
 const { STATE_DIR_NAME } = require("./policy.cjs");
@@ -230,8 +231,8 @@ const codexHomeOf = () => process.env.CODEX_HOME || nodePath.join(os.homedir(), 
  * `clean: true` lets it proceed. A missing baseline, a pending reservation, a held conflict or
  * environment drift are not clean, and neither is anything that cannot be read.
  * @param {string} root
- * @param {{ gitDir?: string, disk?: Disk, codexHome?: string }} [options]
- * @returns {{ clean: boolean, reason?: string }}
+ * @param {{ gitDir?: string, disk?: Disk, codexHome?: string, operation?: "deps-lock" | undefined, git?: import("../template/journal.cjs").GitText }} [options]
+ * @returns {{ clean: boolean, reason?: string, approvedManifest?: string }}
  */
 function status(root, options = {}) {
   try {
@@ -250,7 +251,24 @@ function status(root, options = {}) {
     if (state.needsEvaluation || state.window.length > 0) return { clean: false, reason: "finished calls have not been checked yet" };
     if (state.environmentBlocked)
       return { clean: false, reason: "the dependency environment changed outside an approved route; run node scripts/bootstrap.cjs repair" };
-    if (operationInProgress(gitDir, disk)) return { clean: false, reason: "a merge, rebase, cherry-pick or revert is waiting to be finished" };
+    if (operationInProgress(gitDir, disk)) {
+      if (options.operation === "deps-lock") {
+        const journal = readJournal(gitDir, disk);
+        const git = options.git ?? ((args) => spawnSync("git", args, { cwd: root, encoding: "utf8", env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" } }));
+        if (journal !== null) {
+          const problem = ownedMergeProblem(journal, readFacts({ root, gitDir, disk, git, journal }));
+          if (problem) return { clean: false, reason: problem };
+          const acceptedState = journal.owned.find((file) => file.path === ".template-state.json");
+          if (state.head !== journal.start.head || !acceptedState || state.files[".template-state.json"] !== acceptedState.after.blob)
+            return { clean: false, reason: "the resolved template update has not been accepted as the current guard baseline" };
+          const manifestId = state.files["package.json"];
+          const manifest = manifestId ? readBlob(nodePath.join(gitDir, STATE_DIR_NAME), manifestId, disk) : null;
+          if (manifest === null) return { clean: false, reason: "the accepted template update manifest is unavailable" };
+          return { clean: true, approvedManifest: manifest.toString("utf8") };
+        }
+      }
+      return { clean: false, reason: "a merge, rebase, cherry-pick or revert is waiting to be finished" };
+    }
     return { clean: true };
   } catch (error) {
     return { clean: false, reason: `the guard state could not be read (${/** @type {Error} */ (error).message})` };

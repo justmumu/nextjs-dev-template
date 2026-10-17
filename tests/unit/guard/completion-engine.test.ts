@@ -255,6 +255,18 @@ describe("a denied call that never reports", () => {
     expect(guard.preTool(context, shell("ls", "ls"))).toEqual({});
   });
 
+  test("a denied protected edit releases its reservation without granting the edit", () => {
+    const { machine, transcript, result } = denied();
+    const context = machine.context();
+    const edit = { cwd: "/p", tool_name: "Write", tool_input: { file_path: "/p/AGENTS.md" }, tool_use_id: "denied", transcript_path: transcript };
+    expect(guard.preTool(context, edit)).toMatchObject({ hookSpecificOutput: { permissionDecision: "ask" } });
+    machine.worktree.set("AGENTS.md", "unapproved change\n");
+    result();
+    expect(JSON.stringify(guard.preTool(context, shell("ls", "next")))).toMatch(/restored/);
+    expect(machine.worktree.get("AGENTS.md")).toBe("# Rules\n");
+    expect(machine.state()?.inflight["denied"]).toBeUndefined();
+  });
+
   test("it does not strand a parallel write", () => {
     const { machine, transcript, result } = denied();
     const context = machine.context();

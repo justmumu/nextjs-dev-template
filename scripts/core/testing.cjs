@@ -51,6 +51,13 @@ const SUITES = {
     timeout: 180_000,
     coverage: null,
   },
+  "browser-integration": {
+    environment: "node",
+    roles: ["generator"],
+    tests: [{ dir: "tests/browser-integration", extensions: [".test.ts"] }],
+    timeout: 180_000,
+    coverage: null,
+  },
 };
 
 /** @param {string} role @returns {string[]} the suite names a project of this role has */

@@ -1,13 +1,20 @@
 import { describe, expect, test } from "vitest";
-import { declarations, isGenerator, present, prefixRules, read, repositoryRoot } from "../support/agent-declarations.ts";
+import { declarations, isGenerator, prefixRules, read, repositoryRoot } from "../support/agent-declarations.ts";
 import { parseJson } from "../support/json.ts";
 
-// Generator only: the staged host declarations next to the repository's own, not yet activated, settings.
+// Generator only (the file keeps the name of the U9 staging contract): the repository's own, activated, host declarations and the ones it emits to applications.
+// Activation is data here; a real host's trust approval and prompts are not proven by these files.
 
-describe("the generator and the declarations it stages for applications", () => {
-  test("the declarations are staged below the application seed", () => {
+describe("the generator and the declarations it emits to applications", () => {
+  test("the application declarations are kept below the application seed, apart from the repository's own", () => {
     expect(isGenerator).toBe(true);
     expect(declarations).not.toBe(repositoryRoot);
+  });
+
+  test("the repository registers the guard in both hosts exactly as the applications do", () => {
+    for (const path of [".claude/settings.json", ".codex/hooks.json", ".codex/config.toml", ".codex/rules/publishing.rules"]) {
+      expect(read(repositoryRoot, path), path).toBe(read(declarations, path));
+    }
   });
 
   test("Compound Engineering is configured exactly as in the repository's own settings", () => {
@@ -18,14 +25,17 @@ describe("the generator and the declarations it stages for applications", () => 
     expect(tables(read(declarations, ".codex/config.toml"))).toBe(tables(read(repositoryRoot, ".codex/config.toml")));
   });
 
-  test("the repository's own publishing rules prompt exactly as the staged ones do", () => {
+  test("the repository's own publishing rules prompt exactly as the emitted ones do", () => {
     expect(prefixRules(read(repositoryRoot, ".codex/rules/publishing.rules"))).toEqual(prefixRules(read(declarations, ".codex/rules/publishing.rules")));
   });
 
-  test("the repository itself stays unregistered until the coherent activation", () => {
-    expect(present(repositoryRoot, ".codex/hooks.json")).toBe(false);
-    expect(parseJson(read(repositoryRoot, ".claude/settings.json"))).not.toHaveProperty("hooks");
-    expect(parseJson(read(repositoryRoot, "tooling/capabilities.json"))).toEqual({ guard: false, hooks: false });
-    expect(present(declarations, "tooling/capabilities.json")).toBe(false);
+  test("the guard and the hooks are active for the repository and for every application it emits", () => {
+    expect(parseJson(read(repositoryRoot, "tooling/capabilities.json"))).toEqual({ guard: true, hooks: true });
+  });
+
+  test("the project policy files are the shared ones: one AGENTS import, one inventory", () => {
+    expect(read(repositoryRoot, "CLAUDE.md")).toBe("@AGENTS.md\n");
+    expect(read(declarations, "CLAUDE.md")).toBe("@AGENTS.md\n");
+    expect(read(repositoryRoot, "AGENTS.md")).not.toMatch(/BEGIN:nextjs-agent|NEXT-AGENTS-MD/);
   });
 });

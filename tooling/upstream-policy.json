@@ -96,6 +96,24 @@
           "file": "tests/integration/guard-routes.test.ts",
           "title": "commits, history and conflicts, for real"
         }
+      },
+      {
+        "source": "AGENTS.md and docs/contributing/agents.md: shared policy text, approval routes and stated limits",
+        "behavior": "One shared policy for both hosts: command facade, scopes of unit and integration tests, hook-owned gates, narrow suppressions, the protected-file and publishing routes, the guard's limits, optional Compound Engineering and the once-only learning offer.",
+        "owner": "U16",
+        "proof": {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "the shared policy imports into Claude and states the rules the declarations enforce"
+        }
+      },
+      {
+        "source": "LICENSE (MIT, Copyright (c) 2026 justmumu)",
+        "behavior": "The full license notice of the source stays in this repository and in every application's shared tooling, with the source revision named as provenance, whatever the application's own answers.",
+        "owner": "U16",
+        "proof": {
+          "file": "tests/contracts/rendered-output.test.ts",
+          "title": "every application carries the full license notice and the source attribution of its derived tooling, whatever the answers"
+        }
       }
     ],
     "differences": [

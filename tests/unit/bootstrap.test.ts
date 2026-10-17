@@ -20,7 +20,7 @@ function machine(overrides: Partial<Host> = {}) {
     dirtyReason: () => null,
     dirtyKind: () => null,
     recoveryCommand: () => "node scripts/bootstrap.cjs repair",
-    guardRefusal: () => null,
+    guardCheck: () => ({ refusal: null, approvedManifest: null }),
     hooksRegistered: () => false,
     installHooks: () => calls.push("hooks"),
     installPlugins: () => {
@@ -229,14 +229,31 @@ describe("repair", () => {
 describe("deps-lock", () => {
   test("the environment is checked first, then the guard, then an unrelated incomplete install", () => {
     expect(run(["deps-lock"], machine({ preflightErrors: () => ["Node is wrong"] }).host).err).toMatch(/Node is wrong/);
-    expect(run(["deps-lock"], machine({ guardRefusal: () => "the guard reports an unresolved protected state (baseline not accepted)" }).host).err).toMatch(
-      /baseline not accepted/,
-    );
+    expect(
+      run(
+        ["deps-lock"],
+        machine({ guardCheck: () => ({ refusal: "the guard reports an unresolved protected state (baseline not accepted)", approvedManifest: null }) }).host,
+      ).err,
+    ).toMatch(/baseline not accepted/);
     const dirty = machine({ dirtyReason: () => "install interrupted", dirtyKind: () => "repair" });
     const result = run(["deps-lock"], dirty.host);
     expect(result.status).toBe(1);
     expect(result.err).toMatch(/incomplete install.*install interrupted.*Run: node scripts\/bootstrap\.cjs repair/s);
     expect(dirty.calls).toEqual([]);
+  });
+
+  test("an accepted template merge uses its approved manifest, and still rejects later drift", () => {
+    const approved = manifest({ keywords: ["upstream"], dependencies: { "left-pad": "1.3.0" } });
+    const { host, transactions } = machine({
+      guardActive: () => true,
+      guardCheck: () => ({ refusal: null, approvedManifest: approved }),
+      readFile: (path) => (path.endsWith("pnpm-workspace.yaml") ? workspace : approved),
+    });
+    expect(run(["deps-lock"], host).status).toBe(0);
+    expect(transactions[0]?.plan).toEqual({ action: "none" });
+    host.guardDrift = () => ["package.json"];
+    expect(run(["deps-lock"], host).err).toMatch(/differ from the guard's approved baseline/);
+    expect(transactions).toHaveLength(1);
   });
 
   test("an interrupted relock may be retried", () => {

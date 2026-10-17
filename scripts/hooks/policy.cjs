@@ -67,6 +67,7 @@ const SWITCH_OFF = [
   [new RegExp(STATE_DIR_NAME.replace(/-/g, "\\-")), "the guard's baseline belongs to the guard"],
 ];
 const GIT_COMMIT = /\bgit(?:\s+-\S+(?:\s+[^\s-]\S*)?)*\s+commit(?![\w-])/;
+const PUBLISHING = /\b(?:git(?:\s+-\S+(?:\s+[^\s-]\S*)?)*\s+push|gh(?:\s+-\S+(?:\s+[^\s-]\S*)?)*\s+pr\s+(?:create|merge))(?![\w-])/;
 // Goals the user approves each time; only their exact standalone form reaches the prompt.
 const USER_APPROVED_GOAL = /\b(?:bootstrap\.cjs\s+(guard-accept)|pnpm\s+(?:run\s+)?(release:(?:bump|tag)))\b/;
 
@@ -237,6 +238,10 @@ function switchOffReason(command, call) {
   if (runsGuard(command)) return "Refused: the guard runs only from its hooks and `node scripts/bootstrap.cjs guard-accept`.";
   if (GIT_COMMIT.test(text) && call.kind !== "commit")
     return "Refused: run `git commit` as a standalone command with no chaining or `$(...)`, e.g. `git commit -F <message-file>`, so the guard can check what it commits.";
+  const plainPublishing =
+    call.words !== null && (call.words.slice(0, 2).join(" ") === "git push" || ["gh pr create", "gh pr merge"].includes(call.words.slice(0, 3).join(" ")));
+  if (PUBLISHING.test(text) && !plainPublishing)
+    return "Refused: run publishing as a plain standalone command with no prefixes or chaining, so the user is asked.";
   const goal = USER_APPROVED_GOAL.exec(text);
   if (goal && !(call.route?.userApproved === true))
     return `Refused: run \`${goal[1] ? "node scripts/bootstrap.cjs guard-accept" : `pnpm run ${goal[2] ?? ""}`}\` as a standalone command with no other goals or variables, so the user is asked.`;

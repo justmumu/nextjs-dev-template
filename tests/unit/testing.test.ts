@@ -5,7 +5,7 @@ const testing = createRequire(import.meta.url)("../../scripts/core/testing.cjs")
 
 describe("suite registry", () => {
   test("each role runs the suites it owns and measures coverage for the ones with a scope", () => {
-    expect(testing.suitesFor("generator")).toEqual(["infrastructure", "integration"]);
+    expect(testing.suitesFor("generator")).toEqual(["infrastructure", "integration", "browser-integration"]);
     expect(testing.suitesFor("application")).toEqual(["infrastructure", "app", "integration"]);
     expect(testing.coverageSuitesFor("generator")).toEqual(["infrastructure"]);
     expect(testing.coverageSuitesFor("application")).toEqual(["infrastructure", "app"]);
@@ -15,6 +15,8 @@ describe("suite registry", () => {
     expect(testing.suiteOf("generator", "tests/unit/a.test.ts")).toBe("infrastructure");
     expect(testing.suiteOf("generator", "tests/contracts/a.test.ts")).toBe("infrastructure");
     expect(testing.suiteOf("generator", "tests/integration/a.test.ts")).toBe("integration");
+    expect(testing.suiteOf("generator", "tests/browser-integration/production.test.ts")).toBe("browser-integration");
+    expect(testing.suiteOf("application", "tests/browser-integration/production.test.ts")).toBeNull();
     expect(testing.suiteOf("application", "tests/app/a.test.tsx")).toBe("app");
     expect(testing.suiteOf("application", "tests/app/deep/a.test.ts")).toBe("app");
   });

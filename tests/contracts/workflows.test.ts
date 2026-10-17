@@ -10,6 +10,7 @@ const require = createRequire(import.meta.url);
 const render = require("../../scripts/template/render.cjs") as typeof import("../../scripts/template/render.cjs");
 const initialize = require("../../scripts/template/initialize.cjs") as typeof import("../../scripts/template/initialize.cjs");
 const context = require("../../scripts/ci/context.cjs") as typeof import("../../scripts/ci/context.cjs");
+const testing = require("../../scripts/core/testing.cjs") as typeof import("../../scripts/core/testing.cjs");
 const read = (path: string) => readFileSync(join(root, path), "utf8");
 
 const NAMES = ["ci", "dependency-audit", "release", "template-ci", "template-initialize"];
@@ -170,7 +171,18 @@ describe("required checks and lane ownership", () => {
     }
   });
 
-  test("the generator integration lane runs the whole integration suite, and macOS only the scenarios that exist", () => {
+  test("browser integration belongs to the provisioned production job, while other integration stays independent", () => {
+    expect(testing.suiteOf("generator", "tests/browser-integration/production.test.ts")).toBe("browser-integration");
+    const production = job("ci", "production");
+    const browserStep = production.steps.findIndex((step) => step.run === "pnpm run test:integration --suite=browser-integration");
+    const installed = production.steps.findIndex((step) => step.run?.includes("install --with-deps chromium webkit"));
+    expect(installed).toBeGreaterThanOrEqual(0);
+    expect(browserStep).toBeGreaterThan(installed);
+    for (const { job: target } of allJobs.filter(({ job: target }) => target !== production))
+      expect(stepRuns(target).join("\n")).not.toContain("--suite=browser-integration");
+  });
+
+  test("the generator integration lane runs the non-browser integration suite, and macOS only the scenarios that exist", () => {
     expect(stepRuns(job("template-ci", "generator-integration"))).toContain("pnpm run test:integration");
     const loop = /for scenario in ([\w -]+); do/.exec(job("template-ci", "infrastructure-macos").text)?.[1]?.split(" ") ?? [];
     const scenarios = new Set(readdirSync(join(root, "tests/integration")).map((file) => file.replace(/\.test\.ts$/, "")));
@@ -270,6 +282,21 @@ describe("first-run initialization", () => {
     expect(runs.filter((run) => /git push/.test(run))).toHaveLength(1);
   });
 
+  test("only the two browser lanes keep reports, only after a failure, only from test-results and only briefly", () => {
+    const uploads = allJobs.flatMap(({ workflow, job: target }) =>
+      target.steps.filter((step) => step.uses?.startsWith("actions/upload-artifact@")).map((step) => ({ id: `${workflow}/${target.id}`, step })),
+    );
+    expect(uploads.map(({ id }) => id)).toEqual(["ci/production", "release/validate", "template-initialize/initialize"]);
+    for (const { id, step } of uploads.filter(({ id: lane }) => lane !== "release/validate")) {
+      expect(step.text, id).toMatch(/\n\s+if: failure\(\)\n/);
+      expect(step.text, id).toMatch(/\n\s+path: test-results\n/);
+      expect(step.text, id).toMatch(/\n\s+retention-days: [1-9]\s*$/);
+      expect(step.text, id).toContain("if-no-files-found: ignore");
+    }
+    // A later step must not be able to hide the failure, and the push stays the last step of initialization.
+    expect(init.steps.at(-1)?.run).toMatch(/git push/);
+  });
+
   test("the history is made by the Actions bot's real noreply address, which the commit identity policy accepts", () => {
     const email = "41898282+github-actions[bot]@users.noreply.github.com";
     expect(init.text).toContain(`git config user.email "${email}"`);
@@ -286,7 +313,7 @@ describe("first-run initialization", () => {
 
   test("passes the repository's own name, owner and description as literal arguments, and the description only when it has one", () => {
     const run = runs.find((candidate) => /initialize\.cjs/.test(candidate)) ?? "";
-    expect(run).toContain('args=(--name="$REPOSITORY_NAME" --owner="$REPOSITORY_OWNER")');
+    expect(run).toContain('args=(--name="${REPOSITORY_NAME,,}" --owner="$REPOSITORY_OWNER")');
     expect(run).toContain('if [ -n "$REPOSITORY_DESCRIPTION" ]; then args+=(--description="$REPOSITORY_DESCRIPTION"); fi');
     expect(run).toContain('node scripts/template/initialize.cjs "${args[@]}"');
   });

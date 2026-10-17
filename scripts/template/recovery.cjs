@@ -276,7 +276,9 @@ function inspect(host) {
   }
   const problem = ownedMergeProblem(journal, facts);
   if (journal.phase === "ready" && problem === null) {
-    host.io.stdout("ready: finish it with guard-accept, repair and a normal commit, or run node scripts/template/update.cjs abort\n");
+    host.io.stdout(
+      "ready: finish it with guard-accept, deps-lock if the resolved lock is stale, repair and a normal commit, or run node scripts/template/update.cjs abort\n",
+    );
   } else if (journal.phase === "ready" && facts.unmerged) {
     host.io.stdout("conflicted: resolve the unmerged paths and git add them, or run node scripts/template/update.cjs abort\n");
   } else {

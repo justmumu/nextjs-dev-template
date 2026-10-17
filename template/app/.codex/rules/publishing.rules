@@ -26,3 +26,15 @@ prefix_rule(
     decision = "prompt",
     justification = "Only the user accepts changes to protected files (AGENTS.md).",
 )
+
+prefix_rule(
+    pattern = ["git", ["switch", "checkout", "pull", "merge", "rebase", "reset", "restore", "stash", "cherry-pick"]],
+    decision = "prompt",
+    justification = "History changes can replace protected files; the user approves each one (AGENTS.md).",
+)
+
+prefix_rule(
+    pattern = ["gh", "pr", "checkout"],
+    decision = "prompt",
+    justification = "Checking out a PR can replace protected files; the user approves each one (AGENTS.md).",
+)

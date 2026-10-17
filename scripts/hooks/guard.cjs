@@ -458,7 +458,16 @@ function preTool(context, payload) {
     const admitted = reserved ? baseline.inflight[identity.id] : undefined;
     if (admitted) completion.commandCompletion(admitted, identity.id, { environment, ancestry, starting: true });
     context.repo.writeState(baseline);
-    return reserved ? {} : deny(BUSY);
+    if (!reserved) return deny(BUSY);
+    if (context.client === "claude" && call.edit !== null)
+      return {
+        hookSpecificOutput: {
+          hookEventName: "PreToolUse",
+          permissionDecision: "ask",
+          permissionDecisionReason: `Approve this exact change to protected file ${call.edit} (AGENTS.md).`,
+        },
+      };
+    return {};
   });
 }
 

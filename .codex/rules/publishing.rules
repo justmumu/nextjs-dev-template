@@ -1,7 +1,7 @@
 # Publishing runs CI or ships a release, and accepting protected-file changes
 # overrides the guard, so the user approves each one. Never use an allow decision
-# here. Use the plain command forms documented in AGENTS.md. The release and
-# guard-admin commands below are planned interfaces, not installed tooling yet.
+# here. Use the plain command forms documented in AGENTS.md; prefix
+# forms such as `git -C dir push` do not match, and the guard refuses them.
 
 prefix_rule(
     pattern = ["git", "push"],
@@ -25,4 +25,16 @@ prefix_rule(
     pattern = ["node", "scripts/bootstrap.cjs", "guard-accept"],
     decision = "prompt",
     justification = "Only the user accepts changes to protected files (AGENTS.md).",
+)
+
+prefix_rule(
+    pattern = ["git", ["switch", "checkout", "pull", "merge", "rebase", "reset", "restore", "stash", "cherry-pick"]],
+    decision = "prompt",
+    justification = "History changes can replace protected files; the user approves each one (AGENTS.md).",
+)
+
+prefix_rule(
+    pattern = ["gh", "pr", "checkout"],
+    decision = "prompt",
+    justification = "Checking out a PR can replace protected files; the user approves each one (AGENTS.md).",
 )

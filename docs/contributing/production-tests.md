@@ -5,10 +5,10 @@ real browsers, and that its standalone output runs without the project. Both bui
 fixture copy, never in your working tree, and both are run by CI; run them locally before changing
 anything that affects rendering, routing, error handling or the build.
 
-| Command                  | What it proves                                                                                                                                                           |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `pnpm run test:e2e`      | One production build, served by `next start`, is exercised by Chromium (desktop and mobile viewport) and a WebKit smoke lane.                                            |
-| `pnpm run test:artifact` | The `output: "standalone"` variant of the fixture, relocated outside the project and served without development dependencies, answers with its static and public assets. |
+| Command                  | What it proves                                                                                                                                                                |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pnpm run test:e2e`      | One production build, served by `next start`, is exercised by Chromium (desktop and mobile viewport) and a WebKit smoke lane.                                                 |
+| `pnpm run test:artifact` | The `output: "standalone"` variant of the fixture, relocated outside the project and served without development-only dependencies, answers with its static and public assets. |
 
 Neither command takes arguments. In the generator they render an application into a scratch
 directory, install it from its frozen lock, run the application's own command there and remove it.
@@ -16,7 +16,7 @@ The starter application does not use standalone output; only the artifact fixtur
 
 ## Prerequisites
 
-The commands install nothing. Dependencies and browsers are set up beforehand:
+The commands install fixture dependencies from the package store. Node, pnpm and browser binaries must be available beforehand:
 
 1. `node scripts/bootstrap.cjs setup` installs the project from its frozen lock. The fixture is
    installed with `pnpm install --frozen-lockfile --offline` from the same package store, so the store
@@ -52,9 +52,23 @@ are not run without the proof; `pnpm run build` is not affected.
   error boundary shows a generic message, no response or page carries the error detail, and
   **Try again** renders the page again from the server; an asynchronous server component renders.
 - Traces and screenshots exist only for a failed test and are written to the ignored
-  `test-results/` directory.
+  `test-results/` directory. In the generator the application is a disposable fixture, so a failed
+  `pnpm run test:e2e` copies that directory to the generator's own ignored `test-results/` before the fixture
+  is removed; a passing run copies nothing.
 
 ## The build and the environment
+
+The fixture copies project files, including PostCSS/Browserslist configuration, `.npmrc`, local
+configuration imports and data. It preserves file modes and refuses symlinks or special files.
+It omits `.git`, `.private`, `.claude`, `.codex`, `.compound-engineering`, `node_modules`,
+`.pnpm-store`, `.next`, `out`, `coverage`, `playwright-report`, `test-results`, `.cache`,
+`.temp`, `next-env.d.ts`, `.DS_Store`, `*.tsbuildinfo` and `.env`/`.env.*` at every depth.
+Fixture routes and the standalone configuration transform are applied after that copy.
+
+The generator also carries browser harness integration tests and negative controls. Run
+`pnpm run test:integration --suite=browser-integration` with the same browser prerequisites.
+CI runs this suite in the production job after installing the pinned browsers; the ordinary
+`test:integration` suite needs no browser executables.
 
 - The production build runs without outbound network: on Linux in an unprivileged network
   namespace with only loopback raised, after a probe in the same kind of namespace showed that an
@@ -75,7 +89,7 @@ The fixture is built with `output: "standalone"`. Next.js leaves `public/` and `
 of that output, so the harness copies them in, moves the result to a new scratch directory, deletes
 the fixture and its `node_modules`, and then checks that:
 
-- no development dependency of the project is in the artifact's runtime tree and no parent of the
+- no development-only dependency of the project is in the artifact's runtime tree and no parent of the
   artifact holds a `node_modules` through which one could be found;
 - `node server.js` serves the page, every script and stylesheet it references, and the favicon;
 - an artifact built without `public/` and `.next/static` fails the same check (a negative control; a

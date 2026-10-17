@@ -96,7 +96,10 @@ function makeProject({ deps = {}, allow = {}, install = true }: Options = {}) {
     filter: (source) => !source.includes("/scripts/template") && !source.includes("/scripts/hooks"),
   });
   cpSync(join(import.meta.dirname, "../fixtures/packages"), join(dir, "pkgs"), { recursive: true });
-  for (const name of ["policy.json", "capabilities.json"]) cpSync(join(root, "tooling", name), join(dir, "tooling", name));
+  cpSync(join(root, "tooling/policy.json"), join(dir, "tooling/policy.json"));
+  // The fixture has no guard runtime (scripts/hooks is not copied), so it does not inherit the repository's active capabilities;
+  // the tests of the guard boundary switch the guard on themselves.
+  writeFileSync(join(dir, "tooling/capabilities.json"), JSON.stringify({ guard: false, hooks: false }));
   writeFileSync(join(dir, "tooling/project-role.json"), JSON.stringify({ role: "application", dependencyGraph: "root", seedWorkspaceMember: false }));
   cpSync(join(root, ".node-version"), join(dir, ".node-version"));
   const manifest = {

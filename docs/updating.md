@@ -102,8 +102,14 @@ When it goes ahead it:
    applied: same `HEAD`, same merge head and pending snapshot, the new state staged as written.
    The guard's baseline and its other machine-local state are kept; only the protected diff you
    reviewed is accepted.
-4. `node scripts/bootstrap.cjs repair` when dependencies changed. If the repair fails, the new
-   environment is not trusted.
+4. When the resolved manifest and lock disagree, run `node scripts/bootstrap.cjs deps-lock`
+   after acceptance. This exception applies only to this fully resolved, journal-owned update;
+   it uses the currently accepted manifest, including reviewed upstream metadata. Ordinary merges
+   and unapproved changes remain refused. Review and stage the regenerated lock, then run
+   `node scripts/bootstrap.cjs repair` when dependencies changed. Repair only installs the frozen
+   lock; a stale lock fails without removing the existing environment. If repair fails, the new
+   environment is not trusted. Human-terminal dependency commands have no agent completion event;
+   review their output and run `node scripts/bootstrap.cjs guard-accept` before committing.
 5. `pnpm run check`, then `git commit`: an ordinary merge commit with your hooks. Its parents are
    your `HEAD` and the new snapshot, so the next update has the new baseline.
    The pre-commit hook rejects conflict markers and whitespace errors that are still staged

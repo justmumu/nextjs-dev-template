@@ -101,7 +101,7 @@ describe("the policy mapping", () => {
   test("every carried behavior names its owner and a proof that exists", () => {
     expect(policy.mapping.entries.length).toBeGreaterThan(0);
     for (const entry of policy.mapping.entries) {
-      expect(entry.owner, entry.source).toBe("U6");
+      expect(["U6", "U16"], entry.source).toContain(entry.owner);
       expect(entry.behavior.length, entry.source).toBeGreaterThan(20);
       expect(proves(entry.proof), `${entry.source}: ${entry.proof.file} has no "${entry.proof.title}"`).toBe(true);
     }

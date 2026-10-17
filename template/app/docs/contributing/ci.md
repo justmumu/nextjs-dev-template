@@ -38,6 +38,12 @@ Node and pnpm it actually ran on and fails when they differ from the declared la
 pins. On GitHub-hosted Ubuntu 24.04, the offline build proof needs `sudo sysctl -w
 kernel.apparmor_restrict_unprivileged_userns=0` first; the workflow does it.
 
+## Failure reports
+
+A failed browser run keeps its traces and screenshots: the production job uploads `test-results/` as a workflow
+artifact only when a step failed, keeps it for seven days and uploads nothing when the directory is absent.
+A passing run keeps nothing.
+
 ## Pull requests from forks
 
 Workflows run on the `pull_request` event, so a fork's pull request has a read-only token and no secrets. No

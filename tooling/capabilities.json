@@ -1,4 +1,4 @@
 {
-  "guard": false,
-  "hooks": false
+  "guard": true,
+  "hooks": true
 }

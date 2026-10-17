@@ -52,6 +52,16 @@ network-independent build proof, which runs offline in an unprivileged network n
 GitHub-hosted Ubuntu 24.04 that needs one documented step first:
 `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`.
 
+## Failure reports
+
+A failed browser run keeps its traces and screenshots: the production job, and the first-run initialization job
+of a repository made from the template, upload `test-results/` as a workflow artifact only when a step failed,
+keep it for seven days and upload nothing when the directory is absent. A passing run keeps nothing. In the
+generator, `pnpm run test:e2e` renders its application in a disposable fixture; when the browser command
+fails it copies only the fixture's `test-results/` into the generator's ignored `test-results/` before the
+fixture, its installed dependencies and its processes are removed. If that copy fails, the command says so,
+keeps the browser command's own exit status and still removes everything it owns.
+
 ## Pull requests from forks
 
 Workflows run on the `pull_request` event, which gives a pull request from a fork a read-only token and
@@ -166,3 +176,7 @@ build proof, so it runs with the upstream Moby default seccomp profile (pinned r
 Apache-2.0, downloaded at run time and not copied here) plus exactly one rule:
 `unshare` with the flags `CLONE_NEWUSER | CLONE_NEWNET`. It is not privileged and gets no added
 capability. The image and the profile are a maintainer test harness; they are not part of any application.
+
+The production job also runs the generator's `test:integration --suite=browser-integration`
+after browser installation. Those scenarios are excluded from the separate non-browser integration
+job, so a fresh runner never inherits an assumption about another job's browser cache.

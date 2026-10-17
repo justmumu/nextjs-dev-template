@@ -9,6 +9,7 @@ import { parseJson } from "../support/json.ts";
 // reported as such: an unavailable CLI is never a pass.
 
 const toolchain = createRequire(import.meta.url)("../../scripts/core/toolchain.cjs") as typeof import("../../scripts/core/toolchain.cjs");
+const hookPolicy = createRequire(import.meta.url)("../../scripts/hooks/policy.cjs") as typeof import("../../scripts/hooks/policy.cjs");
 const codex = toolchain.resolveOnPath("codex", process.env["PATH"] ?? "");
 
 interface Decision {
@@ -23,6 +24,16 @@ function evaluate(rules: string, command: string[]): Decision {
 }
 
 const PROMPTED = [
+  ["git", "switch"],
+  ["git", "checkout"],
+  ["git", "pull"],
+  ["git", "merge"],
+  ["git", "rebase"],
+  ["git", "reset"],
+  ["git", "restore"],
+  ["git", "stash"],
+  ["git", "cherry-pick"],
+  ["gh", "pr", "checkout", "1"],
   ["git", "push"],
   ["git", "push", "origin", "feature"],
   ["gh", "pr", "create", "--fill"],
@@ -51,6 +62,17 @@ describe
   ])("real Codex execpolicy on %s", (_label, rules) => {
   test.each(PROMPTED)("prompts before %s", (...command) => {
     expect(evaluate(rules, command).decision).toBe("prompt");
+  });
+
+  test.each([
+    ["git", "-C", "/tmp/project", "push", "origin", "HEAD"],
+    ["gh", "--repo", "owner/repo", "pr", "create", "--fill"],
+    ["gh", "--repo", "owner/repo", "pr", "merge", "1", "--merge"],
+  ])("an unprompted publication prefix is refused by the guard: %s", (...command) => {
+    expect(evaluate(rules, command).matchedRules).toEqual([]);
+    const text = command.join(" ");
+    const words = hookPolicy.simpleWords(text);
+    expect(hookPolicy.switchOffReason(text, { words, route: null, kind: words ? hookPolicy.gitKind(words) : null })).toMatch(/standalone.*user is asked/);
   });
 
   test.each(UNTOUCHED)("leaves %s alone", (...command) => {

@@ -82,3 +82,10 @@ see [Production browser and standalone tests](production-tests).
 unimported application file fails only the application suite, that an unimported shipped script fails
 only the infrastructure suite, and that an empty scope fails. `tests/integration/unit-suites.test.ts`
 lists what Vitest really selects for each project and exercises `test:one` against the generator.
+
+## Browser harness integration (generator)
+
+`pnpm run test:integration --suite=browser-integration [--scenario=production]` selects
+`tests/browser-integration/`. These tests exercise the real browser and artifact commands, including
+negative controls. They run in the provisioned production CI job. Ordinary `test:integration`
+selects only `tests/integration/`; `test:one` also accepts files from the browser suite in a generator.

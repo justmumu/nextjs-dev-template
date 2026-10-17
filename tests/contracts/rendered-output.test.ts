@@ -42,9 +42,11 @@ describe("real seed render", () => {
       ".prettierrc.json",
       "AGENTS.md",
       "CLAUDE.md",
+      "README.md",
       "compound-packs/README.md",
       "docs/.vitepress/config.ts",
       "docs/.vitepress/site.json",
+      "docs/contributing/agents.md",
       "docs/contributing/ci.md",
       "docs/contributing/git-hooks.md",
       "docs/contributing/pr-checklist.md",
@@ -54,6 +56,9 @@ describe("real seed render", () => {
       "docs/contributing/testing.md",
       "docs/contributing/toolchain.md",
       "docs/getting-started.md",
+      "docs/guides/first-use.md",
+      "docs/guides/platforms.md",
+      "docs/guides/recovery.md",
       "docs/index.md",
       "docs/updating.md",
       "eslint.config.mjs",
@@ -129,6 +134,7 @@ describe("real seed render", () => {
       "tests/app/not-found.test.tsx",
       "tests/contracts/agent-permissions.test.ts",
       "tests/contracts/coverage-policy.test.ts",
+      "tests/contracts/documented-commands.test.ts",
       "tests/contracts/suite-classification.test.ts",
       "tests/e2e/boundaries.spec.ts",
       "tests/e2e/environment.spec.ts",
@@ -210,6 +216,8 @@ describe("real seed render", () => {
       "tests/unit/testing.test.ts",
       "tests/unit/toolchain.test.ts",
       "tests/unit/transaction.test.ts",
+      "tooling/LICENSE",
+      "tooling/NOTICE.md",
       "tooling/audit-policy.json",
       "tooling/capabilities.json",
       "tooling/eslint/shared.mjs",
@@ -232,7 +240,7 @@ describe("real seed render", () => {
       /^scripts\/template\/(?!(?:git|inputs|journal|manifest|preview|pristine|provenance|recovery|render|state|update)\.cjs$)/,
       /^tests\/(?:fixtures\/(?!render\/)|generator\/)|^tests\/integration\/(?!(?:artifact-compose|artifact-run|audit|bootstrap|ci-context|dependencies-cli|development-gates|executable-lookup|install-state|interruption|owned-process|permissions|process|production-scratch|release|transaction)\.test\.ts$)/,
       /^tests\/(?:unit\/generator-commands|contracts\/(?:rendered-output|toolchain|command-parity|agent-staging)|support\/rendered-app)/,
-      /^tooling\/(?!project-role\.json$|policy\.json$|audit-policy\.json$|capabilities\.json$|eslint\/(?:shared|suppression-policy)\.mjs$|hooks\/(?:staged|commit-message)\.mjs$|vitest\/suite\.ts$)/,
+      /^tooling\/(?!project-role\.json$|policy\.json$|audit-policy\.json$|capabilities\.json$|LICENSE$|NOTICE\.md$|eslint\/(?:shared|suppression-policy)\.mjs$|hooks\/(?:staged|commit-message)\.mjs$|vitest\/suite\.ts$)/,
       /\.py$/,
       /pyproject|Makefile|copier|uv\.lock/i,
       /auth|prisma|drizzle|database|db\//i,
@@ -267,8 +275,25 @@ describe("real seed render", () => {
     expect(byPath(a, ".compound-engineering/config.yaml")).toBe(readFileSync(join(root, ".compound-engineering/config.yaml"), "utf8"));
     expect(byPath(a, ".compound-engineering/config.example.yaml")).toBe(readFileSync(join(root, ".compound-engineering/config.example.yaml"), "utf8"));
     expect(byPath(a, "compound-packs/README.md")).toBe(readFileSync(join(root, "compound-packs/README.md"), "utf8"));
-    expect(JSON.parse(byPath(a, "tooling/capabilities.json"))).toEqual({ guard: false, hooks: false });
+    expect(JSON.parse(byPath(a, "tooling/capabilities.json"))).toEqual({ guard: true, hooks: true });
     expect(a.files.find((file) => file.path === "scripts/hooks/launch.sh")?.mode).toBe(0o755);
+  });
+
+  test("every application carries the full license notice and the source attribution of its derived tooling, whatever the answers", () => {
+    const license = readFileSync(join(root, "LICENSE"), "utf8");
+    expect(license).toContain("MIT License");
+    expect(license).toContain("Copyright (c) 2026 justmumu");
+    expect(license).toContain('THE SOFTWARE IS PROVIDED "AS IS"');
+    const policy = parseJson<{ source: { revision: string; repository: string } }>(readFileSync(join(root, "tooling/upstream-policy.json"), "utf8"));
+    for (const result of [a, b]) {
+      expect(byPath(result, "tooling/LICENSE")).toBe(license);
+      const notice = byPath(result, "tooling/NOTICE.md");
+      expect(notice).toContain(policy.source.revision);
+      expect(notice).toContain(policy.source.repository);
+      expect(notice).toContain("Copyright (c) 2026 justmumu");
+      expect(notice).not.toMatch(/first-owner|second-owner|first-app|second-app/);
+    }
+    expect(byPath(a, "README.md")).toContain("tooling/LICENSE");
   });
 
   test("emitted tests assume nothing the generator alone provides", () => {

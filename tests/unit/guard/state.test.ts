@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { join } from "node:path";
 import { describe, expect, test } from "vitest";
+import { GIT_DIR, ROOT, STATE, commitId, updating } from "../../support/update-model.ts";
 import { scratchArea } from "../../support/project.ts";
 
 const require = createRequire(import.meta.url);
@@ -172,5 +173,64 @@ describe("what Git reports", () => {
   test("an id of an executable file names the same content as the plain one", () => {
     expect(repo.contentOf("abc:x")).toBe("abc");
     expect(repo.contentOf("abc")).toBe("abc");
+  });
+});
+
+describe("relocking an accepted template merge", () => {
+  const approvedManifest = '{"name":"app","description":"accepted upstream metadata"}';
+  function merging() {
+    const model = updating();
+    const dir = `${GIT_DIR}/protected-baseline`;
+    const manifestId = commitId("approved manifest");
+    const current = baseline({ head: model.journal.start.head, files: { [STATE]: model.journal.owned[0]?.after.blob ?? null, "package.json": manifestId } });
+    model.disk.put(`${dir}/blobs/${manifestId}`, approvedManifest);
+    const options = {
+      gitDir: GIT_DIR,
+      disk: { ...model.disk.disk, statSync: (path: string) => ({ size: Buffer.byteLength(model.disk.text(path) ?? "") }) } as never,
+      operation: "deps-lock" as const,
+      git: (args: string[]) => {
+        try {
+          return { status: 0, stdout: model.host.git.out(ROOT, args) };
+        } catch {
+          return { status: 1, stdout: "" };
+        }
+      },
+    };
+    const check = () => {
+      model.disk.put(`${dir}/state.json`, JSON.stringify(current));
+      return state.status(ROOT, options);
+    };
+    return { model, current, check };
+  }
+  test("only deps-lock receives the currently accepted manifest of the owned resolved merge", () => {
+    const fixture = merging();
+    expect(fixture.check()).toEqual({ clean: true, approvedManifest });
+    // The ordinary dependency operation still refuses the very same pending merge.
+    fixture.model.disk.put(`${GIT_DIR}/protected-baseline/state.json`, JSON.stringify(fixture.current));
+    expect(state.status(ROOT, { gitDir: GIT_DIR, disk: { ...fixture.model.disk.disk, statSync: () => ({ size: 1 }) } as never }).clean).toBe(false);
+  });
+  test.each([
+    "before acceptance",
+    "historical approval only",
+    "moved baseline",
+    "unresolved",
+    "foreign merge",
+    "ordinary merge",
+    "other operation",
+    "missing manifest",
+    "pending call",
+  ])("refuses %s", (scenario) => {
+    const fixture = merging();
+    const owned = fixture.model.journal.owned[0];
+    if (scenario === "before acceptance" || scenario === "historical approval only") fixture.current.files[STATE] = owned?.before.blob ?? null;
+    if (scenario === "historical approval only") fixture.current.approved[STATE] = [owned?.after.blob ?? null];
+    if (scenario === "moved baseline") fixture.current.head = commitId("other");
+    if (scenario === "unresolved") fixture.model.repo.unmerged.push("package.json");
+    if (scenario === "foreign merge") fixture.model.disk.put(`${GIT_DIR}/MERGE_HEAD`, `${commitId("foreign")}\n`);
+    if (scenario === "ordinary merge") fixture.model.disk.disk.rmSync(`${GIT_DIR}/template-update/journal.json`);
+    if (scenario === "other operation") fixture.model.disk.put(`${GIT_DIR}/CHERRY_PICK_HEAD`, "x");
+    if (scenario === "missing manifest") fixture.current.files["package.json"] = commitId("absent");
+    if (scenario === "pending call") fixture.current.inflight["x"] = reservation();
+    expect(fixture.check().clean).toBe(false);
   });
 });

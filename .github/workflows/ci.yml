@@ -111,6 +111,17 @@ jobs:
         run: pnpm run test:e2e
       - name: Standalone portability
         run: pnpm run test:artifact
+      - name: Browser harness integration and negative controls
+        if: needs.plan.outputs.role == 'generator'
+        run: pnpm run test:integration --suite=browser-integration
+      - name: Keep the failure reports of the browser lanes
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: production-failure-reports
+          path: test-results
+          if-no-files-found: ignore
+          retention-days: 7
 
   application-integration:
     name: Application integration

@@ -102,19 +102,29 @@ function capabilities(root) {
  * @returns {string | null} a refusal message, or null when the operation may proceed
  */
 function guardRefusal(root) {
-  if (!capabilities(root).guard) return null;
+  return guardCheck(root).refusal;
+}
+
+/** @param {string} root @param {"deps-lock"} [operation] @returns {{ refusal: string | null, approvedManifest: string | null }} */
+function guardCheck(root, operation) {
+  if (!capabilities(root).guard) return { refusal: null, approvedManifest: null };
   const statePath = nodePath.join(root, "scripts", "hooks", "state.cjs");
-  if (!fs.existsSync(statePath)) return "the guard is registered in tooling/capabilities.json but scripts/hooks/state.cjs is missing";
+  if (!fs.existsSync(statePath))
+    return { refusal: "the guard is registered in tooling/capabilities.json but scripts/hooks/state.cjs is missing", approvedManifest: null };
   /** @type {unknown} */
   let state;
   try {
     /** @type {unknown} */
     const loaded = require(statePath);
-    state = /** @type {{ status: (root: string) => unknown }} */ (loaded).status(root);
+    state = /** @type {{ status: (root: string, options: { operation: "deps-lock" | undefined }) => unknown }} */ (loaded).status(root, { operation });
   } catch (error) {
-    return `the guard state could not be read (${/** @type {Error} */ (error).message}); resolve it before changing dependencies`;
+    return {
+      refusal: `the guard state could not be read (${/** @type {Error} */ (error).message}); resolve it before changing dependencies`,
+      approvedManifest: null,
+    };
   }
-  return guardVerdict(state);
+  const refusal = guardVerdict(state);
+  return { refusal, approvedManifest: refusal === null && isObject(state) && typeof state.approvedManifest === "string" ? state.approvedManifest : null };
 }
 
 /**
@@ -133,6 +143,7 @@ module.exports = {
   clearDirty,
   dirtyKind,
   dirtyReason,
+  guardCheck,
   guardRefusal,
   guardVerdict,
   markDirty,

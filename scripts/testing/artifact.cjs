@@ -2,6 +2,7 @@
 "use strict";
 const { randomUUID } = require("node:crypto");
 const fs = require("node:fs");
+const { createRequire } = require("node:module");
 const nodePath = require("node:path");
 const { cleanEnv } = require("./environment.cjs");
 const { standaloneConfig } = require("./fixtures.cjs");
@@ -52,9 +53,10 @@ function storeName(entry) {
 /**
  * @param {string} artifact
  * @param {readonly string[]} development the project's development dependency names
- * @returns {string[]} development dependencies present in the artifact's runtime tree
+ * @param {readonly string[]} [runtime] direct runtime dependency names
+ * @returns {string[]} development-only dependencies present in the artifact's runtime tree
  */
-function developmentLeaks(artifact, development) {
+function developmentLeaks(artifact, development, runtime = []) {
   const modules = nodePath.join(artifact, "node_modules");
   const present = new Set([
     ...installedNames(modules),
@@ -65,7 +67,47 @@ function developmentLeaks(artifact, development) {
           .map(storeName)
       : []),
   ]);
-  return development.filter((name) => present.has(name));
+  const needed = runtimeNames(runtime, artifact);
+  return development.filter((name) => present.has(name) && !needed.has(name));
+}
+
+/**
+ * Follow installed runtime edges, including optional and peer dependencies, never devDependencies.
+ * A package may serve both development tools and the production server (for example sharp's semver).
+ * @param {readonly string[]} initial
+ * @param {string} root
+ * @param {(name: string, from: string) => { directory: string, manifest: Record<string, unknown> } | null} [load]
+ * @returns {Set<string>}
+ */
+function runtimeNames(initial, root, load) {
+  /** @type {Set<string>} */
+  const needed = new Set();
+  const visited = new Set();
+  const queue = [];
+  for (const name of initial) queue.push({ name, from: root });
+  for (const { name, from } of queue) {
+    let entry = load?.(name, from);
+    if (!load) {
+      const paths = createRequire(nodePath.join(from, "package.json")).resolve.paths(name) ?? [];
+      for (const directory of paths) {
+        const file = nodePath.join(directory, name, "package.json");
+        if (fs.existsSync(file)) {
+          const real = fs.realpathSync(file);
+          entry = { directory: nodePath.dirname(real), manifest: readObject(real) };
+          break;
+        }
+      }
+    }
+    if (!entry) continue;
+    needed.add(name);
+    if (visited.has(entry.directory)) continue;
+    visited.add(entry.directory);
+    for (const field of ["dependencies", "optionalDependencies", "peerDependencies"]) {
+      const dependencies = entry.manifest[field];
+      if (isObject(dependencies)) for (const dependency of Object.keys(dependencies)) queue.push({ name: dependency, from: entry.directory });
+    }
+  }
+  return needed;
 }
 
 /** @param {string} directory @returns {string[]} the ancestors of a directory that hold a node_modules directory, through which a dependency could be found */
@@ -165,7 +207,10 @@ async function runArtifact({ root, io, host, base, serve = serveAndCheck, cancel
     composeArtifact({ fixture, destination: complete, assets: true });
     composeArtifact({ fixture, destination: incomplete, assets: false });
     host.remove(fixture);
-    const leaks = developmentLeaks(complete, development);
+    const manifest = readObject(nodePath.join(root, "package.json"));
+    const runtime = [];
+    for (const value of [manifest.dependencies, manifest.optionalDependencies]) if (isObject(value)) runtime.push(...Object.keys(value));
+    const leaks = developmentLeaks(complete, development, runtime);
     const parents = resolvingAncestors(complete);
     if (leaks.length > 0 || parents.length > 0) {
       io.stderr(
@@ -180,7 +225,7 @@ async function runArtifact({ root, io, host, base, serve = serveAndCheck, cancel
       io.stderr(`artifact is incomplete: ${missing.join("; ")}\n`);
       return 1;
     }
-    io.stdout("artifact: relocated outside the project, served with its static and public assets, no development dependency present\n");
+    io.stdout("artifact: relocated outside the project, served with its static and public assets, no development-only dependency present\n");
     const control = await serve({ ...servers, artifact: incomplete });
     if (cancel.isCancelled()) return 1;
     if (control.length === 0) {
@@ -223,6 +268,7 @@ module.exports = {
   missingAssets,
   programOf,
   resolvingAncestors,
+  runtimeNames,
   runArtifact,
   serveAndCheck,
   storeName,

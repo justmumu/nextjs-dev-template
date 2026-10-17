@@ -42,6 +42,13 @@ describe("default unit selection", () => {
     expect(integration.filter((path) => infrastructure.includes(path))).toEqual([]);
   });
 
+  test("real browser integration is selected only by its explicit project", () => {
+    const browser = selected("browser-integration");
+    expect(browser).toEqual(tracked("tests/browser-integration"));
+    expect(browser).toContain("tests/browser-integration/production.test.ts");
+    expect(browser.filter((path) => integration.includes(path) || infrastructure.includes(path))).toEqual([]);
+  });
+
   test("every integration test file is a scenario of test:integration, and nothing else is", () => {
     const result = run(root, "pnpm", ["run", "test:integration", "--scenario=nope"]);
     expect(result.status).toBe(2);
@@ -108,6 +115,7 @@ describe("focused test command with lookalikes", () => {
       "vitest.config.ts",
       "vitest.infrastructure.config.ts",
       "vitest.integration.config.ts",
+      "vitest.browser-integration.config.ts",
       "scripts",
       "tooling",
     ]) {

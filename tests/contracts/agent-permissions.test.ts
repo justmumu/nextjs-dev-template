@@ -174,6 +174,16 @@ describe("Codex", () => {
 describe.each(Object.entries(rulesFiles))("publishing rules (%s)", (_label, text) => {
   const rules = prefixRules(text);
   const PUBLISHING = [
+    ["git", "switch"],
+    ["git", "checkout"],
+    ["git", "pull"],
+    ["git", "merge"],
+    ["git", "rebase"],
+    ["git", "reset"],
+    ["git", "restore"],
+    ["git", "stash"],
+    ["git", "cherry-pick"],
+    ["gh", "pr", "checkout", "1"],
     ["git", "push"],
     ["git", "push", "origin", "feature"],
     ["gh", "pr", "create", "--fill"],

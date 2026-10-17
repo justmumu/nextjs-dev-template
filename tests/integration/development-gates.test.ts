@@ -184,5 +184,15 @@ describe("focused and integration runs", () => {
   test("the application has the integration command too", () => {
     const root = toolProject("application", { "tests/integration/process.test.ts": "" });
     expect(run(root, ["test:integration", "--scenario=process"]).log).toEqual(["vitest run --project integration tests/integration/process.test.ts"]);
+    expect(run(root, ["test:integration", "--suite=browser-integration"]).status).toBe(2);
+  });
+
+  test("the generator selects browser integration explicitly and validates its own scenarios", () => {
+    const root = toolProject("generator", { "tests/browser-integration/production.test.ts": "" });
+    expect(run(root, ["test:integration", "--suite=browser-integration"]).log).toEqual(["vitest run --project browser-integration"]);
+    expect(run(root, ["test:integration", "--suite=browser-integration", "--scenario=production"]).log.at(-1)).toBe(
+      "vitest run --project browser-integration tests/browser-integration/production.test.ts",
+    );
+    expect(run(root, ["test:integration", "--scenario=production"]).status).toBe(2);
   });
 });

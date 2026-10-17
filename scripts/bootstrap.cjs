@@ -6,7 +6,7 @@ const { existsSync, readFileSync } = require("node:fs");
 const nodePath = require("node:path");
 const { UsageError, parseArgs } = require("./core/args.cjs");
 const { buildPermissions, manifestViolations, npmrcViolations, workspaceViolations } = require("./core/dependency-policy.cjs");
-const { capabilities, clearDirty, dirtyKind, dirtyReason, guardRefusal, recoveryCommand, removeInstallState } = require("./core/install-state.cjs");
+const { capabilities, clearDirty, dirtyKind, dirtyReason, guardCheck, recoveryCommand, removeInstallState } = require("./core/install-state.cjs");
 const { parseObject } = require("./core/json.cjs");
 const { redact, run, runLogged } = require("./core/process.cjs");
 const { installPlugins, realHost: realPluginHost } = require("./core/plugins.cjs");
@@ -21,7 +21,7 @@ const { checkLock, runTransaction } = require("./core/transaction.cjs");
  *   dirtyReason: (root: string) => string | null,
  *   dirtyKind: (root: string) => string | null,
  *   recoveryCommand: (root: string) => string,
- *   guardRefusal: (root: string) => string | null,
+ *   guardCheck: typeof guardCheck,
  *   hooksRegistered: (root: string) => boolean,
  *   installHooks: (root: string, io: Io) => void,
  *   installPlugins: (root: string, io: Io) => void | Promise<void>,
@@ -45,7 +45,7 @@ const HOST = {
   dirtyReason,
   dirtyKind,
   recoveryCommand,
-  guardRefusal,
+  guardCheck,
   hooksRegistered: (root) => capabilities(root).hooks,
   installHooks: (root, io) => {
     /** @type {unknown} */
@@ -190,14 +190,15 @@ function boundaryProblems({ head, manifest, workspace, npmrc }) {
 /**
  * Relocks after an independently approved manifest edit. The approved baseline is the committed
  * HEAD: protected files may not differ from it, and package.json may differ only in its
- * dependency maps. Approval itself is never granted here.
+ * dependency maps. A resolved, guard-accepted template merge uses its accepted manifest instead;
+ * approval itself is never granted here.
  * @param {string} root @param {Io} io @param {Host} host @returns {number}
  */
 function depsLock(root, io, host) {
   const errors = host.preflightErrors(root);
   if (errors.length > 0) return fail(io, errors);
-  const refusal = host.guardRefusal(root);
-  if (refusal) return fail(io, [refusal]);
+  const guard = host.guardCheck(root, "deps-lock");
+  if (guard.refusal) return fail(io, [guard.refusal]);
   const dirty = host.dirtyReason(root);
   if (dirty && host.dirtyKind(root) !== "deps-lock") return fail(io, [`An incomplete install was left behind (${dirty}). Run: ${host.recoveryCommand(root)}`]);
   const head = git(host, root, ["show", "HEAD:package.json"]);
@@ -223,7 +224,7 @@ function depsLock(root, io, host) {
   }
   const npmrc = nodePath.join(root, ".npmrc");
   const problems = boundaryProblems({
-    head: head.stdout,
+    head: guard.approvedManifest ?? head.stdout,
     manifest: host.readFile(nodePath.join(root, "package.json"), "utf8"),
     workspace: host.readFile(nodePath.join(root, "pnpm-workspace.yaml"), "utf8"),
     npmrc: host.exists(npmrc) ? host.readFile(npmrc, "utf8") : null,

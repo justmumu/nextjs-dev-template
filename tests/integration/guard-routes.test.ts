@@ -214,7 +214,7 @@ describe("edits by the hosts (R20)", () => {
     const ordinary = fixture.run("pre", edit("src/app.ts", "e0"));
     expect(ordinary.json).toEqual({});
     fixture.run("post", edit("src/app.ts", "e0"));
-    expect(fixture.run("pre", edit("AGENTS.md", "e1")).json).toEqual({});
+    expect(fixture.run("pre", edit("AGENTS.md", "e1")).json).toMatchObject({ hookSpecificOutput: { permissionDecision: "ask" } });
     fixture.write("AGENTS.md", "# Approved edit\n");
     fixture.write("tsconfig.json", "{}\n");
     const post = fixture.run("post", edit("AGENTS.md", "e1"));
@@ -227,7 +227,7 @@ describe("edits by the hosts (R20)", () => {
     const fixture = createFixture();
     symlinkSync("AGENTS.md", join(fixture.root, "alias.md"));
     const alias = { cwd: fixture.root, tool_name: "Edit", tool_input: { file_path: join(fixture.root, "alias.md") }, tool_use_id: "a1" };
-    expect(fixture.run("pre", alias).json).toEqual({});
+    expect(fixture.run("pre", alias).json).toMatchObject({ hookSpecificOutput: { permissionDecision: "ask" } });
     const stored = JSON.parse(readFileSync(join(fixture.root, ".git/protected-baseline/state.json"), "utf8")) as {
       inflight: Record<string, { exclusive: boolean }>;
     };
@@ -908,7 +908,7 @@ describe("the relock after an approved edit, with the guard active (R11, KTD11)"
       dirtyReason: () => null,
       dirtyKind: () => null,
       recoveryCommand: () => "node scripts/bootstrap.cjs repair",
-      guardRefusal: (root: string) => installState.guardRefusal(root),
+      guardCheck: installState.guardCheck,
       hooksRegistered: () => false,
       installHooks: () => undefined,
       guardActive: (root: string) => installState.capabilities(root).guard,

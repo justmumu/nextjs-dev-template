@@ -29,6 +29,7 @@ const REAL_EFFECTS = [
   ["a changed mode", /(?<![.\w])chmodSync\(/],
   ["a moved, removed or copied entry of the code under test", /(?<![.\w])(?:renameSync|unlinkSync|copyFileSync|cpSync)\(/],
   ["a spied filesystem", /vi\.spyOn\(\s*fs\b/],
+  ["the real report filesystem copier", /\btemplateCommands\.keepReports\s*\(/],
 ] as const;
 
 describe("the default unit selection", () => {
@@ -70,6 +71,7 @@ describe("the classification check itself", () => {
     "unlinkSync(path);",
     "vi.spyOn(fs, 'writeFileSync')",
     'processes.run(process.execPath, ["-e", "1"], {});',
+    "templateCommands.keepReports(app, generator);",
   ])("%s is a real effect", (line) => {
     expect(REAL_EFFECTS.some(([, pattern]) => pattern.test(line))).toBe(true);
   });

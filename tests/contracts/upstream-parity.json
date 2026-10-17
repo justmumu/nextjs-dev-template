@@ -17,7 +17,7 @@
       "sourceTest": "test_live_codex_completion",
       "status": "pending",
       "owner": "U9",
-      "note": "The real authenticated Codex CLI lane is host verification at the coherent activation (U16). test:permissions reports a missing Codex CLI as explicitly unavailable; U9 does not claim the live lane.",
+      "note": "The real authenticated Codex CLI lane is host verification at the coherent activation, after U16 has declared the final hooks and rules. test:permissions reports a missing Codex CLI as explicitly unavailable; no JavaScript test claims the live lane, so it stays pending until a host runs it.",
       "jsTests": [
         {
           "file": "tests/integration/permissions.test.ts",

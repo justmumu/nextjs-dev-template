@@ -27,7 +27,7 @@ describe("every suite of the project has its configuration", () => {
   });
 
   test("nothing is configured that the project does not run", () => {
-    const projects = [...readFileSync(join(root, "vitest.config.ts"), "utf8").matchAll(/"(vitest\.[a-z]+\.config\.ts)"/g)].map((match) => match[1]);
+    const projects = [...readFileSync(join(root, "vitest.config.ts"), "utf8").matchAll(/"(vitest\.[a-z-]+\.config\.ts)"/g)].map((match) => match[1]);
     expect(projects.sort()).toEqual(suites.map((name) => `vitest.${name}.config.ts`).sort());
   });
 

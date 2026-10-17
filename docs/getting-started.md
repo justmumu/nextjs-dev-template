@@ -2,8 +2,11 @@
 
 ## Prerequisites
 
-Node 24.21.0 and pnpm 12.14.0, installed exactly; see [Toolchain](contributing/toolchain). Nothing
-else is required: no Python, uv, Copier, MkDocs, Make or Python-based hooks.
+Node 24.21.0 and pnpm 12.14.0, installed exactly; see [Toolchain](contributing/toolchain). Git 2.34 or
+newer and the operating system's `file` command (the documentation link checker needs it) are also
+required, and the Linux production tests need `unshare`, `ip` and user namespaces; see
+[Prerequisites and platforms](guides/platforms). No Python, uv, Copier, MkDocs, Make or Python-based hooks
+are needed.
 
 ## Set up the generator
 
@@ -12,7 +15,9 @@ node scripts/bootstrap.cjs setup
 pnpm run check
 ```
 
-`setup` installs from the frozen lock. `check` runs the lock, format, lint, type and unit-test gates.
+`setup` installs from the frozen lock, binds the Node binary the guard uses and installs the three Git hooks.
+`check` runs the lock, format, lint, type and unit-test gates. Setup does not trust the agent hosts; see
+[Activate the agent hosts](guides/first-use) before starting Claude Code or Codex.
 
 ## Create a project locally
 
@@ -49,7 +54,8 @@ part of a pristine tree. Updates merge from the pristine commits, so keep both c
 
 The new project has no hooks, no `node_modules` and no machine path. Run
 `node scripts/bootstrap.cjs setup` in it as the explicit next step; that installs the frozen
-dependencies and establishes its own hooks and guard binding.
+dependencies and establishes its own hooks and guard binding. The guard's first baseline then comes from
+the committed enrollment state; see [Activate the agent hosts](guides/first-use).
 
 If the enrollment commit is rejected (an identity problem or a hook), creation reports failure. The
 pristine commit and the state file stay in the project, nothing is removed, and committing

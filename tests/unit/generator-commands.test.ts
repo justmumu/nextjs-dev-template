@@ -61,6 +61,29 @@ describe("production proofs of the generator", () => {
     expect(sink.err()).toMatch(/could not be installed from its frozen lock/);
   });
 
+  test("a failing command has its reports kept before its fixture is removed; a passing one keeps nothing", async () => {
+    const failing = host({ command: 3 });
+    failing.value.keepReports = (dir) => failing.steps.push(`keep ${dir}`);
+    expect(await templateCommands.inRenderedApp("test:e2e", capture().io, failing.value)).toBe(3);
+    expect(failing.steps).toEqual(["render /scratch/app", "install /scratch/app", "run test:e2e in /scratch/app", "keep /scratch/app", "remove /scratch"]);
+
+    const passing = host({ command: 0 });
+    passing.value.keepReports = (dir) => passing.steps.push(`keep ${dir}`);
+    expect(await templateCommands.inRenderedApp("test:e2e", capture().io, passing.value)).toBe(0);
+    expect(passing.steps).not.toContain("keep /scratch/app");
+  });
+
+  test("a report that cannot be kept is reported, the command's own status stays and the fixture is still removed", async () => {
+    const { value, steps } = host({ command: 3 });
+    value.keepReports = () => {
+      throw new Error("disk full");
+    };
+    const sink = capture();
+    expect(await templateCommands.inRenderedApp("test:e2e", sink.io, value, createCancellation())).toBe(3);
+    expect(steps.at(-1)).toBe("remove /scratch");
+    expect(sink.err()).toMatch(/failure reports could not be kept: disk full/);
+  });
+
   test("a command that was killed by a signal is a failure", async () => {
     expect(await templateCommands.inRenderedApp("test:e2e", capture().io, host({ command: null }).value)).toBe(1);
   });

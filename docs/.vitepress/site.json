@@ -14,6 +14,18 @@
           "link": "/getting-started"
         },
         {
+          "text": "Prerequisites and platforms",
+          "link": "/guides/platforms"
+        },
+        {
+          "text": "Activate the agent hosts",
+          "link": "/guides/first-use"
+        },
+        {
+          "text": "Recover a stopped workflow",
+          "link": "/guides/recovery"
+        },
+        {
           "text": "Updating from the template",
           "link": "/updating"
         }
@@ -41,6 +53,10 @@
         {
           "text": "Git hooks and agent hosts",
           "link": "/contributing/git-hooks"
+        },
+        {
+          "text": "Claude Code and Codex",
+          "link": "/contributing/agents"
         },
         {
           "text": "CI and supply chain",

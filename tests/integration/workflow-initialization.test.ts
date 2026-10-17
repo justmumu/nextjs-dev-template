@@ -31,7 +31,7 @@ function shell(cwd: string, script: string, env: NodeJS.ProcessEnv) {
 }
 
 /** A copy of the template as GitHub makes it, a bare remote behind its `origin`, and the environment the workflow's steps see. */
-function repository() {
+function repository(name = "made-app") {
   const env = fixtureEnv(scratch.area);
   const copy = generatorCopy(scratch.area, `copy-${String(Math.random()).slice(2, 8)}`, env, {
     "tooling/capabilities.json": '{"guard":true,"hooks":true}\n',
@@ -47,19 +47,19 @@ function repository() {
   );
   chmodSync(join(hooks, "pre-receive"), 0o755);
   // The URL the workflow's checkout leaves behind, served by the bare repository.
-  git(copy, ["remote", "add", "origin", "https://github.com/made-owner/made-app"], env);
-  git(copy, ["config", `url.${remote}.insteadOf`, "https://github.com/made-owner/made-app"], env);
-  return { env, copy, remote, inputs: inputsOf(copy) };
+  git(copy, ["remote", "add", "origin", `https://github.com/made-owner/${name}`], env);
+  git(copy, ["config", `url.${remote}.insteadOf`, `https://github.com/made-owner/${name}`], env);
+  return { env, copy, remote, name, inputs: inputsOf(copy) };
 }
 
 const answers = { name: "made-app", owner: "made-owner" };
 
-async function runWorkflow({ env, copy, inputs }: Pick<ReturnType<typeof repository>, "env" | "copy" | "inputs">, description: string) {
+async function runWorkflow({ env, copy, inputs, name }: Pick<ReturnType<typeof repository>, "env" | "copy" | "inputs" | "name">, description: string) {
   const identity = shell(copy, stepRun(/bot identity/), env);
   expect(identity.status, identity.err).toBe(0);
   // The initialization step as written, up to the command it starts: its arguments are what the script builds.
   const script = stepRun(/Convert the copy/).replace('node scripts/template/initialize.cjs "${args[@]}"', 'printf "%s\\n" "${args[@]}"');
-  const built = shell(copy, script, { ...env, REPOSITORY_NAME: answers.name, REPOSITORY_OWNER: answers.owner, REPOSITORY_DESCRIPTION: description });
+  const built = shell(copy, script, { ...env, REPOSITORY_NAME: name, REPOSITORY_OWNER: answers.owner, REPOSITORY_DESCRIPTION: description });
   expect(built.status, built.err).toBe(0);
   const args = built.out.split("\n").filter(Boolean);
   const flags = Object.fromEntries(args.map((arg) => [/^--([a-z]+)=/.exec(arg)?.[1] ?? arg, arg.slice(arg.indexOf("=") + 1)]));
@@ -78,6 +78,14 @@ async function runWorkflow({ env, copy, inputs }: Pick<ReturnType<typeof reposit
 const publish = (env: NodeJS.ProcessEnv, copy: string) => shell(copy, stepRun(/Publish the converted history/), { ...env, DEFAULT_BRANCH: "main" });
 
 describe("the first-run workflow, step by step", () => {
+  test("normalizes a mixed-case GitHub repository name into a valid package name", async () => {
+    const repo = repository("My-App");
+    const result = await runWorkflow(repo, "");
+    expect(result.status, result.err).toBe(0);
+    expect(result.args).toEqual(["--name=my-app", "--owner=made-owner"]);
+    expect(parseJson<{ name: string }>(readFileSync(join(repo.copy, "package.json"), "utf8")).name).toBe("my-app");
+  }, 300_000);
+
   test("converts the copy under the bot identity with the guard and hooks active, and publishes the history with one push", async () => {
     const repo = repository();
     const { env, copy, remote } = repo;

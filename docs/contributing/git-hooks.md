@@ -6,9 +6,9 @@ checked against it by `pnpm run test:permissions`.
 
 ## The hooks
 
-`node scripts/bootstrap.cjs setup` installs `pre-commit`, `commit-msg` and `pre-push` once hook
-registration is activated for the project in `tooling/capabilities.json`; until then setup says that no
-hook was installed. The installer asks Git where hooks live, so linked worktrees share one set and a
+`node scripts/bootstrap.cjs setup` installs `pre-commit`, `commit-msg` and `pre-push` because hook
+registration is activated for the project in `tooling/capabilities.json`. A project whose capabilities file
+turns hooks off gets a setup that says no hook was installed. The installer asks Git where hooks live, so linked worktrees share one set and a
 configured `core.hooksPath` is honored and never changed. It replaces only hook files it wrote itself: a
 hook of any other origin stops the installation before anything is changed, and a failure part-way restores
 every hook as it was. Running setup again changes nothing.

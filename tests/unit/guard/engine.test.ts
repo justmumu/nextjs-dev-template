@@ -440,7 +440,7 @@ describe("Codex and Claude edits (R20)", () => {
     const machine = approvedProject();
     const context = machine.context();
     const edit = { cwd: "/p", tool_name: "Write", tool_input: { file_path: "/p/AGENTS.md", content: "# New\n" }, tool_use_id: "w1" };
-    expect(guard.preTool(context, edit)).toEqual({});
+    expect(guard.preTool(context, edit)).toMatchObject({ hookSpecificOutput: { permissionDecision: "ask" } });
     machine.worktree.set("AGENTS.md", "# New\n");
     machine.worktree.set("tsconfig.json", "{}");
     const post = guard.postTool(context, edit, false);
@@ -454,8 +454,20 @@ describe("Codex and Claude edits (R20)", () => {
     const context = machine.context();
     machine.repo.realpath = (absolute) => (absolute === "/p/docs-link.md" ? "/p/AGENTS.md" : absolute);
     const edit = { cwd: "/p", tool_name: "Edit", tool_input: { file_path: "/p/docs-link.md" }, tool_use_id: "w2" };
-    expect(guard.preTool(context, edit)).toEqual({});
+    expect(guard.preTool(context, edit)).toMatchObject({ hookSpecificOutput: { permissionDecision: "ask" } });
     expect(machine.state()?.inflight["w2"]?.exclusive).toBe(true);
+  });
+
+  test.each(["template/app/package.json", ".pnpmfile.cjs", "src/.prettierrc.json"])("asks from the protected inventory for %s", (path) => {
+    const machine = approvedProject();
+    const context = machine.context();
+    const edit = { cwd: "/p", tool_name: "Write", tool_input: { file_path: path }, tool_use_id: "inventory" };
+    const decision = guard.preTool(context, edit);
+    expect(decision).toMatchObject({ hookSpecificOutput: { permissionDecision: "ask" } });
+    expect(JSON.stringify(decision)).toContain(path);
+    machine.worktree.set(path, "approved content\n");
+    expect(guard.postTool(context, edit, false)).toEqual({});
+    expect(text(machine, path)).toBe("approved content\n");
   });
 
   test("an edit to ordinary source is not exclusive and approves nothing", () => {

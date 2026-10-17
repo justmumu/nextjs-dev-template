@@ -39,6 +39,9 @@ function repository(extra: Record<string, string> = {}): string {
   const dir = generatorFixture(scratch, `repo-${String(counter)}`, {
     ".node-version": `${process.versions.node}\n`,
     "pnpm-lock.yaml": readFileSync(join(root, "pnpm-lock.yaml"), "utf8"),
+    // This scenario is about the Git hook stages; the guard stage of pre-commit has its own scenarios (guard-routes), so the fixture
+    // does not inherit the repository's active guard, which would need a bound Node and a baseline here.
+    "tooling/capabilities.json": '{"guard":false,"hooks":true}\n',
     ...extra,
   });
   must(dir, "init", "-q", "-b", "main");
