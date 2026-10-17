@@ -195,6 +195,27 @@ The guard is a safeguard against mistakes, not an operating-system sandbox and n
 
 ## Compound Engineering
 
+The generator and generated projects ship the same Codex plugin defaults in `.codex/config.toml`:
+
+```toml
+[features]
+remote_plugin = false
+
+[plugins._default]
+enabled = false
+
+[plugins."compound-engineering@compound-engineering-plugin"]
+enabled = true
+```
+
+The remote catalog is disabled, and plugins without an explicit enablement are disabled by default.
+Compound Engineering stays explicitly enabled through its declared Git marketplace. Other explicit
+plugin choices and skills installed independently are outside this default. These project settings
+require a trusted checkout and a fresh Codex session; an already-running session's skill list does
+not verify a configuration change. Check the effective settings and loaded plugins in your client.
+
+Existing projects receive these settings by [updating from a published template ref](../updating).
+
 Compound Engineering is optional. Its shipped `.compound-engineering/config.yaml` sends plans and
 brainstorm approaches to Opus, implementation units to a Sonnet worker with a Codex fallback, and
 cross-model reviews to Codex. Without a sandbox, its detached jobs keep running after the call that

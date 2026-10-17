@@ -39,6 +39,87 @@ function finish(app: string, env: NodeJS.ProcessEnv) {
   expect(settled.status, settled.err).toBe(0);
 }
 
+describe("Codex plugin defaults through template lineage", () => {
+  const configPath = ".codex/config.toml";
+  const seedPath = `template/app/${configPath}`;
+  const defaultTable = "[plugins._default]\nenabled = false\n";
+  const remoteTable = "[features]\nremote_plugin = false\n";
+  const explicitPlugin = '[plugins."project-helper@local-marketplace"]\nenabled = true\n';
+
+  function expectDefaults(config: string) {
+    const lines = config.split("\n").map((line) => line.replace(/[ \t]*#.*$/, "").trim());
+    for (const table of ["features", "plugins._default", 'plugins."compound-engineering@compound-engineering-plugin"']) {
+      expect(
+        lines.filter((line) => line === `[${table}]`),
+        table,
+      ).toHaveLength(1);
+    }
+    expect(config).toContain(remoteTable);
+    expect(config).toContain(defaultTable);
+    expect(config).toContain('[plugins."compound-engineering@compound-engineering-plugin"]\nenabled = true\n');
+  }
+
+  test.each(["neither-default", "remote-only", "same-position", "different-position", "commented-position", "conflict"])(
+    "%s preserves local configuration through the reviewed merge",
+    async (scenario) => {
+      const env = fixtureEnv(scratch.area);
+      const gen = source(env);
+      const next = readFileSync(join(gen, seedPath), "utf8");
+      expectDefaults(next);
+      const old = next.replace(`\n${defaultTable}`, "");
+      const baseline = scenario === "neither-default" ? old.replace(`\n${remoteTable}`, "") : old;
+      advance(gen, env, { [seedPath]: baseline }, "chore: older Codex defaults");
+      const app = await createApp(`codex-${scenario}`, gen, env);
+      // Top-level local preferences and an explicit plugin live away from the template's insertion.
+      const withLocal = (config: string) =>
+        `model_reasoning_effort = "high"\n${config.replace('\n[plugins."compound-engineering', `\n${explicitPlugin}\n[plugins."compound-engineering`)}`;
+      let local = withLocal(baseline);
+      if (scenario === "same-position") local = withLocal(next);
+      if (scenario === "different-position") local = local.replace("\n[marketplaces.", `\n${defaultTable}\n[marketplaces.`);
+      if (scenario === "commented-position") {
+        local = local.replace("\n[marketplaces.", `\n${defaultTable.replace("\n", " # local policy\n")}\n[marketplaces.`);
+      }
+      if (scenario === "conflict") local += "\n[plugins._default]\nenabled = true\n";
+      write(app, configPath, local);
+      commitAll(app, env, "chore: local Codex preferences");
+      expect(accept(app).status).toBe(0);
+      advance(gen, env, { [seedPath]: next }, "fix: complete Codex plugin defaults");
+
+      const { result, path } = await previewFile(app, env, gen);
+      expect(result.result.status).toBe(scenario === "conflict" ? "conflicted" : "clean");
+      const applied = await applyPreview(app, env, gen, path);
+      const merged = readFileSync(join(app, configPath), "utf8");
+      expect(merged).toContain('model_reasoning_effort = "high"');
+      expect(merged).toContain(explicitPlugin);
+      if (scenario === "conflict") {
+        expect(git(app, ["ls-files", "-u", "--", configPath], env)).not.toBe("");
+        expect(merged).toMatch(/^<<<<<<< /m);
+        expect(merged).toMatch(/^enabled = true$/m);
+        expect(merged).toMatch(/^enabled = false$/m);
+      } else {
+        expect(applied.status, applied.err).toBe(0);
+        expect(git(app, ["ls-files", "-u"], env)).toBe("");
+      }
+      if (scenario === "different-position" || scenario === "commented-position") {
+        // Git merges text, so an otherwise clean merge can repeat a TOML table.
+        expect(merged.match(/^[ \t]*\[plugins\._default\][ \t]*(?:#.*)?$/gm)).toHaveLength(2);
+        expect(() => {
+          expectDefaults(merged);
+        }).toThrow();
+      }
+      if (scenario === "different-position" || scenario === "commented-position" || scenario === "conflict") {
+        // The fixture models the person reconciling the tables before guard acceptance.
+        write(app, configPath, withLocal(next));
+        git(app, ["add", "--", configPath], env);
+      }
+      expectDefaults(readFileSync(join(app, configPath), "utf8"));
+      finish(app, env);
+      expect((await previewFile(app, env, gen)).result.result.status).toBe("current");
+    },
+    240_000,
+  );
+});
+
 describe("applying a clean preview", () => {
   test("the merge waits uncommitted, the guard accepts it only after the person, and a normal commit and settle finish it", async () => {
     const env = fixtureEnv(scratch.area);

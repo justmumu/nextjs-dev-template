@@ -6,7 +6,7 @@ const PACKAGE_MANAGER = /^(?:npm_|pnpm_|PNPM_|NPM_)/i;
 /** Variables that change how Node.js resolves modules or how Next.js behaves and what it embeds; the harness sets the ones it needs itself. */
 const AMBIENT = /^(?:NODE_ENV|NODE_PATH|NEXT_|PORT$|HOSTNAME$|FIXTURE_|E2E_|PLAYWRIGHT_)/;
 /** The caller's own choices that a fixture must still find: where the package store and the browsers are. The set of browser lanes is never one of them. */
-const KEPT = /^(?:(?:npm|pnpm)_config_store_dir|PLAYWRIGHT_BROWSERS_PATH)$/i;
+const KEPT = /^(?:(?:npm|pnpm)_config_store_dir|PNPM_HOME|PLAYWRIGHT_BROWSERS_PATH)$/i;
 
 /**
  * @param {NodeJS.ProcessEnv} base the invoking environment

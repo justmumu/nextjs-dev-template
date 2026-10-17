@@ -118,6 +118,23 @@ When it goes ahead it:
    the merge commit exists, including after later application commits (the next `template:apply` does it too). Nothing is ever removed because
    of its age.
 
+## Codex plugin defaults
+
+To receive the Codex defaults, preview a published ref containing the change, then follow the apply,
+review and commit steps above. The manifest includes `.codex/config.toml`, so projects with valid
+template lineage receive it through the ordinary three-way merge. No separate migration is needed.
+
+The intended configuration has `remote_plugin = false` under `[features]`, `enabled = false` under
+`[plugins._default]`, and the existing explicit Compound Engineering enablement. Keep unrelated local
+settings and your explicit plugin choices when resolving conflicts.
+
+Review this file even if the preview says `clean`. If you already added `[plugins._default]` at a
+different position, Git can retain both copies without a text conflict. Before `guard-accept` and
+the merge commit, reconcile duplicate tables so each intended table appears once, then stage the
+resolved file. The configuration contract in `pnpm run check` rejects duplicate default tables.
+After committing, open a fresh trusted-project Codex session and inspect the effective settings and
+loaded plugins. See [agent plugin defaults](contributing/agents#compound-engineering) for their scope.
+
 ## Recover
 
 ```sh
