@@ -114,7 +114,7 @@ describe("Claude Code", () => {
   test("does not grant a general bootstrap, shell or interpreter allowance", () => {
     for (const rule of claude.permissions.allow) {
       expect(rule, rule).toMatch(/^Bash\((?:pnpm run [a-z:-]+(?: .*)?|node scripts\/bootstrap\.cjs (?:setup|repair|deps-lock))\)$/);
-      expect(rule).not.toMatch(/guard-accept|release:|template:|\bnode \*|\bsh\b|\bbash\b/);
+      expect(rule).not.toMatch(/guard-accept|release:|template:|update\.cjs|\bnode \*|\bsh\b|\bbash\b/);
     }
     expect(claude.permissions.allow).toContain("Bash(pnpm run test:one --test=tests/*)");
   });
@@ -198,6 +198,7 @@ describe.each(Object.entries(rulesFiles))("publishing rules (%s)", (_label, text
     ["pnpm", "run", "check"],
     ["gh", "pr", "view"],
     ["pnpm", "run", "template:apply"],
+    ["node", "scripts/template/update.cjs", "abort"],
     ["node", "scripts/bootstrap.cjs", "setup"],
   ])("leaves %s alone", (...command) => {
     expect(rules.some((rule) => ruleMatches(rule, command))).toBe(false);

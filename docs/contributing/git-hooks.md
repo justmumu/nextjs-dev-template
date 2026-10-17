@@ -13,11 +13,11 @@ configured `core.hooksPath` is honored and never changed. It replaces only hook 
 hook of any other origin stops the installation before anything is changed, and a failure part-way restores
 every hook as it was. Running setup again changes nothing.
 
-| Hook         | What it does                                                                                                                                                                        |
-| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pre-commit` | Asks the protected-files guard about staged protected files, runs lint-staged on the staged files, then the lock check and the type check when the staged paths make them relevant. |
-| `commit-msg` | Checks the message with commitlint: a Conventional Commit header of at most 72 characters. Merge commits stay possible.                                                             |
-| `pre-push`   | Runs `pnpm run check` and `pnpm run docs:build` once each, and stops the push at the first failure.                                                                                 |
+| Hook         | What it does                                                                                                                                                                                                                                                             |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pre-commit` | Asks the protected-files guard about staged protected files, rejects staged conflict markers and whitespace errors (`git diff --cached --check`), runs lint-staged on the staged files, then the lock check and the type check when the staged paths make them relevant. |
+| `commit-msg` | Checks the message with commitlint: a Conventional Commit header of at most 72 characters. Merge commits stay possible.                                                                                                                                                  |
+| `pre-push`   | Runs `pnpm run check` and `pnpm run docs:build` once each, and stops the push at the first failure.                                                                                                                                                                      |
 
 lint-staged runs one reviewed configuration (`tooling/hooks/staged.mjs`), passed explicitly so no nested
 configuration is picked up. It keeps its defaults: unstaged hunks of a partially staged file are hidden

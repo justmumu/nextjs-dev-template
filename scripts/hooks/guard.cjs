@@ -595,8 +595,9 @@ function accept(context, out) {
     }
     // A call its own transcript shows as finished no longer holds the user's approval back.
     if (previous) completion.liveCalls(previous, transcripts(context));
-    const paths = candidates(context, previous);
-    if (context.repo.operationInProgress() || context.repo.unmerged(paths).size > 0) {
+    // A pending merge is accepted only when it is a template update this engine began and its owner finished
+    // (see scripts/template/journal.cjs); any unmerged index stage, protected or not, is still being resolved.
+    if (context.repo.anyUnmerged() || (context.repo.operationInProgress() && !context.repo.templateUpdate().owned)) {
       out("Not accepted: a merge, rebase, cherry-pick or revert is still waiting to be finished. Resolve it first.\n");
       return 1;
     }

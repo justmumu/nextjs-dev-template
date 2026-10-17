@@ -20,7 +20,7 @@ const GIT_ENV = {
 };
 
 /** The guard and the shared modules it loads, as a generated project holds them. */
-const SHIPPED = ["scripts/core", "scripts/hooks", "scripts/dependencies.cjs", "scripts/bootstrap.cjs", "tooling/policy.json"];
+const SHIPPED = ["scripts/core", "scripts/hooks", "scripts/template/journal.cjs", "scripts/dependencies.cjs", "scripts/bootstrap.cjs", "tooling/policy.json"];
 
 export const WORKSPACE = readFileSync(join(repositoryRoot, "pnpm-workspace.yaml"), "utf8");
 

@@ -1,4 +1,5 @@
 import { chmodSync, openSync, existsSync, lstatSync, mkdirSync, readFileSync, readdirSync, rmSync, symlinkSync, utimesSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -665,6 +666,106 @@ describe("commits, history and conflicts, for real (R17)", () => {
     expect(fixture.accept()).toBe(0);
     expect(stateModule.status(fixture.root)).toEqual({ clean: true });
     expect(fixture.call("true").pre).toEqual({});
+  });
+});
+
+describe("a template update's merge, for real (R8, R17)", () => {
+  const journals = require("../../scripts/template/journal.cjs") as typeof import("../../scripts/template/journal.cjs");
+  const sha256 = (text: string) => createHash("sha256").update(text).digest("hex");
+  const blobOf = (fixture: Fixture, text: string) =>
+    spawnSync("git", ["-C", fixture.root, "hash-object", "--stdin"], { input: text, encoding: "utf8" }).stdout.trim();
+
+  /** A project whose merge of a pristine side stopped before committing, with the journal an update would have written. */
+  function updating(options: { phase?: "prepared" | "ready"; journal?: boolean; extra?: Record<string, string> } = {}) {
+    const fixture = createFixture({ ".template-state.json": '{ "old": true }\n', ...options.extra });
+    fixture.git("switch", "-q", "-c", "pristine");
+    fixture.write("tsconfig.json", '{"compilerOptions":{"strict":true,"noEmit":true}}\n');
+    fixture.git("commit", "-q", "-am", "chore(template): pristine render");
+    const next = fixture.git("rev-parse", "HEAD").trim();
+    fixture.git("switch", "-q", "main");
+    const head = fixture.git("rev-parse", "HEAD").trim();
+    fixture.git("update-ref", journals.PENDING_REF, next);
+    fixture.git("merge", "--no-ff", "--no-commit", "-q", "pristine");
+    const before = '{ "old": true }\n';
+    const after = '{ "new": true }\n';
+    fixture.write(".template-state.json", after);
+    fixture.git("add", ".template-state.json");
+    const journal = {
+      schema: journals.JOURNAL_SCHEMA,
+      journalVersion: journals.JOURNAL_VERSION,
+      phase: options.phase ?? "ready",
+      source: { url: "file:///source", ref: "main", sha: next },
+      start: { head, baseline: { commit: head, tree: fixture.git("rev-parse", "HEAD^{tree}").trim() } },
+      next: { commit: next, tree: fixture.git("rev-parse", "pristine^{tree}").trim(), renderDigest: sha256("render") },
+      outputDigest: sha256("output"),
+      conflicted: false,
+      owned: [
+        {
+          path: ".template-state.json",
+          before: { digest: sha256(before), blob: blobOf(fixture, before) },
+          after: { digest: sha256(after), blob: blobOf(fixture, after) },
+        },
+      ],
+      pendingRef: journals.PENDING_REF,
+    };
+    if (options.journal !== false) {
+      mkdirSync(join(fixture.root, ".git", journals.UPDATE_DIR), { recursive: true });
+      writeFileSync(join(fixture.root, ".git", journals.UPDATE_DIR, journals.JOURNAL_FILE), journals.serializeJournal(journal as never));
+    }
+    return { fixture, head, next };
+  }
+
+  test("a clean merge no-commit the journal vouches for is accepted, and the normal merge commit then settles the guard", () => {
+    const { fixture, head, next } = updating();
+    expect(fixture.git("rev-parse", "MERGE_HEAD").trim()).toBe(next);
+    expect(stateModule.status(fixture.root).clean).toBe(false);
+    expect(fixture.accept()).toBe(0);
+    expect(fixture.run("pre-commit", {}).status).toBe(0);
+    fixture.git("commit", "-q", "-m", "chore(template): update");
+    expect(fixture.git("rev-list", "--parents", "-n", "1", "HEAD").trim().split(" ")).toEqual([fixture.git("rev-parse", "HEAD").trim(), head, next]);
+    expect(fixture.call("true").pre).toEqual({});
+    expect(fixture.run("pre-commit", {}).status).toBe(0);
+    expect(stateModule.status(fixture.root)).toEqual({ clean: true });
+  });
+
+  test("the same merge without a journal, or with an unfinished one, is still refused", () => {
+    const bare = updating({ journal: false });
+    expect(bare.fixture.accept()).toBe(1);
+    expect(updating({ phase: "prepared" }).fixture.accept()).toBe(1);
+  });
+
+  test("a journal does not vouch for a state file someone changed, another merge head, or another operation", () => {
+    const edited = updating();
+    edited.fixture.write(".template-state.json", '{ "edited": true }\n');
+    expect(edited.fixture.accept()).toBe(1);
+
+    const staged = updating();
+    staged.fixture.write(".template-state.json", '{ "edited": true }\n');
+    staged.fixture.git("add", ".template-state.json");
+    expect(staged.fixture.accept()).toBe(1);
+
+    const foreign = updating();
+    foreign.fixture.git("update-ref", journals.PENDING_REF, foreign.head);
+    expect(foreign.fixture.accept()).toBe(1);
+
+    const marker = updating();
+    writeFileSync(join(marker.fixture.root, ".git", "CHERRY_PICK_HEAD"), `${marker.next}\n`);
+    expect(marker.fixture.accept()).toBe(1);
+  });
+
+  test("any unmerged index stage refuses, even in a file outside the protected inventory, and the conflict is not restored away", () => {
+    const { fixture } = updating({ extra: { "src/notes.txt": "base\n" } });
+    fixture.git("merge", "--abort");
+    fixture.git("switch", "-q", "pristine");
+    fixture.write("src/notes.txt", "theirs\n");
+    fixture.git("commit", "-q", "-am", "pristine notes");
+    fixture.git("switch", "-q", "main");
+    fixture.write("src/notes.txt", "mine\n");
+    fixture.git("commit", "-q", "-am", "my notes");
+    expect(spawnSync("git", ["-C", fixture.root, "merge", "--no-ff", "--no-commit", "pristine"]).status).toBe(1);
+    expect(fixture.git("ls-files", "-u")).toMatch(/src\/notes\.txt/);
+    expect(fixture.accept()).toBe(1);
+    expect(readFileSync(join(fixture.root, "src/notes.txt"), "utf8")).toMatch(/<<<<<<</);
   });
 });
 

@@ -36,6 +36,7 @@ const UNTOUCHED = [
   ["pnpm", "run", "check"],
   ["gh", "pr", "view"],
   ["pnpm", "run", "template:apply"],
+  ["node", "scripts/template/update.cjs", "abort"],
   ["node", "scripts/bootstrap.cjs", "setup"],
 ];
 

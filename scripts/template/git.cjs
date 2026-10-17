@@ -264,10 +264,10 @@ function createGit({ start = run, bytes = runBytes, env = process.env } = {}) {
     /**
      * A native merge of `commit` into HEAD that stops before committing and writes over no ignored file.
      * Exit status 1 means conflicts: the unmerged index entries describe them.
-     * @param {string} cwd @param {string} commit @returns {Result}
+     * @param {string} cwd @param {string} commit @param {string} [message] the message the user's commit starts from @returns {Result}
      */
-    mergeNoCommit: (cwd, commit) =>
-      call(cwd, ["merge", "--no-ff", "--no-commit", "--no-overwrite-ignore", "--no-stat", "-m", "template update preview", commit], true),
+    mergeNoCommit: (cwd, commit, message = "template update preview") =>
+      call(cwd, ["merge", "--no-ff", "--no-commit", "--no-overwrite-ignore", "--no-stat", "-m", message, commit], true),
     /** @param {string} cwd @returns {void} a repository without templates, hooks or configuration of the machine */
     init: (cwd) => {
       out(cwd, ["init", "--quiet", "--initial-branch=main", "--template=", "."], true);

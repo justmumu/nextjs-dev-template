@@ -15,6 +15,7 @@ const TYPED = /\.[cm]?[jt]sx?$|(?:^|\/)tsconfig(?:\.[^/]*)?\.json$/;
  *   guardActive: () => boolean,
  *   guard: () => number,
  *   staged: () => string[] | null,
+ *   stagedCheck: () => { ok: boolean, output: string },
  *   lintStaged: () => number,
  *   lock: () => { ok: boolean, output: string },
  *   typecheck: () => number,
@@ -51,6 +52,11 @@ function realHost(root, io, machine = realMachine(root, io)) {
       const result = machine.run("git", ["diff", "--cached", "--name-only", "-z"], { cwd: root });
       return result.status === 0 ? result.stdout.split("\0").filter((name) => name !== "") : null;
     },
+    // Git's own check of what is staged: a conflict marker left in a file `git add` has already settled, and whitespace errors.
+    stagedCheck: () => {
+      const result = machine.run("git", ["diff", "--cached", "--check"], { cwd: root });
+      return { ok: result.status === 0, output: `${result.stdout}${result.stderr}` };
+    },
     lintStaged: () => machine.launch("lint-staged", "lint-staged", ["--config", "tooling/hooks/staged.mjs", "--concurrent", "false"]),
     lock: () => machine.checkLock(root),
     typecheck: () => machine.dispatch(["typecheck"], { root, io }),
@@ -58,7 +64,8 @@ function realHost(root, io, machine = realMachine(root, io)) {
 }
 
 /**
- * The guard's staged check, then the changed-file format and lint of lint-staged (which hides
+ * The guard's staged check, Git's check of the staged diff (leftover conflict markers and whitespace errors, also when
+ * a merge's conflicts were settled with `git add`), then the changed-file format and lint of lint-staged (which hides
  * unstaged hunks of partially staged files, restages what it fixes, and restores Git on failure),
  * then the whole-project checks the staged paths make relevant. Those run after lint-staged on the
  * working tree, so an unstaged edit elsewhere can affect them.
@@ -67,6 +74,11 @@ function realHost(root, io, machine = realMachine(root, io)) {
  */
 function preCommit(host, io) {
   if (host.guardActive() && host.guard() !== 0) return 1;
+  const check = host.stagedCheck();
+  if (!check.ok) {
+    io.stderr(`pre-commit: the staged changes have conflict markers or whitespace errors\n${check.output}`);
+    return 1;
+  }
   const staged = host.staged();
   if (staged === null) {
     io.stderr("pre-commit: the staged files could not be listed\n");

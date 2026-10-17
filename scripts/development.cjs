@@ -394,6 +394,17 @@ function templatePreview(args, context) {
 }
 
 /**
+ * Applying a preview is a person's command at their own terminal. Its modules are emitted with the
+ * application and loaded by a computed path only when it runs.
+ * @type {Handler}
+ */
+function templateApply(args, context) {
+  /** @type {unknown} */
+  const update = require(nodePath.join(__dirname, "template", "update.cjs"));
+  return /** @type {typeof import("./template/update.cjs")} */ (update).apply(args, context);
+}
+
+/**
  * `handlers` is absent for commands owned by another dispatcher. A role without a handler does not
  * receive the script at all.
  * @type {Record<string, { script: string, handlers: Partial<Record<Role, Handler>> }>}
@@ -429,6 +440,7 @@ const COMMANDS = {
     script: "node scripts/development.cjs test:artifact",
     handlers: { generator: generatorCommand("testArtifact"), application: productionProof("scripts/testing/artifact.cjs") },
   },
+  "template:apply": { script: "node scripts/development.cjs template:apply", handlers: { application: templateApply } },
   "template:preview": { script: "node scripts/development.cjs template:preview", handlers: { application: templatePreview } },
   "template:create": { script: "node scripts/development.cjs template:create", handlers: { generator: generatorCommand("templateCreate") } },
   "template:seed:refresh": { script: "node scripts/development.cjs template:seed:refresh", handlers: { generator: generatorCommand("seedRefresh") } },

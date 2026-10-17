@@ -76,6 +76,8 @@ export function memoryRepo(committed: Record<string, Node>, options: { codex?: R
     },
     treePaths: (revision) => new Set([...(treeOf(revision)?.keys() ?? [])].filter(isCandidate)),
     unmerged: (paths) => new Set(paths.filter((path) => conflicts.has(path))),
+    anyUnmerged: () => conflicts.size > 0,
+    templateUpdate: () => ({ owned: false, reason: null }),
     head: () => head,
     operationInProgress: () => operation,
     stagedNames(filter) {

@@ -757,6 +757,12 @@
     {
       "type": "copy",
       "base": "root",
+      "source": "tests/support/update-model.ts",
+      "destination": "tests/support/update-model.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
       "source": "tests/support/agent-declarations.ts",
       "destination": "tests/support/agent-declarations.ts"
     },
@@ -955,6 +961,12 @@
     {
       "type": "copy",
       "base": "root",
+      "source": "scripts/template/journal.cjs",
+      "destination": "scripts/template/journal.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
       "source": "scripts/template/manifest.cjs",
       "destination": "scripts/template/manifest.cjs"
     },
@@ -967,8 +979,20 @@
     {
       "type": "copy",
       "base": "root",
+      "source": "scripts/template/pristine.cjs",
+      "destination": "scripts/template/pristine.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
       "source": "scripts/template/provenance.cjs",
       "destination": "scripts/template/provenance.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/template/recovery.cjs",
+      "destination": "scripts/template/recovery.cjs"
     },
     {
       "type": "copy",
@@ -999,6 +1023,24 @@
       "base": "root",
       "source": "tests/unit/template-git.test.ts",
       "destination": "tests/unit/template-git.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/template-journal.test.ts",
+      "destination": "tests/unit/template-journal.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/template-recovery.test.ts",
+      "destination": "tests/unit/template-recovery.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/template-update.test.ts",
+      "destination": "tests/unit/template-update.test.ts"
     },
     {
       "type": "copy",

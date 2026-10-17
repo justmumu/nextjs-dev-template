@@ -140,6 +140,44 @@ describe("pre-commit", () => {
     expect(output(result)).toMatch(/TS2322|typecheck/);
     expect(git(dir, "rev-parse", "--verify", "HEAD").status).not.toBe(0);
   }, 240_000);
+
+  test("a real text conflict staged with its markers still in it is rejected, as is a whitespace error, and a resolved one commits", () => {
+    const dir = repository();
+    writeProjectFile(dir, "settings.txt", "mode = base\n");
+    must(dir, "add", "settings.txt");
+    expect(commit(dir, "chore: initial").status).toBe(0);
+    must(dir, "switch", "-q", "-c", "template");
+    writeProjectFile(dir, "settings.txt", "mode = template\n");
+    expect(commit(dir, "chore: template side", "-a").status).toBe(0);
+    must(dir, "switch", "-q", "main");
+    writeProjectFile(dir, "settings.txt", "mode = mine\n");
+    expect(commit(dir, "chore: my side", "-a").status).toBe(0);
+    const merged = git(dir, "merge", "--no-ff", "--no-commit", "template");
+    expect(merged.status).toBe(1);
+    expect(readFileSync(join(dir, "settings.txt"), "utf8")).toContain("<<<<<<<");
+
+    // `git add` clears the native unmerged stages; the markers are still text in the file.
+    must(dir, "add", "settings.txt");
+    expect(must(dir, "ls-files", "-u")).toBe("");
+    const head = must(dir, "rev-parse", "HEAD");
+    const marked = commit(dir, "chore: merge the template");
+    expect(marked.status, output(marked)).not.toBe(0);
+    expect(output(marked)).toMatch(/leftover conflict marker/);
+    expect(must(dir, "rev-parse", "HEAD")).toBe(head);
+    expect(existsSync(join(dir, ".git/MERGE_HEAD"))).toBe(true);
+
+    writeProjectFile(dir, "settings.txt", "mode = resolved  \n");
+    must(dir, "add", "settings.txt");
+    const spaced = commit(dir, "chore: merge the template");
+    expect(spaced.status, output(spaced)).not.toBe(0);
+    expect(output(spaced)).toMatch(/trailing whitespace/);
+
+    writeProjectFile(dir, "settings.txt", "mode = resolved\n");
+    must(dir, "add", "settings.txt");
+    const clean = commit(dir, "chore: merge the template");
+    expect(clean.status, output(clean)).toBe(0);
+    expect(must(dir, "rev-list", "--parents", "-n", "1", "HEAD").trim().split(" ")).toHaveLength(3);
+  }, 240_000);
 });
 
 describe("commit-msg", () => {

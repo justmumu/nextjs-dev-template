@@ -12,7 +12,7 @@ const { parseArgs } = require("../core/args.cjs");
 const { createGit, indexKey } = require("./git.cjs");
 const { PROTOCOL, SCHEMA, isRecord } = require("./manifest.cjs");
 const { Refusal, sha256, verifyLineage } = require("./provenance.cjs");
-const { SOURCE_URL, fetchSource, nextPristine, readSourceManifest, validateRef } = require("./update.cjs");
+const { SOURCE_URL, fetchSource, nextPristine, readSourceManifest, validateRef } = require("./pristine.cjs");
 const render = require("./render.cjs");
 
 const PREVIEW_SCHEMA = "nextjs-dev-template/preview";
@@ -20,16 +20,24 @@ const PREVIEW_VERSION = 1;
 /** Where the latest preview of a project is kept: inside its Git directory, which is not tracked content. */
 const PREVIEW_DIR = "template-update";
 const PREVIEW_FILE = "preview.json";
-/** Every file of the installed engine that reads fetched data or builds the result; a change to any of them stales a preview. */
+/**
+ * Every file of the installed engine: the ones that read fetched data or build the result, those that carry out and
+ * undo an update, and the loader the recovery entry starts them with. A change to any of them stales a preview, and
+ * an update never carries one: the engine is replaced by a reviewed change of its own.
+ */
 const ENGINE_FILES = Object.freeze([
   "core/args.cjs",
   "core/json.cjs",
   "core/process.cjs",
+  "hooks/entry.cjs",
   "template/git.cjs",
   "template/inputs.cjs",
+  "template/journal.cjs",
   "template/manifest.cjs",
   "template/preview.cjs",
+  "template/pristine.cjs",
   "template/provenance.cjs",
+  "template/recovery.cjs",
   "template/render.cjs",
   "template/state.cjs",
   "template/update.cjs",
@@ -420,6 +428,7 @@ module.exports = {
   currentBindings,
   engineDigest,
   parsePreview,
+  realHost,
   staleReasons,
   templatePreview,
   writePreview,

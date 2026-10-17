@@ -5,6 +5,7 @@ const fs = require("node:fs");
 const { spawnSync } = require("node:child_process");
 const { homedir } = require("node:os");
 const nodePath = require("node:path");
+const { ownedMerge } = require("../template/journal.cjs");
 const {
   GuardError,
   STATE_DIR_NAME,
@@ -36,6 +37,8 @@ const MAX_ENTRIES = 20_000;
  *   treeIds: (paths: string[], revision?: string) => Record<string, string | null>,
  *   treePaths: (revision: string) => Set<string>,
  *   unmerged: (paths: string[]) => Set<string>,
+ *   anyUnmerged: () => boolean,
+ *   templateUpdate: () => { owned: boolean, reason: string | null },
  *   head: () => string | null,
  *   operationInProgress: () => boolean,
  *   stagedNames: (filter?: string) => string[],
@@ -311,6 +314,18 @@ function createRepo(host, inventory) {
           .map((entry) => entry.path),
       );
     },
+    anyUnmerged: () => index().some((entry) => entry.stage > 0),
+    // Whether the merge waiting here is a template update this engine began and its owner finished.
+    templateUpdate: () =>
+      ownedMerge({
+        root,
+        gitDir,
+        disk,
+        git: (args) => {
+          const result = host.git(["--literal-pathspecs", ...args]);
+          return { status: result.error ? null : result.status, stdout: result.stdout.toString("utf8") };
+        },
+      }),
     head,
     operationInProgress: () => operationInProgress(gitDir, disk),
     stagedNames: (filter) =>

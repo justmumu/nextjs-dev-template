@@ -527,6 +527,7 @@ describe("a preview that no longer describes the update", () => {
     const altered = mkdtempSync(join(scratch.area, "engine-"));
     cpSync(join(root, "scripts/core"), join(altered, "core"), { recursive: true });
     cpSync(join(root, "scripts/template"), join(altered, "template"), { recursive: true });
+    cpSync(join(root, "scripts/hooks"), join(altered, "hooks"), { recursive: true });
     expect(preview.engineDigest(altered)).toBe(preview.engineDigest(join(root, "scripts")));
     writeFileSync(join(altered, "template/inputs.cjs"), `${readFileSync(join(altered, "template/inputs.cjs"), "utf8")}// changed\n`);
     const withEngine = preview.currentBindings({ git: used.host.git, root: app, sourceSha: sha, scriptsRoot: altered });
@@ -578,6 +579,9 @@ describe("the emitted module graph", () => {
       }
     };
     visit("scripts/template/preview.cjs");
+    // The apply and recovery entry, and the loader it reads as a file instead of requiring it (see update.cjs).
+    visit("scripts/template/update.cjs");
+    visit("scripts/hooks/entry.cjs");
     expect([...needed].map((path) => path.replace(/^scripts\//, "")).sort()).toEqual([...preview.ENGINE_FILES].sort());
     expect(bytes.has("scripts/template/create.cjs")).toBe(false);
     expect(bytes.has("scripts/template/initialize.cjs")).toBe(false);

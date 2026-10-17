@@ -9,7 +9,7 @@ import { describe, expect, test } from "vitest";
 const require = createRequire(import.meta.url);
 const provenance = require("../../scripts/template/provenance.cjs") as typeof import("../../scripts/template/provenance.cjs");
 const stateModule = require("../../scripts/template/state.cjs") as typeof import("../../scripts/template/state.cjs");
-const update = require("../../scripts/template/update.cjs") as typeof import("../../scripts/template/update.cjs");
+const update = require("../../scripts/template/pristine.cjs") as typeof import("../../scripts/template/pristine.cjs");
 const previewModule = require("../../scripts/template/preview.cjs") as typeof import("../../scripts/template/preview.cjs");
 
 const id = (seed: string) => createHash("sha1").update(seed).digest("hex");
@@ -511,5 +511,47 @@ describe("where the preview is kept", () => {
       "write /project/.git/template-update/preview.json.<pid>.tmp 384 true",
       "rename /project/.git/template-update/preview.json.<pid>.tmp /project/.git/template-update/preview.json",
     ]);
+  });
+});
+
+describe("the state an update commits", () => {
+  const next = { commit: id("b1"), tree: id("b1-tree"), renderDigest: digest("render 1") };
+  const upstream = { url: "https://github.com/justmumu/nextjs-dev-template.git", sha: id("upstream") };
+  const copied = stateModule.buildState({ baseline, source: { kind: "github-template-copy", copiedCommit: id("o") }, answers, renderDigest: digest("render") });
+
+  test("moves the baseline and names the chosen revision, and keeps the enrollment, the answers and the kind of source", () => {
+    for (const first of [stateModule.parseState(stateText()), copied]) {
+      const moved = stateModule.advanceState(first, { next, upstream });
+      expect(moved.baseline).toEqual({ commit: next.commit, tree: next.tree });
+      expect(moved.renderDigest).toBe(next.renderDigest);
+      expect(moved.upstream).toEqual(upstream);
+      expect(moved.source).toEqual(first.source);
+      expect(moved.answersDigest).toBe(first.answersDigest);
+      expect(stateModule.parseState(stateModule.serializeState(moved))).toEqual(moved);
+    }
+    expect(stateModule.advanceState(copied, { next, upstream }).source).toEqual({ kind: "github-template-copy", copiedCommit: id("o") });
+  });
+
+  test("a second update replaces the upstream, never the enrollment", () => {
+    const once = stateModule.advanceState(copied, { next, upstream });
+    const twice = stateModule.advanceState(once, { next: { ...next, commit: id("b2") }, upstream: { ...upstream, sha: id("upstream 2") } });
+    expect(twice.upstream?.sha).toBe(id("upstream 2"));
+    expect(twice.source).toEqual(copied.source);
+  });
+
+  test("an enrollment state has no upstream and is still read, written and refused exactly as before", () => {
+    const enrolled = stateModule.parseState(stateText());
+    expect(enrolled).not.toHaveProperty("upstream");
+    expect(stateText()).not.toContain("upstream");
+  });
+
+  test.each([
+    ["a string", "upstream"],
+    ["an unknown key", { url: "https://example.com/x.git", sha: id("u"), extra: 1 }],
+    ["a short revision", { url: "https://example.com/x.git", sha: "abc" }],
+    ["a url with whitespace", { url: "not a url", sha: id("u") }],
+    ["a missing revision", { url: "https://example.com/x.git" }],
+  ])("refuses an upstream that is %s", (_label, upstreamValue) => {
+    expect(() => stateModule.parseState(stateText({ upstream: upstreamValue }))).toThrow();
   });
 });

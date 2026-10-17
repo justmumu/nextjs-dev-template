@@ -27,6 +27,7 @@ function host(staged: string[] | null, overrides: Partial<Host> = {}) {
     guardActive: step("guardActive", true),
     guard: step("guard", 0),
     staged: step("staged", staged),
+    stagedCheck: step("stagedCheck", { ok: true, output: "" }),
     lintStaged: step("lintStaged", 0),
     lock: step("lock", { ok: true, output: "" }),
     typecheck: step("typecheck", 0),
@@ -39,7 +40,7 @@ describe("pre-commit", () => {
   test("starts with the staged guard check, then changed-file tooling, then the relevant whole-project checks", () => {
     const { machine, calls } = host(["package.json", "src/a.ts"]);
     expect(preCommit.preCommit(machine, capture().io)).toBe(0);
-    expect(calls).toEqual(["guardActive", "guard", "staged", "lintStaged", "lock", "typecheck"]);
+    expect(calls).toEqual(["guardActive", "guard", "stagedCheck", "staged", "lintStaged", "lock", "typecheck"]);
   });
 
   test("a refusing guard stops before anything else runs", () => {
@@ -58,7 +59,7 @@ describe("pre-commit", () => {
   test("documents alone need neither the lock nor typing", () => {
     const { machine, calls } = host(["docs/a.md", "README.md"], { guardActive: () => false });
     expect(preCommit.preCommit(machine, capture().io)).toBe(0);
-    expect(calls).toEqual(["staged", "lintStaged"]);
+    expect(calls).toEqual(["stagedCheck", "staged", "lintStaged"]);
   });
 
   test.each(["src/a.ts", "src/b.tsx", "scripts/c.cjs", "tooling/d.mjs", "e.js", "tsconfig.json", "app/tsconfig.tooling.json"])(
@@ -92,13 +93,27 @@ describe("pre-commit", () => {
     expect(sink.err()).toMatch(/could not be listed/);
     const { machine, calls } = host([], { guardActive: () => false });
     expect(preCommit.preCommit(machine, capture().io)).toBe(0);
-    expect(calls).toEqual(["staged"]);
+    expect(calls).toEqual(["stagedCheck", "staged"]);
+  });
+
+  test("Git's check of the staged diff rejects the commit before any tooling runs, with its own words", () => {
+    const sink = capture();
+    const { machine, calls } = host(["notes.txt"], {
+      guardActive: () => false,
+      stagedCheck: () => ({ ok: false, output: "notes.txt:1: leftover conflict marker\n" }),
+    });
+    expect(preCommit.preCommit(machine, sink.io)).toBe(1);
+    expect(sink.err()).toMatch(/conflict markers or whitespace errors\nnotes\.txt:1: leftover conflict marker/);
+    expect(calls).toEqual([]);
+    const { machine: after, calls: order } = host(["a.ts"], { stagedCheck: () => ({ ok: false, output: "x" }) });
+    expect(preCommit.preCommit(after, capture().io)).toBe(1);
+    expect(order).toEqual(["guardActive", "guard"]);
   });
 
   test("main runs the injected host", () => {
     const { machine, calls } = host([], { guardActive: () => false });
     expect(preCommit.main([], { root: "/project", io: capture().io, host: machine })).toBe(0);
-    expect(calls).toEqual(["staged"]);
+    expect(calls).toEqual(["stagedCheck", "staged"]);
   });
 });
 
@@ -152,6 +167,7 @@ describe("pre-commit on the machine", () => {
     const { host, calls } = machine();
     expect(host.guardActive()).toBe(true);
     expect(host.guard()).toBe(0);
+    expect(host.stagedCheck()).toEqual({ ok: true, output: "a b.md\0ünï.ts\0" });
     expect(host.staged()).toEqual(["a b.md", "ünï.ts"]);
     expect(host.lintStaged()).toBe(4);
     expect(host.lock()).toEqual({ ok: true, output: "" });
@@ -159,6 +175,7 @@ describe("pre-commit on the machine", () => {
     expect(calls).toEqual([
       ["capabilities", root],
       ["sh", ["/project/scripts/hooks/launch.sh", "--client", "claude", "--event", "pre-commit"], root],
+      ["git", ["diff", "--cached", "--check"], root],
       ["git", ["diff", "--cached", "--name-only", "-z"], root],
       ["lint-staged", "lint-staged", ["--config", "tooling/hooks/staged.mjs", "--concurrent", "false"]],
       ["checkLock", root],
@@ -173,6 +190,7 @@ describe("pre-commit on the machine", () => {
     });
     expect(host.guard()).toBe(1);
     expect(host.staged()).toBeNull();
+    expect(host.stagedCheck().ok).toBe(false);
   });
 });
 
