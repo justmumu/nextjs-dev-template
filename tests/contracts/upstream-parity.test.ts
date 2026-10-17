@@ -42,9 +42,9 @@ describe("the guard behavior map", () => {
     }
   });
 
-  test("a carried or adapted behavior is owned by U6 or U7 and proven by a JavaScript test that exists", () => {
+  test("a carried or adapted behavior is owned by U6, U7 or U9 and proven by a JavaScript test that exists", () => {
     for (const entry of parity.entries.filter((candidate) => ["carried", "adapted"].includes(candidate.status))) {
-      expect(["U6", "U7"], entry.sourceTest).toContain(entry.owner);
+      expect(["U6", "U7", "U9"], entry.sourceTest).toContain(entry.owner);
       expect(entry.jsTests?.length ?? 0, entry.sourceTest).toBeGreaterThan(0);
       for (const proof of entry.jsTests ?? []) expect(proves(proof), `${entry.sourceTest}: ${proof.file} has no "${proof.title}"`).toBe(true);
     }
@@ -58,6 +58,10 @@ describe("the guard behavior map", () => {
       expect((entry.note ?? "").length, entry.sourceTest).toBeGreaterThan(20);
       for (const proof of entry.jsTests ?? []) expect(proves(proof), `${entry.sourceTest}: ${proof.file} has no "${proof.title}"`).toBe(true);
     }
+  });
+
+  test("the live authenticated Codex lane is the one behavior still pending after the host declarations", () => {
+    expect(parity.entries.filter((entry) => entry.status === "pending").map((entry) => entry.sourceTest)).toEqual(["test_live_codex_completion"]);
   });
 
   test("a behavior that is not carried gives a reason, and a proof of the replacement when there is one", () => {
@@ -81,7 +85,7 @@ describe("the guard behavior map", () => {
   });
 
   test("an adapted behavior says what changed", () => {
-    for (const entry of parity.entries.filter((candidate) => candidate.status === "adapted" && candidate.owner === "U7"))
+    for (const entry of parity.entries.filter((candidate) => candidate.status === "adapted" && candidate.owner !== "U6"))
       expect((entry.note ?? "").length, entry.sourceTest).toBeGreaterThan(20);
   });
 

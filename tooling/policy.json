@@ -34,7 +34,11 @@
       "^prettier\\.config\\.[cm]?[jt]s$",
       "^vitest\\.(?:[a-z]+\\.)?(?:config|workspace)\\.[cm]?[jt]s$",
       "^playwright\\.config\\.[cm]?[jt]s$",
-      "^postcss\\.config\\.[cm]?[jt]s$"
+      "^postcss\\.config\\.[cm]?[jt]s$",
+      "^lint-staged\\.config\\.[cm]?[jt]s$",
+      "^\\.lintstagedrc(?:\\..+)?$",
+      "^commitlint\\.config\\.[cm]?[jt]s$",
+      "^\\.commitlintrc(?:\\..+)?$"
     ],
     "docsConfig": "^[^/]+\\.config\\.(?:[cm]?[jt]s|json)$",
     "vitepressConfig": "^\\.vitepress/(?:config\\.[cm]?[jt]s|config/.+)$",
@@ -49,7 +53,11 @@
       "^\\.prettierrc(?:\\..+)?$",
       "^prettier\\.config\\.[cm]?[jt]s$",
       "^vitest\\.(?:[a-z]+\\.)?(?:config|workspace)\\.[cm]?[jt]s$",
-      "^playwright\\.config\\.[cm]?[jt]s$"
+      "^playwright\\.config\\.[cm]?[jt]s$",
+      "^lint-staged\\.config\\.[cm]?[jt]s$",
+      "^\\.lintstagedrc(?:\\..+)?$",
+      "^commitlint\\.config\\.[cm]?[jt]s$",
+      "^\\.commitlintrc(?:\\..+)?$"
     ],
     "shadowExemptPrefixes": ["template/", "tests/fixtures/"],
     "skippedAnywhere": ["node_modules", ".git", ".pnpm-store"],

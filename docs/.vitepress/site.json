@@ -5,17 +5,39 @@
     {
       "text": "Guide",
       "items": [
-        { "text": "Overview", "link": "/" },
-        { "text": "Getting started", "link": "/getting-started" }
+        {
+          "text": "Overview",
+          "link": "/"
+        },
+        {
+          "text": "Getting started",
+          "link": "/getting-started"
+        }
       ]
     },
     {
       "text": "Contributing",
       "items": [
-        { "text": "Toolchain", "link": "/contributing/toolchain" },
-        { "text": "Static quality", "link": "/contributing/static-quality" },
-        { "text": "Unit tests and coverage", "link": "/contributing/testing" },
-        { "text": "Pull request checklist", "link": "/contributing/pr-checklist" }
+        {
+          "text": "Toolchain",
+          "link": "/contributing/toolchain"
+        },
+        {
+          "text": "Static quality",
+          "link": "/contributing/static-quality"
+        },
+        {
+          "text": "Unit tests and coverage",
+          "link": "/contributing/testing"
+        },
+        {
+          "text": "Git hooks and agent hosts",
+          "link": "/contributing/git-hooks"
+        },
+        {
+          "text": "Pull request checklist",
+          "link": "/contributing/pr-checklist"
+        }
       ]
     }
   ]

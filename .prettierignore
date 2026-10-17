@@ -7,3 +7,4 @@ tests/fixtures/
 .private/
 .next/
 coverage/
+docs/.vitepress/.temp/

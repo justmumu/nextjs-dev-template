@@ -20,8 +20,8 @@ function createLoader({ scripts, readFile, builtin, compile = nodeVm.compileFunc
   function load(file) {
     const known = loaded.get(file);
     if (known) return known.exports;
-    const module = { exports: /** @type {unknown} */ ({}) };
-    loaded.set(file, module);
+    const record = { exports: /** @type {unknown} */ ({}) };
+    loaded.set(file, record);
     const directory = nodePath.dirname(file);
     const run = compile(readFile(file), ["exports", "require", "module", "__filename", "__dirname"], { filename: file });
     /** @param {string} request */
@@ -35,8 +35,8 @@ function createLoader({ scripts, readFile, builtin, compile = nodeVm.compileFunc
     };
     // A module started by this loader is never "the main module", so it only exports.
     const localRequire = Object.assign(requireLocal, { main: undefined });
-    run.call(module.exports, module.exports, localRequire, module, file, directory);
-    return module.exports;
+    run.call(record.exports, record.exports, localRequire, record, file, directory);
+    return record.exports;
   }
   return load;
 }

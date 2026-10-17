@@ -26,12 +26,15 @@
     "typecheck": "node scripts/development.cjs typecheck"
   },
   "devDependencies": {
+    "@commitlint/cli": "21.2.3",
+    "@commitlint/config-conventional": "21.2.3",
     "@eslint/js": "9.39.5",
     "@types/node": "24.19.2",
     "@vitest/coverage-v8": "5.0.5",
     "eslint": "9.39.5",
     "globals": "16.4.0",
     "hyperlink": "5.0.4",
+    "lint-staged": "17.6.0",
     "prettier": "3.9.10",
     "typescript": "6.0.3",
     "typescript-eslint": "8.71.2",

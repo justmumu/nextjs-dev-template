@@ -9,6 +9,7 @@ const { buildPermissions, manifestViolations, npmrcViolations, workspaceViolatio
 const { capabilities, clearDirty, dirtyKind, dirtyReason, guardRefusal, recoveryCommand, removeInstallState } = require("./core/install-state.cjs");
 const { parseObject } = require("./core/json.cjs");
 const { redact, run, runLogged } = require("./core/process.cjs");
+const { installPlugins, realHost: realPluginHost } = require("./core/plugins.cjs");
 const { preflightErrors } = require("./core/toolchain.cjs");
 const { isProtectedFile, isShadowOverride } = require("./core/protected.cjs");
 const { checkLock, runTransaction } = require("./core/transaction.cjs");
@@ -22,7 +23,8 @@ const { checkLock, runTransaction } = require("./core/transaction.cjs");
  *   recoveryCommand: (root: string) => string,
  *   guardRefusal: (root: string) => string | null,
  *   hooksRegistered: (root: string) => boolean,
- *   installHooks: (root: string) => void,
+ *   installHooks: (root: string, io: Io) => void,
+ *   installPlugins: (root: string, io: Io) => void | Promise<void>,
  *   guardActive: (root: string) => boolean,
  *   bindNode: (root: string) => void,
  *   guardDrift: (root: string) => string[],
@@ -45,11 +47,13 @@ const HOST = {
   recoveryCommand,
   guardRefusal,
   hooksRegistered: (root) => capabilities(root).hooks,
-  installHooks: (root) => {
+  installHooks: (root, io) => {
     /** @type {unknown} */
     const loaded = require(nodePath.join(root, "scripts", "hooks", "install.cjs"));
-    /** @type {{ install: (options: { root: string }) => void }} */ (loaded).install({ root });
+    const { notice } = /** @type {{ install: (options: { root: string }) => { notice: string[] } }} */ (loaded).install({ root });
+    for (const line of notice) io.stderr(`warning: ${line}\n`);
   },
+  installPlugins: (root, io) => installPlugins(root, io, realPluginHost()),
   guardActive: (root) => capabilities(root).guard,
   bindNode: (root) => {
     /** @type {unknown} */
@@ -86,7 +90,7 @@ function transact(host, root, steps, plan, io, kind) {
   return result.ok;
 }
 
-/** @param {string} root @param {Io} io @param {Host} host @returns {number} */
+/** @param {string} root @param {Io} io @param {Host} host @returns {number | Promise<number>} */
 function setup(root, io, host) {
   const errors = host.preflightErrors(root);
   if (errors.length > 0) return fail(io, errors);
@@ -102,10 +106,23 @@ function setup(root, io, host) {
     io.stdout("Node binary bound for the protected-files guard.\n");
   }
   if (host.hooksRegistered(root)) {
-    host.installHooks(root);
+    try {
+      host.installHooks(root, io);
+    } catch (error) {
+      return fail(io, [`Git hooks were not installed: ${/** @type {Error} */ (error).message}`]);
+    }
     io.stdout("Git hooks installed.\n");
+    // The plugin step is asynchronous so that an interrupting signal is handled while it runs.
+    return Promise.resolve()
+      .then(() => host.installPlugins(root, io))
+      .catch((/** @type {unknown} */ error) => {
+        io.stderr(`warning: the agent plugins were not installed: ${error instanceof Error ? error.message : String(error)}\n`);
+      })
+      .then(() => 0);
   } else {
-    io.stdout("Dependencies installed from the frozen lock. Git hooks are not installed: the hook installer is not available yet.\n");
+    io.stdout(
+      "Dependencies installed from the frozen lock. Git hooks are not installed: hook registration is not activated for this project in tooling/capabilities.json.\n",
+    );
   }
   return 0;
 }
@@ -235,7 +252,7 @@ function fail(io, lines) {
 /**
  * @param {readonly string[]} argv
  * @param {{ root?: string, io?: Io, host?: Host }} [options]
- * @returns {number}
+ * @returns {number | Promise<number>} the exit status; a promise only while the optional plugin step runs
  */
 function main(argv, options = {}) {
   const root = options.root ?? nodePath.resolve(__dirname, "..");
@@ -262,4 +279,8 @@ function main(argv, options = {}) {
 
 module.exports = { boundaryProblems, differingApproved, differingProtected, main };
 
-if (require.main === module) process.exitCode = main(process.argv.slice(2));
+if (require.main === module) {
+  void Promise.resolve(main(process.argv.slice(2))).then((status) => {
+    process.exitCode = status;
+  });
+}

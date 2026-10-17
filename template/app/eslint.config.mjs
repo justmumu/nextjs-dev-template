@@ -6,7 +6,7 @@ import tseslint from "typescript-eslint";
 import { nodeCoreModules, policy, suppressionEnforcement } from "./tooling/eslint/shared.mjs";
 
 export default defineConfig(
-  globalIgnores(["node_modules/", ".next/", "out/", "coverage/", "playwright-report/", "test-results/", "next-env.d.ts"]),
+  globalIgnores(["node_modules/", ".next/", "out/", "coverage/", "playwright-report/", "test-results/", "next-env.d.ts", "docs/.vitepress/.temp/"]),
   js.configs.recommended,
   nextVitals,
   tseslint.configs.strictTypeChecked,

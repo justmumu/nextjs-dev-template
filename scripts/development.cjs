@@ -6,7 +6,7 @@ const { existsSync, readFileSync, readdirSync, rmSync } = require("node:fs");
 const nodePath = require("node:path");
 const { UsageError, parseArgs } = require("./core/args.cjs");
 const { runLogged } = require("./core/process.cjs");
-const { gateErrors, readRole } = require("./core/toolchain.cjs");
+const { gateErrors, readRole, resolveOnPath } = require("./core/toolchain.cjs");
 const { FORMAT_GLOBS, managedAgentBlockErrors } = require("./core/quality.cjs");
 const { isObject, readObject } = require("./core/json.cjs");
 const { checkLock } = require("./core/transaction.cjs");
@@ -17,17 +17,9 @@ const docs = require("./docs.cjs");
  * @typedef {"generator" | "application"} Role
  * @typedef {{ stdout: (text: string) => unknown, stderr: (text: string) => unknown }} Io
  * @typedef {{ launch: (pkg: string, bin: string, args: string[]) => number, focus: (focus: Focus) => number }} Tools how the installed packages are started: an executable with its output passed on, or the one focused test file
- * @typedef {{ root: string, cwd: string, io: Io, tools?: Tools }} Context
+ * @typedef {{ root: string, cwd: string, io: Io, tools?: Tools, exists?: (path: string) => boolean }} Context the project, its output, and (for tests) how the packages are started and whether a project file exists
  * @typedef {(args: readonly string[], context: Context) => number} Handler
  */
-
-/** @param {string} owner @param {string} what @returns {Handler} */
-function unavailable(owner, what) {
-  return (_args, { io }) => {
-    io.stderr(`${what} is not available yet: ${owner} implements it. This is a failure, not a pass.\n`);
-    return 1;
-  };
-}
 
 /** @param {readonly string[]} args */
 function noArgs(args) {
@@ -204,6 +196,29 @@ function readSummary(report) {
   }
 }
 
+const PERMISSION_POLICY_TESTS = "tests/contracts/agent-permissions.test.ts";
+const PERMISSION_CODEX_TESTS = "tests/integration/permissions.test.ts";
+
+/** The declared host policy, then the real Codex execpolicy when a Codex CLI is installed; without one the real part is reported as unavailable, not as passed. @type {Handler} */
+function testPermissions(args, context) {
+  noArgs(args);
+  const missing = [PERMISSION_POLICY_TESTS, PERMISSION_CODEX_TESTS].filter((file) => !(context.exists ?? existsSync)(nodePath.join(context.root, file)));
+  if (missing.length > 0) {
+    context.io.stderr(`test:permissions is not available: ${missing.join(", ")} not found in this project. This is a failure, not a pass.\n`);
+    return 1;
+  }
+  const codex = resolveOnPath("codex", process.env.PATH ?? "");
+  context.io.stdout(
+    codex === null
+      ? "Codex CLI unavailable: the real execpolicy checks are skipped and are not a pass.\n"
+      : `Codex CLI found: ${codex}; the real execpolicy checks run.\n`,
+  );
+  return runSteps(context, [
+    ["vitest", "vitest", ["run", "--project", "infrastructure", PERMISSION_POLICY_TESTS]],
+    ["vitest", "vitest", ["run", "--project", "integration", PERMISSION_CODEX_TESTS]],
+  ]);
+}
+
 /** @type {Handler} */
 function typecheckGenerator(args, context) {
   noArgs(args);
@@ -292,8 +307,7 @@ function check(args, context) {
 /** @type {Handler} */
 function docsBuild(args, context) {
   noArgs(args);
-  const launch = (/** @type {string} */ pkg, /** @type {string} */ bin, /** @type {string[]} */ rest) =>
-    (context.tools ?? installedTools(context)).launch(pkg, bin, rest);
+  const launch = (/** @type {string} */ pkg, /** @type {string} */ bin, /** @type {string[]} */ rest) => runNodeTool(context, pkg, bin, rest);
   return docs.build(docs.realHost({ root: context.root, io: context.io, launch }));
 }
 
@@ -330,7 +344,7 @@ const COMMANDS = {
   },
   "test:permissions": {
     script: "node scripts/development.cjs test:permissions",
-    handlers: { generator: unavailable("U6", "test:permissions"), application: unavailable("U6", "test:permissions") },
+    handlers: { generator: testPermissions, application: testPermissions },
   },
   "docs:build": { script: "node scripts/development.cjs docs:build", handlers: { generator: docsBuild, application: docsBuild } },
   "deps:add": { script: "node scripts/dependencies.cjs add", handlers: {} },
@@ -392,6 +406,6 @@ function main(argv, options = {}) {
   }
 }
 
-module.exports = { COMMANDS, binOf, focusOf, main, parseSummary, runGates, scriptsFor, unit, unitGate };
+module.exports = { COMMANDS, binOf, focusOf, installedTools, testPermissions, main, parseSummary, runGates, scriptsFor, unit, unitGate };
 
 if (require.main === module) process.exitCode = main(process.argv.slice(2));

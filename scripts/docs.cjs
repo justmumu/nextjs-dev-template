@@ -1,9 +1,5 @@
 // @ts-check
 "use strict";
-// The documentation gate: VitePress builds the site, then hyperlink checks every emitted HTML file
-// offline, so a missing page, asset or #fragment fails the build. The site configuration
-// (docs/.vitepress/config.ts) is the only source of the base path, clean URLs and output directory;
-// this module asks VitePress to resolve it instead of repeating it.
 const fs = require("node:fs");
 const { tmpdir } = require("node:os");
 const nodePath = require("node:path");
@@ -114,8 +110,6 @@ function build(host) {
 }
 
 /**
- * The effects on top of a launcher that starts an installed package's executable; the process
- * starter and the disk are parameters so the decisions around them can be judged in-process.
  * @param {{
  *   root: string,
  *   io: Host["io"],

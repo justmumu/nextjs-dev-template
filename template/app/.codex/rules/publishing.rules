@@ -1,0 +1,28 @@
+# Publishing runs CI or ships a release, and accepting protected-file changes
+# overrides the guard, so the user approves each one. Never use an allow decision
+# here. Use the plain command forms documented in AGENTS.md; prefix
+# forms such as `git -C dir push` do not match, and the guard refuses them.
+
+prefix_rule(
+    pattern = ["git", "push"],
+    decision = "prompt",
+    justification = "Pushing runs CI; the user approves every push (AGENTS.md).",
+)
+
+prefix_rule(
+    pattern = ["gh", "pr", ["create", "merge"]],
+    decision = "prompt",
+    justification = "Opening or merging a PR runs CI; the user approves each one (AGENTS.md).",
+)
+
+prefix_rule(
+    pattern = ["pnpm", "run", ["release:bump", "release:tag"]],
+    decision = "prompt",
+    justification = "Version bumps and release tags need the user's approval (AGENTS.md).",
+)
+
+prefix_rule(
+    pattern = ["node", "scripts/bootstrap.cjs", "guard-accept"],
+    decision = "prompt",
+    justification = "Only the user accepts changes to protected files (AGENTS.md).",
+)

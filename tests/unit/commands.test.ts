@@ -159,12 +159,49 @@ describe("dispatcher", () => {
     return { io: { stdout: (text: string) => out.push(text), stderr: (text: string) => err.push(text) }, out, err };
   }
 
-  test("unavailable gates fail clearly instead of passing", () => {
-    for (const command of ["test:permissions"]) {
+  describe("test:permissions", () => {
+    const handler = development.COMMANDS["test:permissions"]?.handlers.generator;
+    const launcher = (status: number) => {
+      const launched: string[][] = [];
+      return {
+        launched,
+        tools: {
+          launch: (_pkg: string, _bin: string, args: string[]) => {
+            launched.push(args);
+            return status;
+          },
+          focus: () => 0,
+        },
+      };
+    };
+
+    test("runs the declared policy tests, then the real Codex checks, and says whether a Codex CLI was found", () => {
       const sink = capture();
-      expect(development.main([command], { root, io: sink.io })).not.toBe(0);
-      expect(sink.err.join("")).toMatch(/not available yet|unavailable/);
-    }
+      const { launched, tools } = launcher(0);
+      expect(handler?.([], { root, cwd: root, io: sink.io, tools, exists: () => true })).toBe(0);
+      expect(launched).toEqual([
+        ["run", "--project", "infrastructure", "tests/contracts/agent-permissions.test.ts"],
+        ["run", "--project", "integration", "tests/integration/permissions.test.ts"],
+      ]);
+      expect(sink.out.join("")).toMatch(
+        /Codex CLI (found: .+; the real execpolicy checks run|unavailable: the real execpolicy checks are skipped and are not a pass)\./,
+      );
+    });
+
+    test("stops at a failing policy test and takes no extra arguments", () => {
+      const { launched, tools } = launcher(1);
+      expect(handler?.([], { root, cwd: root, io: capture().io, tools, exists: () => true })).toBe(1);
+      expect(launched).toHaveLength(1);
+      expect(() => handler?.(["--coverage"], { root, cwd: root, io: capture().io, tools, exists: () => true })).toThrow(/unexpected|unknown/);
+    });
+
+    test("a project without the permission tests fails instead of passing", () => {
+      const sink = capture();
+      const { launched, tools } = launcher(0);
+      expect(handler?.([], { root: "/project", cwd: root, io: sink.io, tools, exists: (path) => !path.endsWith("permissions.test.ts") })).toBe(1);
+      expect(sink.err.join("")).toMatch(/test:permissions is not available: .*agent-permissions\.test\.ts.*This is a failure, not a pass/);
+      expect(launched).toEqual([]);
+    });
   });
 
   test("unknown commands, extra arguments and wrong-role commands are refused", () => {

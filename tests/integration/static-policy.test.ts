@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { afterAll, beforeAll, describe, expect, test } from "vitest";
 import { gate, generatorFixture, installRenderedApp, output, removeDir, root, run, scratchDir, writeProjectFile } from "../support/rendered-app.ts";
@@ -110,6 +110,18 @@ describe.each([
         : run(dir, process.execPath, [join(dir, "node_modules/typescript/bin/tsc"), "--noEmit", "-p", "tsconfig.tooling.json"]);
     expect(output(result)).toMatch(/scripts\/index\.cjs.*TS(2532|18048)/);
     expect(result.status).not.toBe(0);
+  }, 240_000);
+
+  test("VitePress generated temp output is ignored while a bad real docs config still fails", () => {
+    writeProjectFile(dir, "docs/.vitepress/.temp/assets/generated.js", "const x = 1 +;\n");
+    expect(output(gate(dir, "lint", kind))).not.toMatch(/\.vitepress\/\.temp/);
+    expect(output(gate(dir, "format:check", kind))).not.toMatch(/\.vitepress\/\.temp/);
+    writeProjectFile(dir, "docs/.vitepress/real.config.ts", "export default {\n");
+    const bad = gate(dir, "lint", kind);
+    expect(bad.status).toBe(1);
+    expect(report(output(bad), "docs/.vitepress/real.config.ts")).toMatch(/Parsing error/);
+    rmSync(join(dir, "docs/.vitepress/real.config.ts"));
+    rmSync(join(dir, "docs/.vitepress/.temp"), { recursive: true });
   }, 240_000);
 
   describe("format", () => {

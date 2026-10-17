@@ -22,13 +22,23 @@ const byPath = (result: typeof a, path: string) => (result.files.find((file) => 
 describe("real seed render", () => {
   test("emits the application role files and nothing from the generator", () => {
     expect(paths).toEqual([
+      ".claude/settings.json",
+      ".codex/config.toml",
+      ".codex/hooks.json",
+      ".codex/rules/publishing.rules",
+      ".compound-engineering/config.example.yaml",
+      ".compound-engineering/config.yaml",
       ".env.example",
       ".gitignore",
       ".node-version",
       ".prettierignore",
       ".prettierrc.json",
+      "AGENTS.md",
+      "CLAUDE.md",
+      "compound-packs/README.md",
       "docs/.vitepress/config.ts",
       "docs/.vitepress/site.json",
+      "docs/contributing/git-hooks.md",
       "docs/contributing/pr-checklist.md",
       "docs/contributing/static-quality.md",
       "docs/contributing/testing.md",
@@ -47,6 +57,7 @@ describe("real seed render", () => {
       "scripts/core/focused-run.cjs",
       "scripts/core/install-state.cjs",
       "scripts/core/json.cjs",
+      "scripts/core/plugins.cjs",
       "scripts/core/process.cjs",
       "scripts/core/protected.cjs",
       "scripts/core/quality.cjs",
@@ -56,6 +67,19 @@ describe("real seed render", () => {
       "scripts/dependencies.cjs",
       "scripts/development.cjs",
       "scripts/docs.cjs",
+      "scripts/hooks/commit-msg.cjs",
+      "scripts/hooks/completion.cjs",
+      "scripts/hooks/entry.cjs",
+      "scripts/hooks/guard.cjs",
+      "scripts/hooks/install.cjs",
+      "scripts/hooks/launch.sh",
+      "scripts/hooks/mutex.cjs",
+      "scripts/hooks/policy.cjs",
+      "scripts/hooks/pre-commit.cjs",
+      "scripts/hooks/pre-push.cjs",
+      "scripts/hooks/recover-lock.cjs",
+      "scripts/hooks/repo.cjs",
+      "scripts/hooks/state.cjs",
       "src/app/error.tsx",
       "src/app/globals.css",
       "src/app/layout.tsx",
@@ -66,6 +90,7 @@ describe("real seed render", () => {
       "tests/app/home.test.tsx",
       "tests/app/layout.test.tsx",
       "tests/app/not-found.test.tsx",
+      "tests/contracts/agent-permissions.test.ts",
       "tests/contracts/coverage-policy.test.ts",
       "tests/contracts/suite-classification.test.ts",
       "tests/integration/bootstrap.test.ts",
@@ -73,19 +98,37 @@ describe("real seed render", () => {
       "tests/integration/development-gates.test.ts",
       "tests/integration/executable-lookup.test.ts",
       "tests/integration/install-state.test.ts",
+      "tests/integration/permissions.test.ts",
       "tests/integration/process.test.ts",
       "tests/integration/transaction.test.ts",
       "tests/setup/app.ts",
+      "tests/support/agent-declarations.ts",
+      "tests/support/guard-repo.ts",
       "tests/support/json.ts",
       "tests/support/memory-disk.ts",
+      "tests/support/memory-fs.ts",
       "tests/support/project.ts",
+      "tests/support/rollout.ts",
       "tests/unit/bootstrap.test.ts",
       "tests/unit/commands.test.ts",
       "tests/unit/dependencies.test.ts",
       "tests/unit/dependency-policy.test.ts",
       "tests/unit/docs-version.test.ts",
       "tests/unit/gates.test.ts",
+      "tests/unit/guard/commands.test.ts",
+      "tests/unit/guard/completion-engine.test.ts",
+      "tests/unit/guard/completion.test.ts",
+      "tests/unit/guard/engine.test.ts",
+      "tests/unit/guard/entry.test.ts",
+      "tests/unit/guard/events.test.ts",
+      "tests/unit/guard/mutex.test.ts",
+      "tests/unit/guard/policy.test.ts",
+      "tests/unit/guard/repo.test.ts",
+      "tests/unit/guard/state.test.ts",
+      "tests/unit/hooks/hooks.test.ts",
+      "tests/unit/hooks/install.test.ts",
       "tests/unit/install-state.test.ts",
+      "tests/unit/plugins.test.ts",
       "tests/unit/process.test.ts",
       "tests/unit/protected.test.ts",
       "tests/unit/quality.test.ts",
@@ -96,6 +139,8 @@ describe("real seed render", () => {
       "tooling/capabilities.json",
       "tooling/eslint/shared.mjs",
       "tooling/eslint/suppression-policy.mjs",
+      "tooling/hooks/commit-message.mjs",
+      "tooling/hooks/staged.mjs",
       "tooling/policy.json",
       "tooling/project-role.json",
       "tooling/vitest/suite.ts",
@@ -110,15 +155,45 @@ describe("real seed render", () => {
     for (const forbidden of [
       /template-manifest/,
       /^scripts\/template/,
-      /^tests\/(?:fixtures|generator)\/|^tests\/integration\/(?!(?:bootstrap|dependencies-cli|development-gates|executable-lookup|install-state|process|transaction)\.test\.ts$)/,
-      /^tests\/(?:unit\/(?:renderer|generator-commands)|contracts\/(?:rendered-output|toolchain|command-parity)|support\/rendered-app)/,
-      /^tooling\/(?!project-role\.json$|policy\.json$|capabilities\.json$|eslint\/(?:shared|suppression-policy)\.mjs$|vitest\/suite\.ts$)/,
+      /^tests\/(?:fixtures|generator)\/|^tests\/integration\/(?!(?:bootstrap|dependencies-cli|development-gates|executable-lookup|install-state|permissions|process|transaction)\.test\.ts$)/,
+      /^tests\/(?:unit\/(?:renderer|generator-commands)|contracts\/(?:rendered-output|toolchain|command-parity|agent-staging)|support\/rendered-app)/,
+      /^tooling\/(?!project-role\.json$|policy\.json$|capabilities\.json$|eslint\/(?:shared|suppression-policy)\.mjs$|hooks\/(?:staged|commit-message)\.mjs$|vitest\/suite\.ts$)/,
       /\.py$/,
       /pyproject|Makefile|copier|uv\.lock/i,
       /auth|prisma|drizzle|database|db\//i,
     ]) {
       for (const path of paths) expect(path, String(forbidden)).not.toMatch(forbidden);
     }
+  });
+
+  test("the guard runtime, host declarations and permission checks are in the render itself, not only in the generator seed", () => {
+    const required = [
+      ...["entry.cjs", "launch.sh", "guard.cjs", "completion.cjs", "recover-lock.cjs", "mutex.cjs", "policy.cjs", "repo.cjs", "state.cjs"].map(
+        (file) => `scripts/hooks/${file}`,
+      ),
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".claude/settings.json",
+      ".codex/config.toml",
+      ".codex/hooks.json",
+      ".codex/rules/publishing.rules",
+      ".compound-engineering/config.yaml",
+      ".compound-engineering/config.example.yaml",
+      "compound-packs/README.md",
+      "tests/contracts/agent-permissions.test.ts",
+      "tests/integration/permissions.test.ts",
+      "tests/support/agent-declarations.ts",
+      "tests/support/guard-repo.ts",
+      "tests/unit/guard/engine.test.ts",
+    ];
+    for (const path of required) expect(paths, path).toContain(path);
+    // The settings are the application declarations, not the generator's own.
+    expect(byPath(a, ".claude/settings.json")).toContain("scripts/hooks/launch.sh");
+    expect(byPath(a, ".compound-engineering/config.yaml")).toBe(readFileSync(join(root, ".compound-engineering/config.yaml"), "utf8"));
+    expect(byPath(a, ".compound-engineering/config.example.yaml")).toBe(readFileSync(join(root, ".compound-engineering/config.example.yaml"), "utf8"));
+    expect(byPath(a, "compound-packs/README.md")).toBe(readFileSync(join(root, "compound-packs/README.md"), "utf8"));
+    expect(JSON.parse(byPath(a, "tooling/capabilities.json"))).toEqual({ guard: false, hooks: false });
+    expect(a.files.find((file) => file.path === "scripts/hooks/launch.sh")?.mode).toBe(0o755);
   });
 
   test("emitted tests assume nothing the generator alone provides", () => {

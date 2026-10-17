@@ -17,7 +17,13 @@
       "sourceTest": "test_live_codex_completion",
       "status": "pending",
       "owner": "U9",
-      "note": "A real authenticated Codex CLI lane is host verification; U6 does not claim it."
+      "note": "The real authenticated Codex CLI lane is host verification at the coherent activation (U16). test:permissions reports a missing Codex CLI as explicitly unavailable; U9 does not claim the live lane.",
+      "jsTests": [
+        {
+          "file": "tests/integration/permissions.test.ts",
+          "title": "the real Codex execpolicy check is UNAVAILABLE on this machine"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_guard.py",
@@ -1487,137 +1493,208 @@
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_claude_runs_without_an_os_sandbox",
-      "status": "pending",
+      "status": "carried",
       "owner": "U9",
-      "note": "Host declarations, trust and publishing policy are U9."
+      "jsTests": [
+        {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "runs without an OS sandbox and without a bare Bash allowance"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_claude_runs_the_guard_on_every_event",
-      "status": "pending",
+      "status": "adapted",
       "owner": "U9",
       "jsTests": [
         {
-          "file": "tests/integration/guard-routes.test.ts",
-          "title": "a settings change that drops the guard or disables hooks is blocked"
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "%s runs the guard launcher with the %s event"
+        },
+        {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "declares exactly the guard events, and the guard's own registration check accepts the settings"
         }
       ],
-      "note": "Host declarations, trust and publishing policy are U9. U6 checks the registered launcher in config-change."
+      "note": "The registered command starts the Node launcher (launch.sh) and refuses in every shell when the launcher is missing; there is no Python interpreter and no protocol marker to skip on."
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_guard_declares_the_protocol_its_hooks_check",
-      "status": "pending",
+      "status": "not-carried",
       "owner": "U9",
-      "note": "The host-side protocol guard that lets hooks pass on a checkout without a guard is a U9 declaration concern."
+      "note": "There is no GUARD_PROTOCOL marker: the hooks never skip a guard they cannot identify, so there is no protocol to declare. A missing or unbound launcher refuses instead (see launcher-missing-fails-closed).",
+      "jsTests": [
+        {
+          "file": "tests/integration/host-declarations.test.ts",
+          "title": "a checkout without the launcher is refused in every shell, and the end of a turn only reports it"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_claude_hooks_pass_on_a_checkout_without_this_guard",
-      "status": "pending",
+      "status": "not-carried",
       "owner": "U9",
-      "note": "Same as the protocol check."
+      "note": "Deliberate Node-port difference: the Python hooks passed when the guard file was missing or older. A silent pass is a failure route, so the registered command refuses (a stop only reports) and the user restores the launcher.",
+      "jsTests": [
+        {
+          "file": "tests/integration/host-declarations.test.ts",
+          "title": "a checkout without the launcher is refused in every shell, and the end of a turn only reports it"
+        },
+        {
+          "file": "tests/integration/host-declarations.test.ts",
+          "title": "a checkout whose launcher has no machine-bound Node refuses to run, and the end of a turn only reports it"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_claude_guard_hooks_satisfy_the_guards_own_check",
-      "status": "pending",
+      "status": "carried",
       "owner": "U9",
       "jsTests": [
         {
-          "file": "tests/integration/guard-routes.test.ts",
-          "title": "a settings change that drops the guard or disables hooks is blocked"
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "declares exactly the guard events, and the guard's own registration check accepts the settings"
         }
-      ],
-      "note": "Host declarations, trust and publishing policy are U9."
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_claude_asks_before_editing_a_protected_file",
-      "status": "pending",
+      "status": "carried",
       "owner": "U9",
       "jsTests": [
         {
-          "file": "tests/unit/guard/engine.test.ts",
-          "title": "an edit the user approved is kept for exactly that path, and another protected path in the same window is not"
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "asks before editing every protected file and directory of the policy inventory"
         }
-      ],
-      "note": "The permission prompt is a host declaration (U9); the guard side of an approved edit is carried."
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_claude_asks_before_editing_a_protected_directory",
-      "status": "pending",
+      "status": "carried",
       "owner": "U9",
-      "note": "Host declarations, trust and publishing policy are U9."
+      "jsTests": [
+        {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "asks before editing every protected file and directory of the policy inventory"
+        },
+        {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "every Edit rule it asks about names something the inventory protects"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_claude_keeps_acceptance_and_protected_edits_with_the_user",
-      "status": "pending",
+      "status": "carried",
       "owner": "U9",
       "jsTests": [
         {
-          "file": "tests/unit/guard/policy.test.ts",
-          "title": "a user-approved goal is refused unless it is exactly the standalone route"
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "runs the guard's approved commands without asking and asks for the user-approved ones"
+        },
+        {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "runs without an OS sandbox and without a bare Bash allowance"
         }
-      ],
-      "note": "Host declarations, trust and publishing policy are U9."
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_claude_runs_dependency_targets_without_asking",
-      "status": "pending",
+      "status": "adapted",
       "owner": "U9",
       "jsTests": [
         {
-          "file": "tests/unit/guard/policy.test.ts",
-          "title": "is the %s route"
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "runs the guard's approved commands without asking and asks for the user-approved ones"
         }
       ],
-      "note": "Host declarations, trust and publishing policy are U9."
+      "note": "The pnpm run deps:* scripts and the dependency-only deps-lock entry replace the make uv-* targets; the allow rules are derived from the guard commands of tooling/policy.json."
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_claude_does_not_preapprove_direct_uv_writes",
-      "status": "pending",
+      "status": "adapted",
       "owner": "U9",
-      "note": "Host declarations, trust and publishing policy are U9."
+      "note": "There is no direct package-manager write to deny by name: the only allowed Bash rules are the declared pnpm run scripts and three exact bootstrap subcommands, and no general interpreter, shell or bootstrap wildcard exists.",
+      "jsTests": [
+        {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "does not grant a general bootstrap, shell or interpreter allowance"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_claude_asks_before_git_rewrites_the_worktree",
-      "status": "pending",
+      "status": "carried",
       "owner": "U9",
-      "note": "Host declarations, trust and publishing policy are U9."
+      "jsTests": [
+        {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "asks before %s"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_codex_runs_without_a_sandbox",
-      "status": "pending",
+      "status": "carried",
       "owner": "U9",
-      "note": "Host declarations, trust and publishing policy are U9."
+      "jsTests": [
+        {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "runs without a sandbox and every prompt reaches a person"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_codex_runs_the_guard_on_every_event",
-      "status": "pending",
+      "status": "adapted",
       "owner": "U9",
-      "note": "Host declarations, trust and publishing policy are U9."
+      "note": "The Codex hooks run the Node launcher from the Git top level; the matcher names the documented Bash and apply_patch tools.",
+      "jsTests": [
+        {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "%s runs the guard launcher with the %s event"
+        },
+        {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "declares exactly the pre, post and stop events"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_registered_codex_pre_hook_runs_from_subdirectory",
-      "status": "pending",
+      "status": "carried",
       "owner": "U9",
-      "note": "Host declarations, trust and publishing policy are U9."
+      "jsTests": [
+        {
+          "file": "tests/integration/host-declarations.test.ts",
+          "title": "a direct patch of a protected file is refused, also when the host runs the hook from a subdirectory"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_codex_enables_compound_engineering_from_its_marketplace",
-      "status": "pending",
+      "status": "carried",
       "owner": "U9",
-      "note": "Host declarations, trust and publishing policy are U9."
+      "jsTests": [
+        {
+          "file": "tests/contracts/agent-staging.test.ts",
+          "title": "Compound Engineering is configured exactly as in the repository's own settings"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
@@ -1652,106 +1729,178 @@
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_commit_hook_checks_staged_protected_files_first",
-      "status": "pending",
+      "status": "adapted",
       "owner": "U9",
       "jsTests": [
         {
-          "file": "tests/integration/guard-routes.test.ts",
-          "title": "an agent commit that would carry unapproved staged content is rejected by the commit hook"
+          "file": "tests/unit/hooks/hooks.test.ts",
+          "title": "starts with the staged guard check, then changed-file tooling, then the relevant whole-project checks"
         }
       ],
-      "note": "Installing the Git hook is U9/U16; the staged check it calls is carried."
+      "note": "The Node pre-commit hook asks the guard's staged check before lint-staged runs, instead of a pre-commit framework entry."
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_claude_asks_before_publishing",
-      "status": "pending",
+      "status": "carried",
       "owner": "U9",
-      "note": "Publishing policy is U9."
+      "jsTests": [
+        {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "asks before %s"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_codex_publishing_rules_only_prompt",
-      "status": "pending",
+      "status": "carried",
       "owner": "U9",
-      "note": "Publishing policy is U9."
+      "jsTests": [
+        {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "only ever prompt, and carry no template syntax"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_codex_rules_cover_every_publishing_command",
-      "status": "pending",
+      "status": "carried",
       "owner": "U9",
-      "note": "Publishing policy is U9."
+      "jsTests": [
+        {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "covers %s"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_codex_rules_leave_other_commands_alone",
-      "status": "pending",
+      "status": "carried",
       "owner": "U9",
-      "note": "Publishing policy is U9."
+      "jsTests": [
+        {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "leaves %s alone"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_codex_prompts_reach_a_person",
-      "status": "pending",
+      "status": "carried",
       "owner": "U9",
-      "note": "Publishing policy is U9."
+      "jsTests": [
+        {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "runs without a sandbox and every prompt reaches a person"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_real_codex_prompts_before_publishing",
-      "status": "pending",
+      "status": "carried",
       "owner": "U9",
-      "note": "Real-host verification is U9."
+      "jsTests": [
+        {
+          "file": "tests/integration/permissions.test.ts",
+          "title": "prompts before %s"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_real_codex_leaves_other_commands_alone",
-      "status": "pending",
+      "status": "carried",
       "owner": "U9",
-      "note": "Real-host verification is U9."
+      "jsTests": [
+        {
+          "file": "tests/integration/permissions.test.ts",
+          "title": "leaves %s alone"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_claude_runs_a_selected_test_only_under_tests",
-      "status": "pending",
+      "status": "adapted",
       "owner": "U9",
-      "note": "Host declarations, trust and publishing policy are U9."
+      "note": "The focused test allowance is pnpm run test:one --test=tests/*.",
+      "jsTests": [
+        {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "does not grant a general bootstrap, shell or interpreter allowance"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_claude_enables_only_the_sanctioned_plugins",
-      "status": "pending",
+      "status": "adapted",
       "owner": "U9",
-      "note": "Host declarations, trust and publishing policy are U9."
+      "note": "Only Compound Engineering is enabled; the Pyright language-server plugin belongs to the Python template.",
+      "jsTests": [
+        {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "enables only the sanctioned plugin, declares its marketplace and names no retired plugin"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_claude_declares_a_marketplace_for_every_enabled_plugin",
-      "status": "pending",
+      "status": "carried",
       "owner": "U9",
-      "note": "Host declarations, trust and publishing policy are U9."
+      "jsTests": [
+        {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "enables only the sanctioned plugin, declares its marketplace and names no retired plugin"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_claude_configuration_names_no_retired_plugins",
-      "status": "pending",
+      "status": "carried",
       "owner": "U9",
-      "note": "Host declarations, trust and publishing policy are U9."
+      "jsTests": [
+        {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "enables only the sanctioned plugin, declares its marketplace and names no retired plugin"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_setup_installs_every_declared_plugin_in_project_scope",
-      "status": "pending",
+      "status": "adapted",
       "owner": "U9",
-      "note": "Host declarations, trust and publishing policy are U9."
+      "note": "Setup reads the declared plugins and marketplaces from the tracked host settings, installs them project-locally when the CLIs exist, and restores the tracked settings bytes.",
+      "jsTests": [
+        {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "setup installs exactly the plugins and marketplaces both hosts declare, in project scope"
+        },
+        {
+          "file": "tests/unit/plugins.test.ts",
+          "title": "installs every declared plugin in project scope, refreshes the Codex marketplaces with one-command trust, and restores the settings bytes"
+        }
+      ]
     },
     {
       "sourceFile": "tests/test_agent_permissions.py",
       "sourceTest": "test_claude_imports_shared_rules",
-      "status": "pending",
+      "status": "carried",
       "owner": "U9",
-      "note": "Host declarations, trust and publishing policy are U9."
+      "jsTests": [
+        {
+          "file": "tests/contracts/agent-permissions.test.ts",
+          "title": "the shared policy imports into Claude and states the rules the declarations enforce"
+        }
+      ]
     }
   ]
 }

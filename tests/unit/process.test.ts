@@ -1,5 +1,5 @@
 import { createRequire } from "node:module";
-import { describe, expect, test } from "vitest";
+import { describe, expect, test, vi } from "vitest";
 
 const processes = createRequire(import.meta.url)("../../scripts/core/process.cjs") as typeof import("../../scripts/core/process.cjs");
 
@@ -48,5 +48,21 @@ describe("logged output", () => {
     });
     expect(calls[0]?.slice(0, 2)).toEqual(["tool", ["a b", "$(x)"]]);
     expect(calls[0]?.[2]).toMatchObject({ cwd: "/p" });
+  });
+});
+
+describe("the process's own streams", () => {
+  test("write to standard output and standard error", () => {
+    const out = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const err = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    try {
+      processes.stdio.stdout("to out");
+      processes.stdio.stderr("to err");
+      expect(out).toHaveBeenCalledWith("to out");
+      expect(err).toHaveBeenCalledWith("to err");
+    } finally {
+      out.mockRestore();
+      err.mockRestore();
+    }
   });
 });

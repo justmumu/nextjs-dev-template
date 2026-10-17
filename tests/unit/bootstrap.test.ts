@@ -23,6 +23,9 @@ function machine(overrides: Partial<Host> = {}) {
     guardRefusal: () => null,
     hooksRegistered: () => false,
     installHooks: () => calls.push("hooks"),
+    installPlugins: () => {
+      calls.push("plugins");
+    },
     guardActive: () => false,
     bindNode: () => calls.push("bind"),
     guardDrift: () => [],
@@ -48,7 +51,14 @@ function machine(overrides: Partial<Host> = {}) {
 
 function run(argv: string[], host: Host) {
   const sink = capture();
-  const status = bootstrap.main(argv, { root: "/p", io: sink.io, host });
+  const status = bootstrap.main(argv, { root: "/p", io: sink.io, host }) as number;
+  return { status, out: sink.out(), err: sink.err() };
+}
+
+/** The setup that also runs the optional plugin step, which finishes asynchronously. */
+async function runWithPlugins(argv: string[], host: Host) {
+  const sink = capture();
+  const status = await bootstrap.main(argv, { root: "/p", io: sink.io, host });
   return { status, out: sink.out(), err: sink.err() };
 }
 
@@ -108,12 +118,49 @@ describe("setup", () => {
     expect(calls).not.toContain("hooks");
   });
 
-  test("once the hook installer is registered it installs the hooks after the dependencies", () => {
+  test("once the hook installer is registered it installs the hooks after the dependencies", async () => {
     const { host, calls } = machine({ hooksRegistered: () => true });
-    const result = run(["setup"], host);
+    const result = await runWithPlugins(["setup"], host);
     expect(result.status).toBe(0);
-    expect(calls).toEqual(["transact", "hooks"]);
+    expect(calls).toEqual(["transact", "hooks", "plugins"]);
     expect(result.out).toMatch(/Git hooks installed/);
+  });
+
+  test("hooks that cannot be installed fail the setup with the reason, and no success is claimed", () => {
+    const { host } = machine({
+      hooksRegistered: () => true,
+      installHooks: () => {
+        throw new Error("/repo/.git/hooks/pre-push already exists and is not managed by this template");
+      },
+    });
+    const result = run(["setup"], host);
+    expect(result.status).toBe(1);
+    expect(result.err).toMatch(/Git hooks were not installed: .*pre-push already exists/);
+    expect(result.out).not.toMatch(/Git hooks installed/);
+  });
+
+  test("plugin installation is optional: its failure is a warning and the setup still succeeds", async () => {
+    const { host } = machine({
+      hooksRegistered: () => true,
+      installPlugins: () => {
+        throw new Error("settings are not JSON");
+      },
+    });
+    const result = await runWithPlugins(["setup"], host);
+    expect(result.status).toBe(0);
+    expect(result.out).toMatch(/Git hooks installed/);
+    expect(result.err).toMatch(/warning: the agent plugins were not installed: settings are not JSON/);
+  });
+
+  test("no plugin is installed when the hooks could not be", () => {
+    const { host, calls } = machine({
+      hooksRegistered: () => true,
+      installHooks: () => {
+        throw new Error("foreign hook");
+      },
+    });
+    expect(run(["setup"], host).status).toBe(1);
+    expect(calls).not.toContain("plugins");
   });
 
   test("a rejected install fails, reports the violations and the recovery, and installs no hooks", () => {

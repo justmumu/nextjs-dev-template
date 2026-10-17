@@ -218,6 +218,16 @@
           "file": "tests/unit/guard/commands.test.ts",
           "title": "no route runs a forbidden tool"
         }
+      },
+      {
+        "id": "launcher-missing-fails-closed",
+        "source": "The registered hooks exit 0 when the guard file is missing or speaks another protocol.",
+        "javascript": "The registered command refuses in every shell when the launcher is missing, and the launcher refuses when no machine-bound Node exists; a stop only reports.",
+        "reason": "A silent pass is a failure route the guard could not notice (R21); the user, not the hook, decides to restore an older checkout.",
+        "proof": {
+          "file": "tests/integration/host-declarations.test.ts",
+          "title": "a checkout without the launcher is refused in every shell, and the end of a turn only reports it"
+        }
       }
     ]
   }

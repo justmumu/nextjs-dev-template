@@ -105,7 +105,13 @@ describe("the generator's own and a generated application's documentation", () =
     const built = siteDir(app);
     const html = readFileSync(join(built, "index.html"), "utf8");
     expect(html).toContain(">v0.0.0<");
-    expect(readdirSync(join(built, "contributing")).sort()).toEqual(["pr-checklist.html", "static-quality.html", "testing.html", "toolchain.html"]);
+    expect(readdirSync(join(built, "contributing")).sort()).toEqual([
+      "git-hooks.html",
+      "pr-checklist.html",
+      "static-quality.html",
+      "testing.html",
+      "toolchain.html",
+    ]);
     for (const file of files(built).filter((name) => name.endsWith(".html"))) {
       expect(readFileSync(file, "utf8"), file).not.toMatch(/template:create|template:seed|versions\.json|renderer/);
     }

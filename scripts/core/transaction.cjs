@@ -311,8 +311,6 @@ function violationsFor(before, after, manifestBefore, plan) {
 const DETAIL_LINES = 12;
 
 /**
- * The violation for a failed lock check. The check's own output (credentials masked, bounded) rides
- * along, so a stale manifest and unreachable registry metadata can be told apart.
  * @param {string} output
  */
 function lockViolation(output) {

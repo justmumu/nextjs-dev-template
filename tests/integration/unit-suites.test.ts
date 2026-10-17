@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, readdirSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { createRequire } from "node:module";
 import { afterAll, describe, expect, test } from "vitest";
@@ -100,7 +100,8 @@ describe("focused test command with lookalikes", () => {
   function project(files: Record<string, string>): string {
     const dir = join(scratch, `p${String(readdirSync(scratch).length)}`);
     mkdirSync(dir);
-    cpSync(join(root, "node_modules"), join(dir, "node_modules"), { recursive: true, verbatimSymlinks: true });
+    // The fixtures never change dependencies, so they share the installed toolchain instead of copying it.
+    symlinkSync(join(root, "node_modules"), join(dir, "node_modules"));
     for (const path of [
       "package.json",
       "tsconfig.json",
