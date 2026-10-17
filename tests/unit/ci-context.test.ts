@@ -18,7 +18,6 @@ function hostFor(over: Partial<Parameters<typeof context.main>[1]> = {}) {
     expected: () => expected,
     actual: () => ({ ...expected, platform: "linux-x64" }),
     append: (path, text) => appended.push([path, text]),
-    identityErrors: () => [],
     ...over,
   };
   return { host, sink, appended };
@@ -98,26 +97,6 @@ describe("the toolchain a job runs on", () => {
   });
 });
 
-describe("the identities of a release", () => {
-  test("a clean history passes", () => {
-    const { host, sink } = hostFor();
-    expect(context.main(["identities", "--tag=v1.2.3"], host)).toBe(0);
-    expect(sink.out()).toContain("every author and committer of v1.2.3 uses a GitHub noreply address");
-  });
-
-  test("a commit with a private address fails and the address is not printed", () => {
-    const { host, sink } = hostFor({ identityErrors: (tag) => [`abc123: committer e-mail is not a GitHub noreply address (${tag})`] });
-    expect(context.main(["identities", "--tag=v1.2.3"], host)).toBe(1);
-    expect(sink.err()).toContain("abc123: committer e-mail is not a GitHub noreply address");
-    expect(sink.out()).toBe("");
-  });
-
-  test("names a release tag and nothing else", () => {
-    expect(() => context.main(["identities", "--tag=main"], hostFor().host)).toThrow(/unsupported value/);
-    expect(() => context.main(["identities"], hostFor().host)).toThrow(/--tag is required/);
-  });
-});
-
 test("an unknown command is a usage error", () => {
   expect(() => context.main(["deploy"], hostFor().host)).toThrow(/usage: node scripts\/ci\/context.cjs/);
 });
@@ -139,18 +118,12 @@ describe("the real host reads the project through what it is given", () => {
         readRole: (dir) => (seen.push(`role ${dir}`), "generator"),
         readExpected: () => expected,
         pnpmVersion: () => "12.14.0",
-        readPolicy: () => ({
-          forbiddenTools: [],
-          install: { frozenLockfile: true, dependencyBuildScripts: "deny" },
-          commitIdentity: { emailPattern: "^noreply$" },
-        }),
       },
-      identityErrors: (root, _env, pattern, tag) => [`${root} ${pattern} ${tag}`],
     };
     return { deps, seen };
   }
 
-  test("answers about the files, the toolchain and the history of the root it was made for", () => {
+  test("answers about the files and toolchain of the root it was made for", () => {
     const { deps, seen } = depsFor();
     const host = context.realHost("/project", { A: "1" }, capture().io, deps);
     expect(host.role()).toBe("generator");
@@ -159,7 +132,6 @@ describe("the real host reads the project through what it is given", () => {
     expect(host.expected()).toEqual(expected);
     expect(host.actual()).toEqual({ node: process.versions.node, pnpm: "12.14.0", platform: `${process.platform}-${process.arch}` });
     host.append("/summary", "text\n");
-    expect(host.identityErrors("v1.2.3")).toEqual(["/project ^noreply$ v1.2.3"]);
     expect(seen).toContain("exists /project/tooling/template-sentinel.json");
     expect(seen).toContain("append /summary text");
   });

@@ -1,8 +1,8 @@
 // @ts-check
 "use strict";
 // What the workflows ask the repository instead of guessing: which role it has and whether the first-run
-// initialization applies (`plan`), which Node and pnpm the job really runs on (`toolchain`), and whether
-// the commits of a release carry noreply identities (`identities`). The workflows are byte-identical in
+// initialization applies (`plan`) and which Node and pnpm the job really runs on (`toolchain`).
+// The workflows are byte-identical in
 // the generator and in every application, so these answers are the only thing that tells them apart.
 // Decisions take plain values; the real files, Git and environment are read in `realHost`.
 const nodePath = require("node:path");
@@ -23,7 +23,6 @@ const SENTINEL = "tooling/template-sentinel.json";
  *   expected: () => { node: string, pnpm: string },
  *   actual: () => { node: string, pnpm: string | null, platform: string },
  *   append: (path: string, text: string) => unknown,
- *   identityErrors: (tag: string) => string[],
  * }} Host
  */
 
@@ -74,22 +73,14 @@ function main(argv, host) {
     for (const error of errors) io.stderr(`${error}\n`);
     return errors.length > 0 ? 1 : 0;
   }
-  if (command === "identities") {
-    const { tag } = parseArgs(rest, { tag: { required: true, pattern: /^v\d+\.\d+\.\d+$/ } });
-    const errors = host.identityErrors(tag);
-    for (const error of errors) io.stderr(`${error}\n`);
-    if (errors.length === 0) io.stdout(`every author and committer of ${tag} uses a GitHub noreply address\n`);
-    return errors.length > 0 ? 1 : 0;
-  }
-  throw new UsageError("usage: node scripts/ci/context.cjs plan | toolchain --lane=<node major> | identities --tag=vX.Y.Z");
+  throw new UsageError("usage: node scripts/ci/context.cjs plan | toolchain --lane=<node major>");
 }
 
 /**
  * @typedef {{
  *   fs: Pick<typeof import("node:fs"), "existsSync" | "appendFileSync">,
- *   toolchain: Pick<typeof import("../core/toolchain.cjs"), "readRole" | "readExpected" | "pnpmVersion" | "readPolicy">,
- *   identityErrors: (root: string, env: NodeJS.ProcessEnv, pattern: string, tag: string) => string[],
- * }} Deps what the real project is read with: its files, the toolchain facts and the Git history of a release
+ *   toolchain: Pick<typeof import("../core/toolchain.cjs"), "readRole" | "readExpected" | "pnpmVersion">,
+ * }} Deps what the real project is read with: its files and toolchain facts
  */
 
 /** @returns {Deps} */
@@ -97,18 +88,11 @@ function loadDeps() {
   return {
     fs: require("node:fs"),
     toolchain: require("../core/toolchain.cjs"),
-    identityErrors: (root, env, pattern, tag) => {
-      const git = require("../template/git.cjs").createGit({ env });
-      const { baselines } = require("../release/changelog.cjs").snapshotLineage(git, root);
-      const commit = git.out(root, ["rev-parse", "--verify", `refs/tags/${tag}^{commit}`]).trim();
-      return require("../release/validate.cjs").identityErrors(git, root, pattern, [commit, ...(baselines.length > 0 ? ["--not", ...baselines] : [])]);
-    },
   };
 }
 
 /**
- * The real project: the files of `root`, the Node and pnpm that run it, and the Git history that the
- * checked-out `root` holds. Git is loaded only when a release is audited.
+ * The real project: the files of `root` and the Node and pnpm that run it.
  * @param {string} root
  * @param {NodeJS.ProcessEnv} env
  * @param {Io} io
@@ -127,7 +111,6 @@ function realHost(root, env, io, deps = loadDeps()) {
     append: (path, text) => {
       fs.appendFileSync(path, text);
     },
-    identityErrors: (tag) => deps.identityErrors(root, env, facts.readPolicy(root).commitIdentity.emailPattern, tag),
   };
 }
 

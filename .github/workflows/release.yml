@@ -53,8 +53,6 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Validate the tag against origin/main
         run: pnpm run release:validate --tag="$RELEASE_TAG" --notes="$RUNNER_TEMP/release-notes.md"
-      - name: Audit the author and committer identities of the release
-        run: node scripts/ci/context.cjs identities --tag="$RELEASE_TAG"
       - name: Keep the notes as data for publication
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

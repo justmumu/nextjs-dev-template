@@ -82,10 +82,7 @@ After the pull request has been merged with a regular merge commit, update `main
 - `HEAD` is a merge commit and the working tree is clean;
 - `package.json` and `CHANGELOG.md` agree: the changelog has exactly one section whose heading is the
   tag of the manifest's version (`v0.0.1` never matches `v0.0.10`);
-- the tag does not exist yet, and published tags are never replaced;
-- every author and every committer e-mail of the project's own commits is a GitHub noreply address
-  allowed by `commitIdentity` in `tooling/policy.json`. The check reads the real commit objects; the
-  message names the commit and the role, never the address.
+- the tag does not exist yet, and published tags are never replaced.
 
 Then it creates a local annotated tag on `HEAD` and prints the push command. A tag is never created on a
 feature branch, on a stale `main`, or on a commit that is not the reviewed merge.
@@ -105,7 +102,7 @@ the merge even when their trees match. A valid release stays valid after `main` 
 ## What is not here
 
 - No npm publication or deployment: the commands only prepare, tag and validate. `release.yml` validates a
-  pushed tag with the validator code of the trusted `main`, audits the commit identities and keeps the
+  pushed tag with the validator code of the trusted `main` and keeps the
   notes as data; its `publish` job creates the GitHub Release only when started by hand (see
   [CI and supply chain](ci)).
 - No standalone changelog command and no way to choose another changelog boundary: the bump owns both.

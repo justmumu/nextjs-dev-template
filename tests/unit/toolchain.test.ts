@@ -47,19 +47,3 @@ describe("environment judgement", () => {
     expect(toolchain.NO_MANAGER_SWITCH).toMatchObject({ COREPACK_ENABLE_NETWORK: "0", pnpm_config_pm_on_fail: "ignore" });
   });
 });
-
-describe("commit identity", () => {
-  const noreply = (local: string) => `${local}@users.noreply.github.com`;
-  const pattern = "^(?:\\d+\\+)?[A-Za-z0-9-]+@users\\.noreply\\.github\\.com$";
-
-  test("every revision is judged for author and committer separately", () => {
-    const errors = toolchain.commitIdentityErrors(
-      [
-        { rev: "a1", author: noreply("7+someone"), committer: noreply("someone") },
-        { rev: "b2", author: noreply("me").replace("users.noreply.github.com", "example.test"), committer: noreply("someone") },
-      ],
-      pattern,
-    );
-    expect(errors).toEqual(["b2: author e-mail is not a GitHub noreply address"]);
-  });
-});

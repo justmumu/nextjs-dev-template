@@ -8,7 +8,7 @@ const { dirtyReason, recoveryCommand } = require("./install-state.cjs");
 const { readObject } = require("./json.cjs");
 const { run } = require("./process.cjs");
 
-/** @typedef {{ forbiddenTools: string[], install: { frozenLockfile: boolean, dependencyBuildScripts: string }, commitIdentity: { emailPattern: string } }} Policy */
+/** @typedef {{ forbiddenTools: string[], install: { frozenLockfile: boolean, dependencyBuildScripts: string } }} Policy */
 
 /** @param {string} path @returns {import("./json.cjs").JsonObject} */
 function readJson(path) {
@@ -52,22 +52,6 @@ function checkEnvironment(actual, expected, detail = "") {
     );
   } else if (actual.pnpm !== expected.pnpm) {
     errors.push(`pnpm ${expected.pnpm} is required (found ${actual.pnpm}). Install exactly that version.`);
-  }
-  return errors;
-}
-
-/**
- * @param {{ rev: string, author: string, committer: string }[]} entries
- * @param {string} emailPattern
- * @returns {string[]}
- */
-function commitIdentityErrors(entries, emailPattern) {
-  const pattern = new RegExp(emailPattern);
-  const errors = [];
-  for (const entry of entries) {
-    for (const role of /** @type {const} */ (["author", "committer"])) {
-      if (!pattern.test(entry[role])) errors.push(`${entry.rev}: ${role} e-mail is not a GitHub noreply address`);
-    }
   }
   return errors;
 }
@@ -133,7 +117,6 @@ function gateErrors(dir) {
 module.exports = {
   NO_MANAGER_SWITCH,
   checkEnvironment,
-  commitIdentityErrors,
   gateErrors,
   pnpmVersion,
   preflightErrors,

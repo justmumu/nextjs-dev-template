@@ -14,7 +14,6 @@ const state = require("../../scripts/template/state.cjs") as typeof import("../.
 
 const MANIFEST = `{\n  "name": "app",\n  "version": "0.0.0",\n  "private": true,\n  "dependencies": { "version": "1.0.0" }\n}\n`;
 const at = (local: string, domain: string) => `${local}@${domain}`;
-const PATTERN = "^([0-9]+\\+)?[A-Za-z0-9-]+@users\\.noreply\\.github\\.com$";
 
 describe("versions and tags", () => {
   test.each([
@@ -309,26 +308,6 @@ describe("a reviewed release", () => {
   });
 });
 
-describe("commit identities", () => {
-  const entry = (hash: string, author: string, committer: string) => `${hash}\u001f${author}\u001f${committer}`;
-
-  test("user and bot noreply identities pass; any other address is reported by commit and role, never by value", () => {
-    const log = [
-      entry("a1", at("7+someone", "users.noreply.github.com"), at("someone", "users.noreply.github.com")),
-      entry("b2", at("nextjs-dev-template", "users.noreply.github.com"), at("nextjs-dev-template", "users.noreply.github.com")),
-      entry("c3", at("secret.person", "example.com"), at("someone", "users.noreply.github.com")),
-      entry("d4", at("someone", "users.noreply.github.com"), at("other.secret", "example.org")),
-    ].join("\u0000");
-    const errors = validate.identityErrors(repository({ log }).git, "/project", PATTERN, ["HEAD"]);
-    expect(errors).toEqual(["c3: author e-mail is not a GitHub noreply address", "d4: committer e-mail is not a GitHub noreply address"]);
-    expect(errors.join("\n")).not.toMatch(/secret|example/);
-  });
-
-  test("a history with no commit has nothing to report", () => {
-    expect(validate.identityErrors(repository({ log: "" }).git as never, "/project", PATTERN, ["HEAD"])).toEqual([]);
-  });
-});
-
 describe("the template lineage", () => {
   const baseline = "b".repeat(40);
   const stateText = (upstream: boolean) =>
@@ -412,7 +391,6 @@ function hostOf(over: { git?: ReturnType<typeof repository>; files?: Record<stri
     disk: files,
     io: sink.io,
     now: () => new Date("2026-10-17T12:00:00Z"),
-    emailPattern: PATTERN,
     generate: (input: { version: string; date: string }) => {
       events.push(`generate ${input.version} ${input.date}`);
       return Promise.resolve(over.generate ?? `## v${input.version} (${input.date})\n\n### Features\n\n- feature\n`);
@@ -553,15 +531,10 @@ describe("release:tag", () => {
     expect(git.calls.some((args) => args[0] === "tag" && args[1] === "-a")).toBe(false);
   });
 
-  test("an address that is not a noreply address creates no tag and is not printed", async () => {
-    const { host, git } = reviewed({ log: `h1\u001f${at("private.person", "example.com")}\u001f${at("someone", "users.noreply.github.com")}` });
-    const failure = await release.tag(host as never).then(
-      () => null,
-      (error: unknown) => error as Error,
-    );
-    expect(failure?.message).toMatch(/h1: author e-mail is not a GitHub noreply address/);
-    expect(failure?.message).not.toMatch(/private|example/);
-    expect(git.calls.some((args) => args[0] === "tag" && args[1] === "-a")).toBe(false);
+  test("a reviewed release is not gated by historical commit email addresses", async () => {
+    const { host, git } = reviewed({ log: `h1\u001f${at("fixture", "example.invalid")}\u001f${at("noreply", "github.com")}` });
+    await release.tag(host);
+    expect(git.calls.some((args) => args[0] === "tag" && args[1] === "-a")).toBe(true);
   });
 });
 

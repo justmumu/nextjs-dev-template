@@ -58,21 +58,6 @@ describe("workspace policy of both graphs", () => {
 });
 
 describe("commit identity", () => {
-  const pattern = toolchain.readPolicy(root).commitIdentity.emailPattern;
-
-  test("accepts GitHub noreply author and committer", () => {
-    const entry = { rev: "a1", author: "1+someone@users.noreply.github.com", committer: "someone@users.noreply.github.com" };
-    expect(toolchain.commitIdentityErrors([entry], pattern)).toEqual([]);
-  });
-
-  test("reports author and committer separately", () => {
-    const entry = { rev: "b2", author: "me@example.com", committer: "me@example.com" };
-    const errors = toolchain.commitIdentityErrors([entry], pattern);
-    expect(errors).toHaveLength(2);
-    expect(errors[0]).toMatch(/b2.*author/);
-    expect(errors[1]).toMatch(/b2.*committer/);
-  });
-
   test("no owner e-mail is stored in template manifests or state", () => {
     const tracked = [
       "package.json",

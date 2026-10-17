@@ -8,7 +8,7 @@ const nodeFs = require("node:fs");
 const nodePath = require("node:path");
 const { UsageError, parseArgs } = require("./core/args.cjs");
 const { readObject } = require("./core/json.cjs");
-const { readPolicy, readRole } = require("./core/toolchain.cjs");
+const { readRole } = require("./core/toolchain.cjs");
 const { checkLock } = require("./core/transaction.cjs");
 const { createGit } = require("./template/git.cjs");
 const changelog = require("./release/changelog.cjs");
@@ -27,7 +27,6 @@ const REFUSALS = new Set(["ReleaseError", "GitError"]);
  *   disk: Disk,
  *   io: { stdout: (text: string) => unknown, stderr: (text: string) => unknown },
  *   now: () => Date,
- *   emailPattern: string,
  *   generate: (input: { version: string, date: string }) => Promise<string>,
  *   format: (file: string) => unknown,
  *   checkLock: () => { ok: boolean, output: string },
@@ -102,9 +101,6 @@ function tag(host) {
     const name = metadata.tagOf(metadata.readVersion(mustRead(host, metadata.adapterFor(host.role).file)));
     changelog.extractSection(mustRead(host, changelog.CHANGELOG_FILE), name);
     validate.requireFreeTag(git, root, name);
-    const { baselines } = changelog.snapshotLineage(git, root);
-    const problems = validate.identityErrors(git, root, host.emailPattern, ["HEAD", ...(baselines.length > 0 ? ["--not", ...baselines] : [])]);
-    if (problems.length > 0) throw new ReleaseError(`Every author and committer must use a GitHub noreply address before a release:\n${problems.join("\n")}`);
     git.out(root, ["tag", "-a", name, "HEAD", "-m", name]);
     io.stdout(`Reviewed release tag ${name} created at ${head}. Pushing it needs its own approval: git push origin ${name}\n`);
   });
@@ -169,7 +165,6 @@ function realHost(context) {
       },
     },
     now: () => new Date(),
-    emailPattern: readPolicy(root).commitIdentity.emailPattern,
     generate: ({ version, date }) => {
       const lineage = changelog.snapshotLineage(git, root);
       const { name } = readObject(resolve(metadata.adapterFor(role).file));
