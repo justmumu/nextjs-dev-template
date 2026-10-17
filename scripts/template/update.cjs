@@ -13,9 +13,7 @@ const nodeVm = require("node:vm");
 
 const RECOVERY_COMMANDS = new Set(["inspect", "abort", "resume"]);
 const USAGE = "usage: node scripts/template/update.cjs inspect|abort|resume\n";
-/** The errors the commands report as a refusal rather than a crash. */
 const REFUSALS = new Set(["JournalError", "Refusal", "GitError", "RenderError"]);
-/** Operations of Git other than the update's own merge, which stop an update from starting. */
 const OPERATION_MARKERS = ["MERGE_HEAD", "CHERRY_PICK_HEAD", "REVERT_HEAD", "REBASE_HEAD", "rebase-merge", "rebase-apply"];
 
 /** @param {unknown} value @returns {string} the JSON of a value with its keys in a fixed order, so equal data gives equal text */
@@ -59,8 +57,13 @@ function main(argv, context = { io: { stdout: (text) => process.stdout.write(tex
     return 2;
   }
   const scripts = context.scripts ?? nodePath.resolve(__dirname, "..");
-  const load = context.load ?? ((/** @type {string} */ relative) => installedLoader(scripts)(nodePath.join(scripts, relative)));
   try {
+    const load =
+      context.load ??
+      (
+        (/** @type {(file: string) => unknown} */ installed) => (/** @type {string} */ relative) =>
+          installed(nodePath.join(scripts, relative))
+      )(installedLoader(scripts));
     const recovery = /** @type {typeof import("./recovery.cjs")} */ (load("template/recovery.cjs"));
     const git = /** @type {typeof import("./git.cjs")} */ (load("template/git.cjs")).createGit();
     const root = nodePath.resolve(scripts, "..");

@@ -382,26 +382,32 @@ function generatorCommand(name) {
   };
 }
 
-/**
- * The update preview is an application command: its modules are emitted with the application and
- * loaded by a computed path only when it runs.
- * @type {Handler}
- */
+/** @type {Handler} */
 function templatePreview(args, context) {
   /** @type {unknown} */
   const preview = require(nodePath.join(__dirname, "template", "preview.cjs"));
   return /** @type {typeof import("./template/preview.cjs")} */ (preview).templatePreview(args, context);
 }
 
-/**
- * Applying a preview is a person's command at their own terminal. Its modules are emitted with the
- * application and loaded by a computed path only when it runs.
- * @type {Handler}
- */
+/** @type {Handler} */
 function templateApply(args, context) {
   /** @type {unknown} */
   const update = require(nodePath.join(__dirname, "template", "update.cjs"));
   return /** @type {typeof import("./template/update.cjs")} */ (update).apply(args, context);
+}
+
+/**
+ * The release commands load their modules, and the release packages they need, only when one runs,
+ * so every other command works without them.
+ * @param {"bumpCommand" | "tagCommand" | "validateCommand"} name
+ * @returns {Handler}
+ */
+function releaseCommand(name) {
+  return (args, context) => {
+    /** @type {unknown} */
+    const release = require(nodePath.join(__dirname, "release.cjs"));
+    return /** @type {typeof import("./release.cjs")} */ (release)[name](args, { root: context.root, io: context.io, tools: toolsOf(context) });
+  };
 }
 
 /**
@@ -439,6 +445,18 @@ const COMMANDS = {
   "test:artifact": {
     script: "node scripts/development.cjs test:artifact",
     handlers: { generator: generatorCommand("testArtifact"), application: productionProof("scripts/testing/artifact.cjs") },
+  },
+  "release:bump": {
+    script: "node scripts/development.cjs release:bump",
+    handlers: { generator: releaseCommand("bumpCommand"), application: releaseCommand("bumpCommand") },
+  },
+  "release:tag": {
+    script: "node scripts/development.cjs release:tag",
+    handlers: { generator: releaseCommand("tagCommand"), application: releaseCommand("tagCommand") },
+  },
+  "release:validate": {
+    script: "node scripts/development.cjs release:validate",
+    handlers: { generator: releaseCommand("validateCommand"), application: releaseCommand("validateCommand") },
   },
   "template:apply": { script: "node scripts/development.cjs template:apply", handlers: { application: templateApply } },
   "template:preview": { script: "node scripts/development.cjs template:preview", handlers: { application: templatePreview } },

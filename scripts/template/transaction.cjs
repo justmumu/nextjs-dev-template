@@ -1,8 +1,5 @@
 // @ts-check
 "use strict";
-// The decisions and the effects shared by both creation routes: what may be installed over what,
-// the staging validation that must pass before any target is touched, the installation that can be
-// undone from a backup, and the enrollment commit.
 const { randomUUID } = require("node:crypto");
 const nodePath = require("node:path");
 const { assetOf } = require("./smoke.cjs");

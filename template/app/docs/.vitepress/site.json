@@ -43,6 +43,10 @@
           "link": "/contributing/git-hooks"
         },
         {
+          "text": "Release process",
+          "link": "/contributing/release-process"
+        },
+        {
           "text": "Pull request checklist",
           "link": "/contributing/pr-checklist"
         }

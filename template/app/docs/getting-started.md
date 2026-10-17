@@ -23,7 +23,7 @@ pnpm run docs:build
 The build fails on a broken internal page, asset or `#anchor` link. Set `DOCS_BASE` (for example
 `/repo-name/`) to build for a site served below a path; external links are not checked.
 
-## Later work
+## Updates and releases
 
-Applying updates, recovery and releases are not documented yet. Previewing an update is: see
-[Updating from the template](updating).
+[Updating from the template](updating) describes preview, apply and recovery.
+[Release process](contributing/release-process) describes version preparation and reviewed tags.

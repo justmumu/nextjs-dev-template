@@ -1083,6 +1083,54 @@
       "base": "template",
       "source": "docs/updating.md",
       "destination": "docs/updating.md"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/release.cjs",
+      "destination": "scripts/release.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/release/metadata.cjs",
+      "destination": "scripts/release/metadata.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/release/changelog.cjs",
+      "destination": "scripts/release/changelog.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/release/validate.cjs",
+      "destination": "scripts/release/validate.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/support/release-fixture.ts",
+      "destination": "tests/support/release-fixture.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/release.test.ts",
+      "destination": "tests/unit/release.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/integration/release.test.ts",
+      "destination": "tests/integration/release.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "docs/contributing/release-process.md",
+      "destination": "docs/contributing/release-process.md"
     }
   ]
 }

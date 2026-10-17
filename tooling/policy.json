@@ -5,7 +5,7 @@
     "dependencyBuildScripts": "denied"
   },
   "commitIdentity": {
-    "emailPattern": "^([0-9]+\\+)?[A-Za-z0-9-]+@users\\.noreply\\.github\\.com$"
+    "emailPattern": "^([0-9]+\\+)?[A-Za-z0-9-]+(\\[bot\\])?@users\\.noreply\\.github\\.com$"
   },
   "protected": {
     "files": [

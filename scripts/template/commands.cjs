@@ -42,7 +42,6 @@ function realCreateHost(cancel, env = process.env) {
 }
 
 /**
- * Runs a creation flow as the owner of this process's interrupts; a refused input is a usage error.
  * @param {Io} io
  * @param {(host: ReturnType<typeof realCreateHost>, cancel: import("../testing/owned.cjs").Cancellation) => Promise<number>} flow
  * @returns {Promise<number>}

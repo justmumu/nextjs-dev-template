@@ -1,8 +1,5 @@
 // @ts-check
 "use strict";
-// Local creation (F1): validate the answers, render deterministically, validate the rendered
-// application in a staging copy, and only then create the project with its own Git history: the
-// pristine render B0 and, on top of it, the enrollment commit E0.
 const nodePath = require("node:path");
 const render = require("./render.cjs");
 const { RenderError, parseManifest } = require("./manifest.cjs");

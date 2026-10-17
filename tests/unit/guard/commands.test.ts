@@ -11,10 +11,6 @@ const manifest = JSON.parse(readFileSync(resolve(root, "package.json"), "utf8"))
 const declared = JSON.parse(readFileSync(resolve(root, "tooling/policy.json"), "utf8")) as { protected: Record<string, unknown> };
 const protectedFiles = require("../../../scripts/core/protected.cjs") as typeof import("../../../scripts/core/protected.cjs");
 
-// Commands the policy already names whose scripts belong to units that are not built yet (release
-// automation). They are routes by declaration only; the parity check below must not pass them silently.
-const NOT_BUILT_YET = new Set(["release:bump", "release:tag"]);
-
 describe("the command routes are the public command contract", () => {
   const rules = guardPolicy.commands;
 
@@ -24,8 +20,7 @@ describe("the command routes are the public command contract", () => {
       if (tool === "pnpm") {
         expect(rest[0], rule.id).toBe("run");
         const script = rest[1] ?? "";
-        if (NOT_BUILT_YET.has(script)) expect(manifest.scripts[script], `${script} is built; remove it from the pending list`).toBeUndefined();
-        else expect(manifest.scripts[script], `${rule.id}: package.json has no script ${script}`).toBeDefined();
+        expect(manifest.scripts[script], `${rule.id}: package.json has no script ${script}`).toBeDefined();
       } else {
         expect(tool).toBe("node");
         expect(rest[0]).toBe("scripts/bootstrap.cjs");

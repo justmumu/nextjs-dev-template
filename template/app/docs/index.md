@@ -9,4 +9,5 @@ with.
   describe the gates behind `pnpm run check`.
 - [Pull request checklist](contributing/pr-checklist) lists what a change must satisfy.
 
-Template updates, recovery and releases are later work and are not documented yet.
+[Updating from the template](updating) covers preview, apply and recovery.
+[Release process](contributing/release-process) covers version preparation and reviewed tags.
