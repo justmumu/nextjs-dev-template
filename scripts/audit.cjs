@@ -179,7 +179,7 @@ function decisionFor(finding, decisions, graph) {
 function report(projects, host) {
   const { io } = host;
   /** @type {unknown} */
-  let policy = null;
+  let policy;
   try {
     policy = host.readPolicy();
   } catch {

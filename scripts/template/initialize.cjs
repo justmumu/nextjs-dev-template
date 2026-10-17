@@ -94,7 +94,7 @@ async function initializeCopy({ host, io, isCancelled, root, inputs, answers }) 
   }
 
   /** @type {unknown} */
-  let role = null;
+  let role;
   try {
     role = JSON.parse((readIfPresent(host, nodePath.join(root, "tooling", "project-role.json")) ?? Buffer.alloc(0)).toString("utf8"));
   } catch {
@@ -136,7 +136,7 @@ async function initializeCopy({ host, io, isCancelled, root, inputs, answers }) 
   }
   const backup = host.scratch("template-backup-");
   /** @type {string[]} */
-  let failures = [];
+  let failures;
   /** @type {{ commit: string, tree: string } | null} */
   let baseline = null;
   /** @type {{ undo: () => string[] } | null} */
