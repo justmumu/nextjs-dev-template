@@ -7,6 +7,7 @@ describe("the environment of a production child", () => {
   const caller = {
     PATH: "/usr/bin",
     HOME: "/home/dev",
+    PNPM_HOME: "/home/dev/.local/share/pnpm",
     NODE_ENV: "test",
     NODE_PATH: "/somewhere/node_modules",
     npm_config_user_agent: "pnpm/12",
@@ -53,8 +54,16 @@ describe("the environment of a production child", () => {
     expect(cleanEnv(caller)).toMatchObject({
       PATH: "/usr/bin",
       HOME: "/home/dev",
+      PNPM_HOME: "/home/dev/.local/share/pnpm",
       pnpm_config_store_dir: "/stores/ci",
       PLAYWRIGHT_BROWSERS_PATH: "/browsers",
+      NEXT_TELEMETRY_DISABLED: "1",
+    });
+  });
+
+  test("keeps PNPM_HOME when it is the only package-store selector", () => {
+    expect(cleanEnv({ PNPM_HOME: "/home/runner/setup-pnpm/node_modules/.bin" })).toEqual({
+      PNPM_HOME: "/home/runner/setup-pnpm/node_modules/.bin",
       NEXT_TELEMETRY_DISABLED: "1",
     });
   });
