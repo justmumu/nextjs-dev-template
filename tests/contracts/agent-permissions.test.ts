@@ -148,7 +148,9 @@ describe("Codex", () => {
     expect(codexConfig).toMatch(/^sandbox_mode = "danger-full-access"$/m);
     expect(codexConfig).toMatch(/^approval_policy = "on-request"$/m);
     expect(codexConfig).toMatch(/^approvals_reviewer = "user"$/m);
-    expect(codexConfig).not.toMatch(/^(?:default_permissions|permissions|features)\b|^\[(?:permissions|features)/m);
+    const remoteCatalogSetting = /^\[features\]\nremote_plugin = false\n(?=\n\[|$)/m;
+    expect(codexConfig).toMatch(remoteCatalogSetting);
+    expect(codexConfig.replace(remoteCatalogSetting, "")).not.toMatch(/^(?:default_permissions|permissions|features)\b|^\[(?:permissions|features)/m);
   });
 
   test("declares exactly the pre, post and stop events", () => {
@@ -232,6 +234,12 @@ describe("the human update boundary and the host settings the agents share", () 
   });
 
   test("enables only the sanctioned plugin, declares its marketplace and names no retired plugin", () => {
+    for (const root of new Set([declarations, repositoryRoot])) {
+      const settings = parseJson<ClaudeSettings>(read(root, ".claude/settings.json"));
+      expect(settings["syncClaudeAiPlugins"]).toBe(false);
+      expect(settings["disableClaudeAiConnectors"]).toBe(true);
+      expect(read(root, ".codex/config.toml")).toMatch(/^\[features\]\nremote_plugin = false\n(?=\n\[|$)/m);
+    }
     expect(claude["enabledPlugins"]).toEqual({ "compound-engineering@compound-engineering-plugin": true });
     const marketplaces = claude["extraKnownMarketplaces"] as Record<string, { source: { source: string; repo: string } }>;
     for (const plugin of Object.keys(claude["enabledPlugins"] as object)) {

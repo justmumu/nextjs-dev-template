@@ -6,6 +6,9 @@ sandbox_mode = "danger-full-access"
 approval_policy = "on-request"
 approvals_reviewer = "user"
 
+[features]
+remote_plugin = false
+
 [marketplaces.compound-engineering-plugin]
 source_type = "git"
 source = "https://github.com/EveryInc/compound-engineering-plugin.git"
