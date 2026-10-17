@@ -101,9 +101,8 @@ describe("the first-run workflow, step by step", () => {
     expect(log).toHaveLength(3);
     expect(log[0]?.split("|").slice(1)).toEqual([BOT, BOT]);
     expect(git(copy, ["merge-base", "--is-ancestor", original, "HEAD"], env)).toBe("");
-    const policy = parseJson<{ commitIdentity: { emailPattern: string } }>(readFileSync(join(root, "tooling/policy.json"), "utf8"));
     for (const email of log.flatMap((line) => line.split("|").slice(1))) {
-      if (email !== "fixture@users.noreply.github.com") expect(new RegExp(policy.commitIdentity.emailPattern).test(email), email).toBe(true);
+      expect([BOT, "fixture@users.noreply.github.com", "nextjs-dev-template@users.noreply.github.com"]).toContain(email);
     }
     // Neither the hooks nor the guard of the copy were installed by getting there.
     expect(existsSync(join(copy, ".git/hooks/pre-commit"))).toBe(false);

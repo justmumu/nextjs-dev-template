@@ -7,7 +7,7 @@ import { scratchArea } from "../support/project.ts";
 import { commit, fixtureEnv, git, head, hook, hostAt, root, status, tags, write } from "../support/release-fixture.ts";
 
 // The release commands on real Git: a bump through real hooks, the refusals that must leave nothing
-// behind, the tag of a reviewed merge, and the identity audit over real commit objects. Nothing is
+// behind, and the tag of a reviewed merge. Nothing is
 // pushed, published or deployed.
 const require = createRequire(import.meta.url);
 const release = require("../../scripts/release.cjs") as typeof import("../../scripts/release.cjs");
@@ -385,47 +385,20 @@ describe("the tag of a reviewed merge", () => {
   });
 });
 
-describe("the identity audit on real commit objects", () => {
-  test("user and bot noreply identities pass; an ordinary address stops the tag without being printed", async () => {
+describe("reviewed releases with existing commit history", () => {
+  test("tags and validates a reviewed merge without an email allowlist", async () => {
     const { dir, env } = project();
-    const identity = (name: string, email: string) => ({
-      ...env,
-      GIT_AUTHOR_NAME: name,
-      GIT_AUTHOR_EMAIL: email,
-      GIT_COMMITTER_NAME: name,
-      GIT_COMMITTER_EMAIL: email,
-    });
     await release.bump(hostAt(dir, env).host, "patch");
-    write(dir, "user.js", "export const user = 1;\n");
-    commit(dir, identity("A User", at("12345+a-user", "users.noreply.github.com")), "feat: by a noreply user");
-    write(dir, "bot.js", "export const bot = 1;\n");
-    commit(dir, identity("github-actions[bot]", at("41898282+github-actions[bot]", "users.noreply.github.com")), "feat: by the template bot");
-    mergeReviewed(dir, env);
-    await release.tag(hostAt(dir, env).host);
+    write(dir, "legacy.js", "export const legacy = 1;\n");
+    commit(dir, { ...env, GIT_AUTHOR_EMAIL: at("fixture", "example.invalid") }, "fix: preserve existing application history");
+    mergeReviewed(dir, { ...env, GIT_COMMITTER_NAME: "GitHub", GIT_COMMITTER_EMAIL: at("noreply", "github.com") });
+    const { host } = hostAt(dir, env);
+    await release.tag(host);
     expect(tags(dir, env)).toBe("v0.0.1");
-
-    // The same history with one ordinary address in the author and another in the committer.
-    git(dir, ["tag", "-d", "v0.0.1"], env);
-    git(dir, ["switch", "-q", "-c", "release/private"], env);
-    write(dir, "private.js", "export const secret = 1;\n");
-    git(dir, ["add", "-A"], env);
-    git(dir, ["commit", "-q", "-m", "feat: by someone with a private address"], {
-      ...env,
-      GIT_AUTHOR_EMAIL: at("private.person", "example.com"),
-      GIT_COMMITTER_EMAIL: at("other.private", "example.org"),
-    });
-    git(dir, ["switch", "-q", "main"], env);
-    git(dir, ["merge", "-q", "--no-ff", "release/private", "-m", "Merge private"], env);
-    git(dir, ["update-ref", "refs/remotes/origin/main", "HEAD"], env);
-    const { host, sink } = hostAt(dir, env);
-    const failure = await release.tag(host).then(
-      () => null,
-      (error: unknown) => error as Error,
-    );
-    expect(failure?.message).toMatch(/author e-mail is not a GitHub noreply address/);
-    expect(failure?.message).toMatch(/committer e-mail is not a GitHub noreply address/);
-    expect(`${failure?.message ?? ""}${sink.out()}${sink.err()}`).not.toMatch(/private\.person|other\.private|example\.(com|org)/);
-    expect(tags(dir, env)).toBe("");
+    expect(git(dir, ["rev-parse", "v0.0.1^{commit}"], env).trim()).toBe(head(dir, env));
+    expect(() => {
+      release.validate(host, { tag: "v0.0.1" });
+    }).not.toThrow();
   });
 });
 

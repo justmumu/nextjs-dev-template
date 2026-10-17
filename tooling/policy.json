@@ -4,9 +4,6 @@
     "frozenLockfile": true,
     "dependencyBuildScripts": "denied"
   },
-  "commitIdentity": {
-    "emailPattern": "^([0-9]+\\+)?[A-Za-z0-9-]+(\\[bot\\])?@users\\.noreply\\.github\\.com$"
-  },
   "protected": {
     "files": [
       "package.json",

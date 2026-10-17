@@ -5,7 +5,6 @@
 // decision about the answers is judged without a repository.
 const nodeFs = require("node:fs");
 const nodePath = require("node:path");
-const { commitIdentityErrors } = require("../core/toolchain.cjs");
 const { CHANGELOG_FILE, extractSection } = require("./changelog.cjs");
 const { ReleaseError, adapterFor, readVersion, versionOfTag } = require("./metadata.cjs");
 
@@ -134,27 +133,8 @@ function validateTag(git, root, role, tag) {
   return { commit, version, notes };
 }
 
-/**
- * The commits in `revisions` whose author or committer e-mail is not allowed by the policy. Only the
- * commit and the role are reported; an address is never copied into a message.
- * @param {Git} git @param {string} root @param {string} pattern @param {readonly string[]} revisions
- * @returns {string[]}
- */
-function identityErrors(git, root, pattern, revisions) {
-  const entries = git
-    .out(root, ["log", "-z", "--format=%H%x1f%ae%x1f%ce", ...revisions])
-    .split("\0")
-    .filter((record) => record !== "")
-    .map((record) => {
-      const [rev = "", author = "", committer = ""] = record.split("\u001f");
-      return { rev: rev.slice(0, 12), author, committer };
-    });
-  return commitIdentityErrors(entries, pattern);
-}
-
 module.exports = {
   MAIN_REF,
-  identityErrors,
   requireCleanTree,
   requireFeatureBranch,
   requireFreeTag,

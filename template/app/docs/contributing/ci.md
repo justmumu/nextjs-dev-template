@@ -67,9 +67,7 @@ workflow uses `pull_request_target`, and `actions/checkout` keeps `allow-unsafe-
 
 Pushing a release tag (`vMAJOR.MINOR.PATCH`) starts `release.yml`, which checks out the default branch with its
 tags, so the validator is the reviewed code of `main` and not code from the tag. It runs
-`pnpm run release:validate`, audits the real author and committer objects of the release for noreply
-addresses (`node scripts/ci/context.cjs identities`; only the commit and the role are reported), and keeps
-the changelog section as data. These jobs are read-only. The `publish` job, the only one with
+`pnpm run release:validate` and keeps the changelog section as data. These jobs are read-only. The `publish` job, the only one with
 `contents: write`, runs only when you start the workflow by hand from the default branch and name the tag.
 See [Release process](release-process).
 

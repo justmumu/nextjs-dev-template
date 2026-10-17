@@ -119,9 +119,7 @@ do create workflow runs, which wait for approval.
 
 Pushing a release tag (`vMAJOR.MINOR.PATCH`) starts `release.yml`, which checks out the default branch
 with its tags, so the validator is the reviewed code of `main` and not code from the tag. It runs
-`pnpm run release:validate` with the tag and writes the notes to a file, runs
-`node scripts/ci/context.cjs identities` over the real author and committer objects of the release
-(only the commit and the role are reported, never an address), and keeps the notes as an artifact.
+`pnpm run release:validate` with the tag, writes the notes to a file and keeps them as an artifact.
 This job has read-only permissions.
 
 Creating the GitHub Release is a different act. The `publish` job runs only when the workflow is

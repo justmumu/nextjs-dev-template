@@ -296,12 +296,10 @@ describe("first-run initialization", () => {
     expect(init.steps.at(-1)?.run).toMatch(/git push/);
   });
 
-  test("the history is made by the Actions bot's real noreply address, which the commit identity policy accepts", () => {
+  test("initialization commits use the Actions bot's noreply address", () => {
     const email = "41898282+github-actions[bot]@users.noreply.github.com";
     expect(init.text).toContain(`git config user.email "${email}"`);
     expect(init.text).toContain('git config user.name "github-actions[bot]"');
-    const policy = parseJson<{ commitIdentity: { emailPattern: string } }>(read("tooling/policy.json"));
-    expect(new RegExp(policy.commitIdentity.emailPattern).test(email)).toBe(true);
   });
 
   test("publishes once with a plain push of HEAD to the default branch: a rejection fails, it never forces", () => {
@@ -331,12 +329,8 @@ describe("release validation and publication", () => {
     expect(stepRuns(validate)).toContain('pnpm run release:validate --tag="$RELEASE_TAG" --notes="$RUNNER_TEMP/release-notes.md"');
   });
 
-  test("audits the identities of the release before anything is published", () => {
-    const runs = stepRuns(validate);
-    expect(runs).toContain('node scripts/ci/context.cjs identities --tag="$RELEASE_TAG"');
-    expect(runs.indexOf('node scripts/ci/context.cjs identities --tag="$RELEASE_TAG"')).toBeGreaterThan(
-      runs.findIndex((run) => run.includes("release:validate")),
-    );
+  test("release validation does not add an email audit", () => {
+    expect(stepRuns(validate).join("\n")).not.toContain("context.cjs identities");
   });
 
   test("publication is a separate job that needs validation, runs only from a manual start on the default branch, and takes the notes as a file", () => {
