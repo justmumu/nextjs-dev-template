@@ -3,6 +3,7 @@
 // The Git operations creation and enrollment need, behind one runner so decisions about their output
 // are judged without a repository. Arguments are literal argv, never a shell line.
 const { createHash, randomUUID } = require("node:crypto");
+const { spawnSync } = require("node:child_process");
 const { rmSync } = require("node:fs");
 const nodePath = require("node:path");
 const { run } = require("../core/process.cjs");
@@ -28,7 +29,17 @@ class GitError extends Error {
  * @typedef {{ path: string, mode: string, sha: string, stage: string }} IndexEntry
  * @typedef {{ status: number | null, stdout: string, stderr: string }} Result
  * @typedef {(command: string, args: readonly string[], options: { cwd: string, env?: NodeJS.ProcessEnv }) => Result} Start
+ * @typedef {{ status: number | null, stdout: Buffer, stderr: string }} BytesResult
+ * @typedef {(command: string, args: readonly string[], options: { cwd: string, env?: NodeJS.ProcessEnv }) => BytesResult} StartBytes
  */
+
+/** @type {StartBytes} the output of a command as bytes, for content that must not be decoded */
+function runBytes(command, args, options) {
+  const result = spawnSync(command, args, { cwd: options.cwd, env: options.env ?? process.env, shell: false, maxBuffer: 256 * 1024 * 1024 });
+  // A process that could not be spawned has null output streams although the types promise buffers.
+  const { error, status, stdout, stderr } = /** @type {import("node:child_process").SpawnSyncReturns<Buffer | null>} */ (result);
+  return { status, stdout: stdout ?? Buffer.alloc(0), stderr: stderr?.toString("utf8") ?? error?.message ?? "" };
+}
 
 /** @param {Buffer} content @returns {string} the id Git gives a blob of these bytes */
 function blobId(content) {
@@ -90,9 +101,9 @@ function internalEnv(base) {
 }
 
 /**
- * @param {{ start?: Start, env?: NodeJS.ProcessEnv }} [options] `env` is the caller's environment: its Git configuration decides who enrolls
+ * @param {{ start?: Start, bytes?: StartBytes, env?: NodeJS.ProcessEnv }} [options] `env` is the caller's environment: its Git configuration decides who enrolls
  */
-function createGit({ start = run, env = process.env } = {}) {
+function createGit({ start = run, bytes = runBytes, env = process.env } = {}) {
   const user = userEnv(env);
   const internal = internalEnv(env);
   const plain = ["--literal-pathspecs", "-c", "core.quotepath=false"];
@@ -121,6 +132,20 @@ function createGit({ start = run, env = process.env } = {}) {
   const headOf = (cwd) => {
     const result = call(cwd, ["rev-parse", "--verify", "--quiet", "HEAD^{commit}"]);
     return result.status === 0 ? result.stdout.trim() : null;
+  };
+
+  /**
+   * The tree of the rendered files, built in the private index named by `own` and checked to be exactly them.
+   * @param {string} cwd @param {readonly { path: string, mode: number, content: Buffer }[]} files @param {NodeJS.ProcessEnv} own @returns {string}
+   */
+  const buildTree = (cwd, files, own) => {
+    out(cwd, ["read-tree", "--empty"], true, own);
+    for (let i = 0; i < files.length; i += CHUNK) {
+      out(cwd, ["add", "-f", "--", ...files.slice(i, i + CHUNK).map((file) => file.path)], true, own);
+    }
+    const problems = treeProblems(inventory(cwd, true, own), files);
+    if (problems.length > 0) throw new GitError(`the pristine tree is not the rendered tree: ${problems.join("; ")}`);
+    return out(cwd, ["write-tree"], true, own).trim();
   };
 
   return {
@@ -178,13 +203,7 @@ function createGit({ start = run, env = process.env } = {}) {
         if (indexKey(inventory(cwd)) !== indexKey(index)) throw new GitError(`the index changed ${when}; it was left as it is`);
       };
       try {
-        out(cwd, ["read-tree", "--empty"], true, own);
-        for (let i = 0; i < files.length; i += CHUNK) {
-          out(cwd, ["add", "-f", "--", ...files.slice(i, i + CHUNK).map((file) => file.path)], true, own);
-        }
-        const problems = treeProblems(inventory(cwd, true, own), files);
-        if (problems.length > 0) throw new GitError(`the pristine tree is not the rendered tree: ${problems.join("; ")}`);
-        const tree = out(cwd, ["write-tree"], true, own).trim();
+        const tree = buildTree(cwd, files, own);
         const commit = out(cwd, ["commit-tree", tree, ...(parent === null ? [] : ["-p", parent]), "-m", message], true).trim();
         held("before HEAD was moved");
         const moved = call(cwd, ["update-ref", "-m", message, "HEAD", commit, parent ?? "0".repeat(commit.length)], true);
@@ -202,6 +221,53 @@ function createGit({ start = run, env = process.env } = {}) {
         rmSync(own.GIT_INDEX_FILE, { force: true });
       }
     },
+    /**
+     * Records rendered files as a commit in the repository `gitDir` without touching its HEAD, refs,
+     * index or working tree: the files are read from `workDir` into an index of their own. The date
+     * is fixed by the caller, so the same inputs give the same commit.
+     * @param {string} gitDir
+     * @param {string} workDir the directory the files were written to
+     * @param {readonly { path: string, mode: number, content: Buffer }[]} files
+     * @param {{ parent: string, message: string, date: string }} commit
+     * @returns {{ commit: string, tree: string }}
+     */
+    commitSnapshot: (gitDir, workDir, files, { parent, message, date }) => {
+      const index = nodePath.join(gitDir, `template-snapshot-${randomUUID()}.index`);
+      const own = { GIT_DIR: gitDir, GIT_WORK_TREE: workDir, GIT_INDEX_FILE: index, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date };
+      try {
+        const tree = buildTree(workDir, files, own);
+        return { commit: out(workDir, ["commit-tree", tree, "-p", parent, "-m", message], true, own).trim(), tree };
+      } finally {
+        rmSync(index, { force: true });
+      }
+    },
+    /** @param {string} cwd @param {string} spec @returns {Buffer} the bytes of the blob `spec` names, exactly as stored */
+    blob: (cwd, spec) => {
+      const result = bytes("git", [...plain, ...raw, "cat-file", "blob", spec], { cwd, env: internal });
+      if (result.status !== 0) throw new GitError(`git cat-file blob ${spec} failed: ${result.stderr.trim() || `exit ${String(result.status)}`}`);
+      return result.stdout;
+    },
+    /** @param {string} cwd @returns {boolean} whether this repository's history is incomplete */
+    isShallow: (cwd) => out(cwd, ["rev-parse", "--is-shallow-repository"]).trim() === "true",
+    /** @param {string} cwd @param {string} id @returns {boolean} whether the repository has this commit */
+    hasCommit: (cwd, id) => call(cwd, ["cat-file", "-e", `${id}^{commit}`]).status === 0,
+    /** @param {string} cwd @param {string} ancestor @param {string} descendant @returns {boolean} */
+    isAncestor: (cwd, ancestor, descendant) => call(cwd, ["merge-base", "--is-ancestor", ancestor, descendant]).status === 0,
+    /**
+     * Fetches one ref of a repository into FETCH_HEAD: no tags, no other refs, no hooks. The caller's
+     * Git configuration applies, because it decides how the network is reached.
+     * @param {string} cwd @param {string} url @param {string} ref
+     */
+    fetchRef: (cwd, url, ref) => {
+      out(cwd, ["-c", "core.hooksPath=/dev/null", "fetch", "--quiet", "--no-tags", "--depth=1", "--", url, ref]);
+    },
+    /**
+     * A native merge of `commit` into HEAD that stops before committing and writes over no ignored file.
+     * Exit status 1 means conflicts: the unmerged index entries describe them.
+     * @param {string} cwd @param {string} commit @returns {Result}
+     */
+    mergeNoCommit: (cwd, commit) =>
+      call(cwd, ["merge", "--no-ff", "--no-commit", "--no-overwrite-ignore", "--no-stat", "-m", "template update preview", commit], true),
     /** @param {string} cwd @returns {void} a repository without templates, hooks or configuration of the machine */
     init: (cwd) => {
       out(cwd, ["init", "--quiet", "--initial-branch=main", "--template=", "."], true);

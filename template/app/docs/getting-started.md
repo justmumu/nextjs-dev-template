@@ -25,4 +25,5 @@ The build fails on a broken internal page, asset or `#anchor` link. Set `DOCS_BA
 
 ## Later work
 
-Template updates, recovery and releases are not documented yet.
+Applying updates, recovery and releases are not documented yet. Previewing an update is: see
+[Updating from the template](updating).

@@ -61,7 +61,7 @@ function expectKept(copy: ReturnType<typeof copyOf>, env: NodeJS.ProcessEnv, err
   expect(git(copy.dir, ["diff", "--cached", "--name-only"], env)).toBe("");
   expect(readFileSync(join(copy.dir, "user.txt"), "utf8")).toBe("somebody else's work\n");
   // The installed application is still on disk, not reverted over a commit that may contain it.
-  expect(existsSync(join(copy.dir, "scripts/template/render.cjs"))).toBe(false);
+  expect(existsSync(join(copy.dir, "scripts/template/create.cjs"))).toBe(false);
   expect(existsSync(join(copy.dir, "package.json"))).toBe(true);
   expect(existsSync(join(copy.dir, ".template-state.json"))).toBe(false);
   const backup = /template-backup-[A-Za-z0-9]+/.exec(err)?.[0];

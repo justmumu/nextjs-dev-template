@@ -383,6 +383,17 @@ function generatorCommand(name) {
 }
 
 /**
+ * The update preview is an application command: its modules are emitted with the application and
+ * loaded by a computed path only when it runs.
+ * @type {Handler}
+ */
+function templatePreview(args, context) {
+  /** @type {unknown} */
+  const preview = require(nodePath.join(__dirname, "template", "preview.cjs"));
+  return /** @type {typeof import("./template/preview.cjs")} */ (preview).templatePreview(args, context);
+}
+
+/**
  * `handlers` is absent for commands owned by another dispatcher. A role without a handler does not
  * receive the script at all.
  * @type {Record<string, { script: string, handlers: Partial<Record<Role, Handler>> }>}
@@ -418,6 +429,7 @@ const COMMANDS = {
     script: "node scripts/development.cjs test:artifact",
     handlers: { generator: generatorCommand("testArtifact"), application: productionProof("scripts/testing/artifact.cjs") },
   },
+  "template:preview": { script: "node scripts/development.cjs template:preview", handlers: { application: templatePreview } },
   "template:create": { script: "node scripts/development.cjs template:create", handlers: { generator: generatorCommand("templateCreate") } },
   "template:seed:refresh": { script: "node scripts/development.cjs template:seed:refresh", handlers: { generator: generatorCommand("seedRefresh") } },
 };

@@ -7,11 +7,10 @@ const { randomUUID } = require("node:crypto");
 const nodePath = require("node:path");
 const { assetOf } = require("./smoke.cjs");
 const { blobId, indexKey } = require("./git.cjs");
-const { STATE_FILE, buildState, serializeState } = require("./state.cjs");
+const { PRISTINE_MESSAGE, STATE_FILE, buildState, serializeState } = require("./state.cjs");
 
 const WORKFLOWS = ".github/workflows/";
 const ENROLL_MESSAGE = "chore(template): enroll project in template updates";
-const PRISTINE_MESSAGE = "chore(template): pristine render";
 /** The commands the staged application must pass, in order, before anything is installed. */
 const VALIDATION_STEPS = Object.freeze([
   { name: "setup", command: process.execPath, args: ["scripts/bootstrap.cjs", "setup"] },

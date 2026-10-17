@@ -9,6 +9,8 @@ const { PROTOCOL, SCHEMA, RenderError, isRecord } = require("./manifest.cjs");
 const STATE_FILE = ".template-state.json";
 const STATE_SCHEMA = "nextjs-dev-template/state";
 const STATE_VERSION = 1;
+/** The message of every pristine snapshot commit, the first one and each update's. */
+const PRISTINE_MESSAGE = "chore(template): pristine render";
 const OBJECT_ID = /^[0-9a-f]{40}(?:[0-9a-f]{24})?$/;
 const DIGEST = /^[0-9a-f]{64}$/;
 
@@ -115,4 +117,4 @@ function parseState(text) {
   };
 }
 
-module.exports = { STATE_FILE, STATE_SCHEMA, STATE_VERSION, answersDigest, buildState, parseState, serializeState };
+module.exports = { PRISTINE_MESSAGE, STATE_FILE, STATE_SCHEMA, STATE_VERSION, answersDigest, buildState, parseState, serializeState };

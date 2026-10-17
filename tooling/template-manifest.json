@@ -939,6 +939,108 @@
       "base": "root",
       "source": "tests/integration/production-scratch.test.ts",
       "destination": "tests/integration/production-scratch.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/template/git.cjs",
+      "destination": "scripts/template/git.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/template/inputs.cjs",
+      "destination": "scripts/template/inputs.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/template/manifest.cjs",
+      "destination": "scripts/template/manifest.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/template/preview.cjs",
+      "destination": "scripts/template/preview.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/template/provenance.cjs",
+      "destination": "scripts/template/provenance.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/template/render.cjs",
+      "destination": "scripts/template/render.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/template/state.cjs",
+      "destination": "scripts/template/state.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "scripts/template/update.cjs",
+      "destination": "scripts/template/update.cjs"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/template-state.test.ts",
+      "destination": "tests/unit/template-state.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/template-git.test.ts",
+      "destination": "tests/unit/template-git.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/unit/renderer.test.ts",
+      "destination": "tests/unit/renderer.test.ts"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/fixtures/render/manifest.json",
+      "destination": "tests/fixtures/render/manifest.json"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/fixtures/render/template/run.sh",
+      "destination": "tests/fixtures/render/template/run.sh"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/fixtures/render/template/package.json",
+      "destination": "tests/fixtures/render/template/package.json"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/fixtures/render/root/.node-version",
+      "destination": "tests/fixtures/render/root/.node-version"
+    },
+    {
+      "type": "copy",
+      "base": "root",
+      "source": "tests/fixtures/render/template/dir/data.txt",
+      "destination": "tests/fixtures/render/template/dir/data.txt"
+    },
+    {
+      "type": "copy",
+      "base": "template",
+      "source": "docs/updating.md",
+      "destination": "docs/updating.md"
     }
   ]
 }

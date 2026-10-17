@@ -46,6 +46,7 @@ describe("real seed render", () => {
       "docs/contributing/toolchain.md",
       "docs/getting-started.md",
       "docs/index.md",
+      "docs/updating.md",
       "eslint.config.mjs",
       "next.config.ts",
       "package.json",
@@ -82,6 +83,14 @@ describe("real seed render", () => {
       "scripts/hooks/recover-lock.cjs",
       "scripts/hooks/repo.cjs",
       "scripts/hooks/state.cjs",
+      "scripts/template/git.cjs",
+      "scripts/template/inputs.cjs",
+      "scripts/template/manifest.cjs",
+      "scripts/template/preview.cjs",
+      "scripts/template/provenance.cjs",
+      "scripts/template/render.cjs",
+      "scripts/template/state.cjs",
+      "scripts/template/update.cjs",
       "scripts/testing/artifact.cjs",
       "scripts/testing/environment.cjs",
       "scripts/testing/fixtures.cjs",
@@ -107,6 +116,11 @@ describe("real seed render", () => {
       "tests/e2e/environment.spec.ts",
       "tests/e2e/pages.spec.ts",
       "tests/e2e/support.ts",
+      "tests/fixtures/render/manifest.json",
+      "tests/fixtures/render/root/.node-version",
+      "tests/fixtures/render/template/dir/data.txt",
+      "tests/fixtures/render/template/package.json",
+      "tests/fixtures/render/template/run.sh",
       "tests/integration/artifact-compose.test.ts",
       "tests/integration/artifact-run.test.ts",
       "tests/integration/bootstrap.test.ts",
@@ -160,7 +174,10 @@ describe("real seed render", () => {
       "tests/unit/production/production.test.ts",
       "tests/unit/protected.test.ts",
       "tests/unit/quality.test.ts",
+      "tests/unit/renderer.test.ts",
       "tests/unit/suppression-policy.test.ts",
+      "tests/unit/template-git.test.ts",
+      "tests/unit/template-state.test.ts",
       "tests/unit/testing.test.ts",
       "tests/unit/toolchain.test.ts",
       "tests/unit/transaction.test.ts",
@@ -182,9 +199,9 @@ describe("real seed render", () => {
     expect(paths).toEqual(b.files.map((file) => file.path));
     for (const forbidden of [
       /template-manifest/,
-      /^scripts\/template/,
-      /^tests\/(?:fixtures|generator)\/|^tests\/integration\/(?!(?:artifact-compose|artifact-run|bootstrap|dependencies-cli|development-gates|executable-lookup|install-state|interruption|owned-process|permissions|process|production-scratch|transaction)\.test\.ts$)/,
-      /^tests\/(?:unit\/(?:renderer|generator-commands)|contracts\/(?:rendered-output|toolchain|command-parity|agent-staging)|support\/rendered-app)/,
+      /^scripts\/template\/(?!(?:git|inputs|manifest|preview|provenance|render|state|update)\.cjs$)/,
+      /^tests\/(?:fixtures\/(?!render\/)|generator\/)|^tests\/integration\/(?!(?:artifact-compose|artifact-run|bootstrap|dependencies-cli|development-gates|executable-lookup|install-state|interruption|owned-process|permissions|process|production-scratch|transaction)\.test\.ts$)/,
+      /^tests\/(?:unit\/generator-commands|contracts\/(?:rendered-output|toolchain|command-parity|agent-staging)|support\/rendered-app)/,
       /^tooling\/(?!project-role\.json$|policy\.json$|capabilities\.json$|eslint\/(?:shared|suppression-policy)\.mjs$|hooks\/(?:staged|commit-message)\.mjs$|vitest\/suite\.ts$)/,
       /\.py$/,
       /pyproject|Makefile|copier|uv\.lock/i,
@@ -228,7 +245,9 @@ describe("real seed render", () => {
     const tests = a.files.filter((file) => file.path.startsWith("tests/"));
     expect(tests.length).toBeGreaterThan(10);
     for (const file of tests) {
-      expect(file.content.toString("utf8"), file.path).not.toMatch(/join\(root, "tooling\/versions|render\.cjs|template-manifest|scripts\/template/);
+      expect(file.content.toString("utf8"), file.path).not.toMatch(
+        /join\(root, "tooling\/versions|template-manifest|scripts\/template\/(?:create|initialize|transaction|seed|smoke|commands)\.cjs/,
+      );
     }
   });
 
@@ -277,7 +296,9 @@ describe("real seed render", () => {
     for (const file of a.files) {
       // pnpm copies the maintainers' deprecation notices of third-party packages into the lock; they are not owner data.
       const text = file.path === "pnpm-lock.yaml" ? file.content.toString("utf8").replace(/^ +deprecated: .*$/gm, "") : file.content.toString("utf8");
-      expect(text, file.path).not.toMatch(/[\w.+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z][A-Za-z0-9-]*)+/);
+      // The addresses the output may name: the generator's noreply identity for the pristine commits it makes, and the renderer test's rejected owner.
+      const named = ["nextjs-dev-template@users.noreply.github.com", "me@example.com"].reduce((left, address) => left.replaceAll(address, ""), text);
+      expect(named, file.path).not.toMatch(/[\w.+-]+@[A-Za-z0-9-]+(?:\.[A-Za-z][A-Za-z0-9-]*)+/);
     }
     expect(paths.filter((path) => /\.log$|\.tsbuildinfo$/.test(path))).toEqual([]);
   });

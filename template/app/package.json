@@ -18,6 +18,7 @@
     "lint": "node scripts/development.cjs lint",
     "lint:fix": "node scripts/development.cjs lint:fix",
     "start": "node scripts/development.cjs start",
+    "template:preview": "node scripts/development.cjs template:preview",
     "test:artifact": "node scripts/development.cjs test:artifact",
     "test:e2e": "node scripts/development.cjs test:e2e",
     "test:integration": "node scripts/development.cjs test:integration",

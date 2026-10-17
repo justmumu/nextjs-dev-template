@@ -12,6 +12,10 @@
         {
           "text": "Getting started",
           "link": "/getting-started"
+        },
+        {
+          "text": "Updating from the template",
+          "link": "/updating"
         }
       ]
     },

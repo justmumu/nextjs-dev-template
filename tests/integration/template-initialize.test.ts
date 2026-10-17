@@ -49,7 +49,7 @@ async function initializeIn(copy: ReturnType<typeof copyOf>, host: Host, over: {
 function expectUntouched(copy: ReturnType<typeof copyOf>, env: NodeJS.ProcessEnv, head = copy.original) {
   expect(git(copy.dir, ["rev-parse", "HEAD"], env).trim()).toBe(head);
   expect(git(copy.dir, ["status", "--porcelain"], env)).toBe("");
-  expect(existsSync(join(copy.dir, "scripts/template/render.cjs"))).toBe(true);
+  expect(existsSync(join(copy.dir, "scripts/template/create.cjs"))).toBe(true);
   expect(existsSync(join(copy.dir, ".template-state.json"))).toBe(false);
 }
 
@@ -79,7 +79,7 @@ describe("a real GitHub initialization", () => {
       .map((line) => /^(\d+) blob ([0-9a-f]+)\t([\s\S]+)$/.exec(line) as RegExpExecArray)
       .map((match) => ({ mode: match[1] as string, sha: match[2] as string, stage: "0", path: match[3] as string }));
     expect(gitModule.treeProblems(tree, files)).toEqual([]);
-    for (const gone of ["scripts/template/render.cjs", "tooling/template-sentinel.json", "README.md", "tests/unit/template-transaction.test.ts"]) {
+    for (const gone of ["scripts/template/create.cjs", "tooling/template-sentinel.json", "README.md", "tests/unit/template-transaction.test.ts"]) {
       expect(existsSync(join(copy.dir, gone)), gone).toBe(false);
     }
     expect(git(copy.dir, ["status", "--porcelain", "--ignored"], env)).toBe("");
@@ -215,7 +215,7 @@ describe("a copy that cannot be converted is refused before staging, untouched",
     expect(counter.runs()).toBe(0);
     expect(git(copy.dir, ["rev-parse", "HEAD"], env).trim()).toBe(before);
     expect(git(copy.dir, ["status", "--porcelain"], env)).toBe(statusBefore);
-    expect(existsSync(join(copy.dir, "scripts/template/render.cjs"))).toBe(true);
+    expect(existsSync(join(copy.dir, "scripts/template/create.cjs"))).toBe(true);
     expect(existsSync(join(copy.dir, ".template-state.json"))).toBe(false);
   });
 
@@ -251,7 +251,7 @@ describe("a copy that changes while it is validated is left as it is", () => {
     );
     expect(result.status).toBe(1);
     expect(result.err).toMatch(/HEAD moved/);
-    expect(existsSync(join(copy.dir, "scripts/template/render.cjs"))).toBe(true);
+    expect(existsSync(join(copy.dir, "scripts/template/create.cjs"))).toBe(true);
     expect(existsSync(join(copy.dir, ".template-state.json"))).toBe(false);
     expect(git(copy.dir, ["status", "--porcelain"], env)).toBe("");
   });

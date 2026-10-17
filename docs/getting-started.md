@@ -115,5 +115,5 @@ The build fails on a broken internal page, asset or `#anchor` link. Set `DOCS_BA
 
 ## Later work
 
-Adopting the template into an existing repository, template updates, recovery and releases are
-not documented yet.
+Adopting the template into an existing repository, applying updates, recovery and releases are
+not documented yet. Previewing an update is: see [Updating from the template](updating).
