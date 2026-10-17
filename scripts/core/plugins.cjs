@@ -1,7 +1,5 @@
 // @ts-check
 "use strict";
-// Optional, project-local installation of the agent plugins the tracked host settings declare. The
-// core setup never needs an agent CLI: a missing CLI is skipped, a failing one is a warning.
 const nodePath = require("node:path");
 const { readFileSync, existsSync, writeFileSync } = require("node:fs");
 const { redact, runStoppable } = require("./process.cjs");

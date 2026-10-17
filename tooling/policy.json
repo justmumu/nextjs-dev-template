@@ -15,6 +15,7 @@
       ".npmrc",
       ".node-version",
       ".nvmrc",
+      ".template-state.json",
       ".gitignore",
       ".gitattributes",
       ".editorconfig",

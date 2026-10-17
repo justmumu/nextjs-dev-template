@@ -5,7 +5,19 @@ const fs = require("node:fs");
 const { spawnSync } = require("node:child_process");
 const { homedir } = require("node:os");
 const nodePath = require("node:path");
-const { GuardError, STATE_DIR_NAME, locateGit, operationInProgress, pruneBlobs, readBlob, readState, storeBlob, withLock, writeState } = require("./state.cjs");
+const {
+  GuardError,
+  STATE_DIR_NAME,
+  codexHomeOf,
+  locateGit,
+  operationInProgress,
+  pruneBlobs,
+  readBlob,
+  readState,
+  storeBlob,
+  withLock,
+  writeState,
+} = require("./state.cjs");
 
 const SYMLINK_PREFIX = "symlink:";
 const EXECUTABLE_SUFFIX = ":x";
@@ -445,10 +457,7 @@ function openRepo(start, inventory, options = {}) {
       env: { ...process.env, GIT_OPTIONAL_LOCKS: "0" },
       ...(input === undefined ? {} : { input }),
     });
-  return createRepo(
-    { ...located, userHome: homedir(), codexHome: options.codexHome ?? (process.env.CODEX_HOME || nodePath.join(homedir(), ".codex")), git, disk: fs },
-    inventory,
-  );
+  return createRepo({ ...located, userHome: homedir(), codexHome: options.codexHome ?? codexHomeOf(), git, disk: fs }, inventory);
 }
 
 module.exports = { SYMLINK_PREFIX, contentOf, createRepo, openRepo, parseIndexListing, parseTreeListing };

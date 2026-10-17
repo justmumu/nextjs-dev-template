@@ -1,22 +1,124 @@
 // @ts-check
 "use strict";
+const fs = require("node:fs");
 const nodePath = require("node:path");
 const { parseArgs } = require("../core/args.cjs");
 const { cleanEnv } = require("../testing/environment.cjs");
 const harness = require("../testing/harness.cjs");
 const { createCancellation } = require("../testing/owned.cjs");
+const { createGit } = require("./git.cjs");
 
-/** @typedef {import("../development.cjs").Handler} Handler */
+/**
+ * @typedef {import("../development.cjs").Handler} Handler
+ * @typedef {import("./transaction.cjs").Io} Io
+ */
+
+/**
+ * What creation does on this machine: real Git, the real filesystem, and tools that run as groups of
+ * their own that this process stops when it is interrupted. The tools see the cleaned environment of
+ * the production harnesses; Git sees the caller's, because its configuration decides who enrolls.
+ * @param {import("../testing/owned.cjs").Cancellation} cancel
+ * @param {NodeJS.ProcessEnv} [env] the caller's environment
+ * @returns {import("./transaction.cjs").Host & { terminate: () => Promise<string[]> }}
+ */
+function realCreateHost(cancel, env = process.env) {
+  const tools = harness.realHost(cancel);
+  const render = require("./render.cjs");
+  return {
+    git: createGit({ env }),
+    disk: fs,
+    scratch: tools.scratch,
+    remove: tools.remove,
+    write: render.writeTree,
+    read: (path) => {
+      const stat = fs.lstatSync(path, { throwIfNoEntry: false });
+      return stat?.isFile() ? { content: fs.readFileSync(path), mode: stat.mode & 0o777 } : null;
+    },
+    run: (command, args, options) => tools.run(command, args, { ...options, graceMs: NESTED_GRACE_MS }),
+    smoke: ({ cwd, env: toolEnv, nonce }) => require("./smoke.cjs").smoke({ cwd, env: toolEnv, nonce, cancel }),
+    env: cleanEnv(env),
+    terminate: tools.terminate,
+  };
+}
+
+/**
+ * Runs a creation flow as the owner of this process's interrupts; a refused input is a usage error.
+ * @param {Io} io
+ * @param {(host: ReturnType<typeof realCreateHost>, cancel: import("../testing/owned.cjs").Cancellation) => Promise<number>} flow
+ * @returns {Promise<number>}
+ */
+function owningCreation(io, flow) {
+  const cancel = createCancellation();
+  const host = realCreateHost(cancel);
+  return harness.execute(
+    async () => {
+      try {
+        return await flow(host, cancel);
+      } catch (error) {
+        if (error instanceof Error && error.name === "RenderError") {
+          io.stderr(`${error.message}\n`);
+          return 2;
+        }
+        throw error;
+      }
+    },
+    process,
+    cancel,
+    host,
+  );
+}
 
 /** @type {Handler} */
-function templateCreate(args, { cwd, io }) {
+function templateCreate(args, { root, cwd, io }) {
   const flags = parseArgs(args, { name: { required: true }, owner: { required: true }, dest: { required: true } });
-  const render = require("./render.cjs");
-  const { manifest, bases } = render.defaultInputs();
-  const { files, digest } = render.renderTree({ manifest, bases, answers: { name: flags.name, owner: flags.owner } });
-  render.writeTree(files, nodePath.resolve(cwd, flags.dest));
-  io.stdout(`${JSON.stringify({ files: files.length, digest })}\n`);
-  return 0;
+  return owningCreation(io, (host, cancel) => {
+    const inputs = require("./render.cjs").defaultInputs();
+    return require("./create.cjs").createLocal({
+      host,
+      io,
+      isCancelled: cancel.isCancelled,
+      inputs,
+      answers: { name: flags.name, owner: flags.owner },
+      dest: nodePath.resolve(cwd, flags.dest),
+      source: () => require("./create.cjs").generatorSource({ git: host.git, root, manifest: inputs.manifest }),
+    });
+  });
+}
+
+/**
+ * The initialization of a GitHub copy, run by its workflow from the root of the copy.
+ * @param {readonly string[]} args
+ * @param {{ root: string, io: Io }} context
+ * @returns {Promise<number>}
+ */
+function templateInitialize(args, { root, io }) {
+  const flags = parseArgs(args, { name: { required: true }, owner: { required: true }, description: {} });
+  return owningCreation(io, (host, cancel) =>
+    require("./initialize.cjs").initializeCopy({
+      host,
+      io,
+      isCancelled: cancel.isCancelled,
+      root,
+      inputs: require("./render.cjs").defaultInputs(),
+      answers: { name: flags.name, owner: flags.owner, ...(flags.description === undefined ? {} : { description: flags.description }) },
+    }),
+  );
+}
+
+/**
+ * The entry of `node scripts/template/initialize.cjs`.
+ * @param {readonly string[]} argv
+ * @param {{ stdout: { write: (text: string) => unknown }, stderr: { write: (text: string) => unknown }, exitCode?: number | string | null | undefined }} proc
+ * @returns {Promise<void>}
+ */
+async function initializeMain(argv, proc) {
+  const io = { stdout: (/** @type {string} */ text) => proc.stdout.write(text), stderr: (/** @type {string} */ text) => proc.stderr.write(text) };
+  try {
+    proc.exitCode = await templateInitialize(argv, { root: nodePath.resolve(__dirname, "..", ".."), io });
+  } catch (error) {
+    io.stderr(`${error instanceof Error ? error.message : String(error)}\n`);
+    proc.exitCode = 2;
+  }
 }
 
 /** @type {Handler} */
@@ -109,4 +211,4 @@ function testArtifact(args) {
   return proofInRenderedApp("test:artifact");
 }
 
-module.exports = { inRenderedApp, realRenderedHost, seedRefresh, templateCreate, testArtifact, testE2e };
+module.exports = { inRenderedApp, initializeMain, realCreateHost, realRenderedHost, seedRefresh, templateCreate, templateInitialize, testArtifact, testE2e };

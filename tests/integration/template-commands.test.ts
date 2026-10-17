@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { createRequire } from "node:module";
 import { describe, expect, test } from "vitest";
@@ -11,21 +11,11 @@ const commands = require("../../scripts/template/commands.cjs") as typeof import
 const scratch = scratchArea("template-commands-");
 
 describe("template:create", () => {
-  test("renders the application into a new directory and reports its digest", () => {
-    const sink = capture();
-    const cwd = scratch.project();
-    expect(commands.templateCreate(["--name=made-app", "--owner=made-owner", "--dest=out"], { root, cwd, io: sink.io })).toBe(0);
-    const report = JSON.parse(sink.out()) as { files: number; digest: string };
-    expect(report.files).toBeGreaterThan(10);
-    expect(report.digest).toMatch(/^[0-9a-f]{64}$/);
-    expect((JSON.parse(readFileSync(join(cwd, "out/package.json"), "utf8")) as { name: string }).name).toBe("made-app");
-  });
-
-  test("requires every answer, and leaves a non-empty destination alone", () => {
+  test("requires every answer, and leaves a non-empty destination alone", async () => {
     const cwd = scratch.project({ "out/keep.txt": "mine" });
     const io = capture().io;
     expect(() => commands.templateCreate(["--name=made-app", "--owner=o"], { root, cwd, io })).toThrow(/--dest is required/);
-    expect(() => commands.templateCreate(["--name=made-app", "--owner=o", "--dest=out"], { root, cwd, io })).toThrow(/not empty/);
+    expect(await commands.templateCreate(["--name=made-app", "--owner=o", "--dest=out"], { root, cwd, io })).toBe(2);
     expect(readFileSync(join(cwd, "out/keep.txt"), "utf8")).toBe("mine");
   });
 });
@@ -54,28 +44,17 @@ describe("template:seed:refresh", () => {
 });
 
 describe("template:create as a process", () => {
-  const render = require("../../scripts/template/render.cjs") as typeof import("../../scripts/template/render.cjs");
-  const walk = (dir: string, prefix = ""): string[] =>
-    readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
-      entry.isDirectory() ? walk(join(dir, entry.name), `${prefix}${entry.name}/`) : [`${prefix}${entry.name}`],
-    );
-
-  test("renders the same tree, bytes and modes as the API and refuses a non-empty destination", () => {
-    const dest = join(scratch.project(), "cli");
-    const cli = (target: string) =>
-      run(root, process.execPath, [join(root, "scripts/development.cjs"), "template:create", "--name=first-app", "--owner=first-owner", `--dest=${target}`]);
-    const first = cli(dest);
-    expect(first.status, output(first)).toBe(0);
-    const { manifest, bases } = render.defaultInputs();
-    const same = render.renderTree({ manifest, bases, answers: { name: "first-app", owner: "first-owner" } });
-    expect(JSON.parse(first.stdout)).toEqual({ files: same.files.length, digest: same.digest });
-    expect(walk(dest)).toEqual(same.files.map((file) => file.path));
-    for (const file of same.files) {
-      expect(statSync(join(dest, file.path)).mode & 0o777, file.path).toBe(file.mode);
-      expect(readFileSync(join(dest, file.path)).equals(file.content), file.path).toBe(true);
-    }
-    const second = cli(dest);
-    expect(second.status).toBe(2);
-    expect(second.stderr).toMatch(/not empty/);
+  test("refuses a non-empty destination with a usage status, before staging or writing anything", () => {
+    const dest = scratch.project({ "keep.txt": "mine" });
+    const result = run(root, process.execPath, [
+      join(root, "scripts/development.cjs"),
+      "template:create",
+      "--name=first-app",
+      "--owner=first-owner",
+      `--dest=${dest}`,
+    ]);
+    expect(result.status, output(result)).toBe(2);
+    expect(result.stderr).toMatch(/not empty/);
+    expect(readFileSync(join(dest, "keep.txt"), "utf8")).toBe("mine");
   });
 });

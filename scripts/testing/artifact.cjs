@@ -1,8 +1,5 @@
 // @ts-check
 "use strict";
-// `pnpm run test:artifact`: the standalone output of a disposable fixture, relocated outside the
-// project and served without the project or its development dependencies. The application itself
-// stays on the default `next start` path; only the fixture is built with `output: "standalone"`.
 const { randomUUID } = require("node:crypto");
 const fs = require("node:fs");
 const nodePath = require("node:path");
@@ -167,7 +164,6 @@ async function runArtifact({ root, io, host, base, serve = serveAndCheck, cancel
     const development = developmentNames(root);
     composeArtifact({ fixture, destination: complete, assets: true });
     composeArtifact({ fixture, destination: incomplete, assets: false });
-    // The fixture, with its node_modules, is gone before anything is served: nothing can resolve through it.
     host.remove(fixture);
     const leaks = developmentLeaks(complete, development);
     const parents = resolvingAncestors(complete);

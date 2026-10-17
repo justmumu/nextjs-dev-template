@@ -1,17 +1,11 @@
 // @ts-check
 "use strict";
-// `pnpm run test:e2e`: one production build of the application plus disposable fixture routes,
-// served by `next start` on a port and process this run owns, and the Playwright suite against it.
-// The suite runs from the application so it uses the project's own Playwright; the fixture is only
-// the server under test.
 const { randomUUID } = require("node:crypto");
 const nodePath = require("node:path");
 const { cleanEnv } = require("./environment.cjs");
 const { NEXT, main, prepareFixture, preconditions } = require("./harness.cjs");
 const { attemptAll, createCancellation, freePort, startOwned } = require("./owned.cjs");
 
-// Values that only exist to be found or not found: the build and the server get different ones so
-// the suite can tell what was fixed at build time from what the server reads at run time.
 const BUILD = { FIXTURE_SERVER_ONLY: "build-time-server-only-value", NEXT_PUBLIC_FIXTURE_PUBLIC: "build-time-public-value" };
 const RUNTIME = { FIXTURE_SERVER_ONLY: "runtime-server-only-value", NEXT_PUBLIC_FIXTURE_PUBLIC: "runtime-public-value" };
 
@@ -84,7 +78,6 @@ async function runProduction({ root, io, host, servers, base, cancel = createCan
   } catch (error) {
     io.stderr(`${error instanceof Error ? error.message : String(error)}\n`);
   }
-  // Every owned thing is cleaned up even when an earlier cleanup fails; a failed cleanup is not a pass.
   const failures = await attemptAll([
     () => server?.stop(),
     () => {

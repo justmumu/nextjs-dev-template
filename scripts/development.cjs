@@ -60,7 +60,6 @@ function installedTools({ root, io }) {
       return result.status ?? 1;
     },
     stream: (pkg, bin, args) => runInherited(process.execPath, [packageBin(root, pkg, bin), ...args], { cwd: root }).status ?? 1,
-    // The project script runs in this process, so this process is the one owner of the interrupts of its servers and browsers.
     script: (script, args) => {
       if (args.length > 0) throw new UsageError(`${script} takes no arguments`);
       /** @type {unknown} */

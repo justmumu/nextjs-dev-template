@@ -1,8 +1,5 @@
 // @ts-check
 "use strict";
-// The environment the production harnesses give every child: production, not test; no package
-// manager overrides from the invoking `pnpm run`; no stray application variables of the caller.
-// Local `.env*` files never reach a fixture because the fixture is staged without them (stage.cjs).
 
 /** Variables the invoking pnpm and npm inject for a script; a child pnpm must read its own project configuration instead. */
 const PACKAGE_MANAGER = /^(?:npm_|pnpm_|PNPM_|NPM_)/i;

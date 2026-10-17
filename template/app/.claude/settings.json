@@ -106,6 +106,7 @@
       "Edit(/.npmrc)",
       "Edit(/.node-version)",
       "Edit(/.nvmrc)",
+      "Edit(/.template-state.json)",
       "Edit(/.gitignore)",
       "Edit(/.gitattributes)",
       "Edit(/.editorconfig)",

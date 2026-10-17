@@ -72,6 +72,9 @@ describe("owned processes", () => {
   test("a server is started on its port, answers its nonce, and stopping it ends its whole process group", async () => {
     const port = await owned.freePort();
     const server = await owned.startOwned(spec(port, SERVER));
+    cleanups.push(async () => {
+      await server.stop();
+    });
     const grandchild = Number(await (await fetch(`http://127.0.0.1:${String(port)}/grandchild`)).text());
     expect(alive(server.pid)).toBe(true);
     expect(alive(grandchild)).toBe(true);

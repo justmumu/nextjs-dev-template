@@ -1,8 +1,5 @@
 // @ts-check
 "use strict";
-// A disposable copy of the application to build in. Only the files that make up the application are
-// copied: no `.env*` file of the checkout, no build output, no dependency tree and no test, so what
-// the checkout's local environment holds can never change a fixture's build or its result.
 const fs = require("node:fs");
 const nodePath = require("node:path");
 

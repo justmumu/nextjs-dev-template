@@ -1,8 +1,5 @@
 // @ts-check
 "use strict";
-// What the production browser and standalone harnesses share: a disposable fixture that is staged,
-// installed from the frozen lock and built once, tools that stay owned by the run, and cleanup that
-// happens whether the run passed, failed or was interrupted.
 const fs = require("node:fs");
 const { tmpdir } = require("node:os");
 const nodePath = require("node:path");
@@ -46,14 +43,12 @@ function realHost(cancel = createCancellation()) {
   /** @type {Set<ReturnType<typeof supervise>>} */
   const running = new Set();
   return {
-    // Each tool leads a process group of its own, so what it starts can be stopped with it.
     run: async (command, args, options) => {
       if (cancel.isCancelled()) return null;
       const tool = supervise(processes.start(command, args, { cwd: options.cwd, env: options.env, inherit: true }), processes, options.graceMs);
       running.add(tool);
       const { code, signal } = await tool.done;
       running.delete(tool);
-      // A command that could not be started never ran and says why through its output.
       if (code === null && signal === null && tool.log() !== "") process.stderr.write(`${command}: ${tool.log()}\n`);
       return code;
     },
@@ -61,7 +56,6 @@ function realHost(cancel = createCancellation()) {
     scratch: scratchDirectory,
     stage: realStage,
     remove: removeDirectory,
-    // Asks every running tool's group to stop, then forces it after the grace period; reports what could not be stopped.
     terminate: () => attemptAll([...running].map((tool) => () => tool.stop())),
   };
 }

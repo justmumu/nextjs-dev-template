@@ -164,18 +164,13 @@ function rollback(createdFiles, createdDirs) {
 }
 
 /**
- * Writes a rendered tree into a missing or empty directory; never overwrites. No symlink may
- * appear among the destination or its ancestors. If a write fails, only the files and empty
- * directories this call created (and that are still unchanged) are removed.
+ * A destination a tree may be written to: absolute, missing or an empty directory, with no symlink
+ * among it or its ancestors.
+ * @param {string} dest
+ * @returns {{ root: string, exists: boolean }}
  */
-/** @param {readonly RenderedFile[]} files @param {string} dest */
-function writeTree(files, dest) {
+function checkDestination(dest) {
   if (typeof dest !== "string" || !nodePath.isAbsolute(dest)) throw new RenderError("destination root must be an absolute path");
-  for (const file of files) {
-    safeSegments(file.path, "file path");
-    if (!MODES.has(file.mode)) throw new RenderError(`unsupported mode for ${file.path}`);
-  }
-  checkCollisions(files.map((file) => file.path));
   const root = nodePath.resolve(dest);
   assertNoSymlinkAncestors(root, "destination");
   const stat = fs.lstatSync(root, { throwIfNoEntry: false });
@@ -183,12 +178,30 @@ function writeTree(files, dest) {
     if (!stat.isDirectory()) throw new RenderError(`destination exists and is not a directory: ${root}`);
     if (fs.readdirSync(root).length > 0) throw new RenderError(`destination is not empty: ${root}`);
   }
+  return { root, exists: stat !== undefined };
+}
+
+/**
+ * Writes a rendered tree into a missing or empty directory; never overwrites. No symlink may
+ * appear among the destination or its ancestors. If a write fails, only the files and empty
+ * directories this call created (and that are still unchanged) are removed. The result removes
+ * them the same way later, for a caller whose own next step failed.
+ * @param {readonly RenderedFile[]} files @param {string} dest
+ * @returns {{ undo: () => void }}
+ */
+function writeTree(files, dest) {
+  for (const file of files) {
+    safeSegments(file.path, "file path");
+    if (!MODES.has(file.mode)) throw new RenderError(`unsupported mode for ${file.path}`);
+  }
+  checkCollisions(files.map((file) => file.path));
+  const { root, exists } = checkDestination(dest);
   /** @type {OwnedDir[]} */
   const createdDirs = [];
   /** @type {OwnedFile[]} */
   const createdFiles = [];
   try {
-    if (!stat) {
+    if (!exists) {
       const segments = root.split(nodePath.sep).filter(Boolean);
       ensureDirs(nodePath.sep, segments, createdDirs);
     }
@@ -206,6 +219,11 @@ function writeTree(files, dest) {
     rollback(createdFiles, createdDirs);
     throw error;
   }
+  return {
+    undo: () => {
+      rollback([...createdFiles], [...createdDirs]);
+    },
+  };
 }
 
 /** @returns {{ manifest: unknown, bases: Bases }} */
@@ -216,4 +234,4 @@ function defaultInputs() {
   };
 }
 
-module.exports = { PROTOCOL, SCHEMA, RenderError, renderTree, writeTree, treeDigest, defaultInputs };
+module.exports = { PROTOCOL, SCHEMA, RenderError, checkDestination, renderTree, writeTree, treeDigest, defaultInputs };

@@ -47,7 +47,6 @@ function signallable(pgid) {
 function realHost() {
   return {
     start: (command, args, options) => {
-      // A tool that talks to the terminal inherits its output; it is still the leader of a group of its own.
       /** @type {import("node:child_process").StdioOptions} */
       const stdio = options.inherit ? ["ignore", "inherit", "inherit"] : ["ignore", "pipe", "pipe"];
       const child = spawn(command, args, { cwd: options.cwd, env: options.env, shell: false, detached: true, stdio });
@@ -200,7 +199,6 @@ function supervise(child, host, graceMs = GRACE_MS) {
   });
   child.onExit((code, signal) => {
     state.exit = { code, signal };
-    // The leader is gone: whatever it left behind in its group is an orphan of this run.
     try {
       if (signallable(pgid)) host.signalGroup(pgid, "SIGKILL");
     } finally {
@@ -247,7 +245,6 @@ async function startOwned(spec, host = realHost()) {
   if (cancel?.isCancelled()) throw new OwnedProcessError(`${spec.command} was not started: the run was interrupted`);
   const server = supervise(host.start(spec.command, spec.args, { cwd: spec.cwd, env: spec.env }), host);
   const { pgid, state, stop } = server;
-  // An interrupt ends the server wherever the run is; a failure to stop resurfaces from the owner's own stop.
   const release =
     cancel?.onCancel(() => {
       stop().catch(() => undefined);
