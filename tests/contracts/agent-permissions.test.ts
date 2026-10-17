@@ -238,7 +238,19 @@ describe("the human update boundary and the host settings the agents share", () 
       const settings = parseJson<ClaudeSettings>(read(root, ".claude/settings.json"));
       expect(settings["syncClaudeAiPlugins"]).toBe(false);
       expect(settings["disableClaudeAiConnectors"]).toBe(true);
-      expect(read(root, ".codex/config.toml")).toMatch(/^\[features\]\nremote_plugin = false\n(?=\n\[|$)/m);
+      const config = read(root, ".codex/config.toml");
+      const lines = config.split("\n").map((line) => line.replace(/[ \t]*#.*$/, "").trim());
+      for (const [table, body] of [
+        ["features", "remote_plugin = false"],
+        ["plugins._default", "enabled = false"],
+        ['plugins."compound-engineering@compound-engineering-plugin"', "enabled = true"],
+      ]) {
+        expect(
+          lines.filter((line) => line === `[${table}]`),
+          `${root}: ${table}`,
+        ).toHaveLength(1);
+        expect(config).toContain(`[${table}]\n${body}\n`);
+      }
     }
     expect(claude["enabledPlugins"]).toEqual({ "compound-engineering@compound-engineering-plugin": true });
     const marketplaces = claude["extraKnownMarketplaces"] as Record<string, { source: { source: string; repo: string } }>;

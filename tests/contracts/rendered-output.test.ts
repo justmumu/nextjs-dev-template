@@ -21,6 +21,17 @@ const paths = a.files.map((file) => file.path);
 const byPath = (result: typeof a, path: string) => (result.files.find((file) => file.path === path)?.content as Buffer).toString("utf8");
 
 describe("real seed render", () => {
+  test("project answers preserve the Codex remote opt-out, plugin default and explicit opt-in", () => {
+    for (const result of [a, b]) {
+      const config = byPath(result, ".codex/config.toml");
+      expect(config).toContain("[features]\nremote_plugin = false\n");
+      expect(config).toContain("[plugins._default]\nenabled = false\n");
+      expect(config).toContain('[plugins."compound-engineering@compound-engineering-plugin"]\nenabled = true\n');
+      expect(config.match(/^[ \t]*\[plugins\._default\][ \t]*(?:#.*)?$/gm)).toHaveLength(1);
+    }
+    expect(byPath(a, ".codex/config.toml")).toBe(byPath(b, ".codex/config.toml"));
+  });
+
   test("emits the application role files and nothing from the generator", () => {
     expect(paths).toEqual([
       ".claude/settings.json",
